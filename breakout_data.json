@@ -169,6 +169,40 @@
     "fortune gems 2": {
       "lowest_low": -40.58,
       "lowest_low_delta": -92.79
+    },
+    "fortune gems": {
+      "lowest_low": -68.89,
+      "lowest_low_delta": -62.98
+    },
+    "legacy of egypt": {
+      "lowest_low": -53.09,
+      "lowest_low_delta": -80.54
+    },
+    "pirate queen": {
+      "lowest_low": -31.2,
+      "lowest_low_delta": -88.33
+    },
+    "fortune gems 3": {
+      "lowest_low": 9.31,
+      "lowest_low_delta": -54.01
+    },
+    "lucky jaguar": {
+      "lowest_low": -16.2,
+      "lowest_low_delta": -80.63
+    },
+    "sh\u014dgun": {
+      "lowest_low": 17.91,
+      "lowest_low_delta": -54.28
+    },
+    "super ace": {
+      "lowest_low": -24.24,
+      "lowest_low_delta": -64.91
+    }
+  },
+  "2025-06-30": {
+    "fortune gems 2": {
+      "lowest_low": -35.48,
+      "lowest_low_delta": -85.26
     }
   }
 }

@@ -50,6 +50,7 @@ class AutoState:
     prev_10m: float = 0.0
     is_delta_breakout: bool = False
     is_breakout: bool = False
+    elapsed: int = 0
 
 
 @dataclass
@@ -595,16 +596,26 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
         mins, secs = divmod(time_left, 60)
         text = "Betting Ends In" if state.bet_lvl is not None else "Waiting For Next Iteration"
 
-        if time_left <= 5:
-            if time_left == 5:
-                alert_queue.put((None, "5 seconds remaining"))
-            elif time_left <4:
+        if time_left <= 10:
+            if time_left == 10:
+                alert_queue.put((None, f"{time_left} seconds remaining"))
+                spin_done = False
+            elif time_left < 6:
+                print('spin done >>> ', spin_done)
+                if state.auto_mode and state.elapsed == 0 and not spin_done:
+                    time.sleep(random.randint(*DELAY_RANGE))
+                    if state.dual_slots:
+                        directions = ["left", "right"]
+                        random.shuffle(directions)  # Randomize order
+                        spin_queue.put(("low", None, directions[0]))
+                        spin_queue.put(("low", None, directions[1]))
+                    else:
+                        spin_queue.put(("low", None, None))
+                    spin_done = True 
+                    print('after spin done >>> ', spin_done)
+                elif state.elapsed != 0:
+                    spin_done = False
                 alert_queue.put((None, time_left))
-                # if time_left == 0:
-                #     directions = ["left", "right"]
-                #     random.shuffle(directions)  # Randomize order
-                #     spin_queue.put(("low", None, directions[0]))
-                #     spin_queue.put(("low", None, directions[1]))
             timer = f"\t⏳ {text}: {BWHTE}... {BLNK}{BLRED}{secs}{RES}"
         else:
             timer = f"\t⏳ {text}: {BLYEL}{mins:02d}{BLNK}{BWHTE}:{RES}{BLYEL}{secs:02d}{RES}  [ {CYN}{game}{RES} ]"
@@ -1071,7 +1082,6 @@ async def get_game_stats(game: str, provider: str, url: str) -> dict:
         try:
             response = await client.get(URL, params=PARAMS)
             response.raise_for_status()  # Raises error on 4xx/5xx
-            print('RESP >> ', client)
             data = response.json().get("data", [])
             # Filter exact match
             result = next((g for g in data if g.get("name", "").lower() == game.lower()), None)
@@ -1120,20 +1130,24 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
             if data:
                 # LUCKY SPIN HERE
                 # if previous_hash and state.auto_mode and state.dual_slots and state.prev_jackpot_val != 0.0 and state.prev_10m != 0.0 and state.last_pull_delta != 0.0:
-                if state.auto_mode and state.dual_slots and state.last_pull_delta != 0:
+                if state.auto_mode and state.last_pull_delta != 0:
                     # print("data.get('min10') | state.prev_10m : ", data.get('min10'), state.prev_10m)
                     # if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m:
                     if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m or state.is_breakout or state.is_delta_breakout:
                         get_delta = round(data.get('min10') - state.prev_10m, 2)
                         if get_delta < state.last_pull_delta and get_delta <= -30 and data.get('min10') <= -30:
-                            slots = ["left", "right"]
-                            random.shuffle(slots)  # Randomize order
-                            spin_queue.put(("low", None, slots[0]))
-                            spin_queue.put(("low", None, slots[1]))
+                            if state.dual_slots:
+                                slots = ["left", "right"]
+                                random.shuffle(slots)  # Randomize order
+                                spin_queue.put(("low", None, slots[0]))
+                                spin_queue.put(("low", None, slots[1]))
+                            else:
+                                spin_queue.put(("low", None, None))
                             
                 current_hash = hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
                 if current_hash != previous_hash:
+                    print('\nELAPSED >>> ', state.elapsed)
                     previous_hash = current_hash
                     data_queue.put(data)
             else:
@@ -1355,30 +1369,30 @@ if __name__ == "__main__":
     monitor_thread.start()
     spin_thread.start()
 
-    elapsed = 0
+    state.elapsed = 0
 
     try:
         while True:
             try:
-                # Wait for new data from monitor thread (max 10s)
+                # Wait for new data from monitor thread (max 60s)
                 data = data_queue.get(timeout=60)
                 alert_queue.put((None, game))
                 parsed_data = extract_game_data(data)
 
                 # Reset the countdown because data came in
                 reset_event.set()
+                state.elapsed = 0  # Reset elapsed on data
 
                 all_data = load_previous_data()
                 previous_data = all_data.get(game.lower())
                 compare_data(previous_data, parsed_data)
                 all_data[game.lower()] = parsed_data
                 save_current_data(all_data)
-                elapsed = 0  # Reset elapsed on data
             except Empty:
-                elapsed += 1
-                if elapsed >= 60:
+                state.elapsed += 1
+                if state.elapsed >= 60:
                     print("⚠️  No data received in 1 minute.")
-                    elapsed = 0  # Optional: reset or exit
+                    state.elapsed = 0  # Optional: reset or exit
 
             # Handle timeout signal from countdown
             # try:

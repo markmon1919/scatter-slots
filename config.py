@@ -99,7 +99,11 @@ GAME_CONFIGS = {
     "Boxing King": GameConfig(False, True, True, None, False, True, "JILI"),
     "Boxing Extravaganza": GameConfig(False, True, True, None, False, True, "JILI"),
     "Mines": GameConfig(False, True, True, None, False, True, "JILI"),
+    "Mega Fishing": GameConfig(False, True, True, None, False, True, "JILI"),
+    "Jackpot Fishing": GameConfig(False, True, True, None, False, True, "JILI"),
+    "Royal Fishing": GameConfig(False, True, True, None, False, True, "JILI"),
     "Wild Bounty Showdown": GameConfig(False, True, True, None, False, False, "PG"),
+    "Wild Bandito": GameConfig(False, True, True, None, False, False, "PG"),
     "Wild Fireworks": GameConfig(False, True, True, None, False, False, "PG"),
     "Legendary Monkey King": GameConfig(False, True, True, None, False, False, "PG"),
     "Fortune Mouse": GameConfig(False, True, True, None, False, False, "PG"),
@@ -108,6 +112,12 @@ GAME_CONFIGS = {
     "Jurassic Kingdom": GameConfig(False, True, True, None, False, False, "PG"),
     "Cruise Royale": GameConfig(False, True, True, None, False, False, "PG"),
     "Gemstones Gold": GameConfig(False, True, True, None, False, False, "PG"),
+    "Dragon Hatch": GameConfig(False, True, True, None, False, False, "PG"),
+    "Dragon Hatch 2": GameConfig(False, True, True, None, False, False, "PG"),
+    "Queen of Bounty": GameConfig(False, True, True, None, False, False, "PG"),
+    "Captain's Bounty": GameConfig(False, True, True, None, False, False, "PG"),
+    "Treasures of Aztec": GameConfig(False, True, True, None, False, False, "PG"),
+    "Lucky Neko": GameConfig(False, True, True, None, False, False, "PG"),
     "Grand Blue": GameConfig(True, True, True, None, False, False, "FC"),
     "Golden Genie": GameConfig(True, True, True, None, False, False, "FC"),
     "Egypt Bonanza": GameConfig(True, True, True, None, False, False, "FC"),
@@ -156,10 +166,11 @@ DEFAULT_PROVIDER_PROPS = ProviderProps(None, WHTE)
 URLS = [ "https://www.helpslot.win", "https://slimeserveahead.github.io/monitor" ]
 
 API_CONFIG = {
-    "host": "127.0.0.1",
+    "host": "0.0.0.0",
     "port": 4444,
     "reload": True,
-    "url": next((url for url in URLS if 'helpslot' in url), None)
+    "url": next((url for url in URLS if 'helpslot' in url), None),
+    "refresh_interval": 1  # fast initial poll interval
 }
 
 CASINOS = [ "JLJL9", "Bingo Plus", "Casino Plus", "Rollem 88", "2JL" ]

@@ -1,7 +1,7 @@
 #!/usr/bin/env .venv/bin/python
 # -*- coding: utf-8 -*-
 
-import asyncio, httpx, time, uvicorn
+import asyncio, httpx, time, uvicorn, hashlib, json
 from config import API_CONFIG
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query
@@ -9,13 +9,12 @@ from pathlib import Path
 from pydantic import BaseModel
 from typing import Dict, Any, List
 
-# Shared cache and dynamic game registry
+# Shared cache and game registry
 CACHE: Dict[str, Any] = {
     "games": [],
-    "last_updated": 0
+    "last_updated": 0,
+    "last_snapshot": None
 }
-
-# Store registered games as dicts: {name, provider}
 REGISTERED_GAMES: List[Dict[str, str]] = []
 
 class GameRegistration(BaseModel):
@@ -23,7 +22,10 @@ class GameRegistration(BaseModel):
     name: str
     provider: str = 'JILI'
 
-# Optimized fetcher using async parallel calls
+def hash_games(games: List[Dict[str, Any]]) -> str:
+    return hashlib.sha256(json.dumps(games, sort_keys=True).encode()).hexdigest()
+
+# Fetch single game data
 async def fetch_game(url: str, name: str, provider: str = 'JILI') -> List[Dict[str, Any]]:
     URL = f"{url}/api/games"
     HEADERS = {
@@ -36,20 +38,26 @@ async def fetch_game(url: str, name: str, provider: str = 'JILI') -> List[Dict[s
         "manuf": provider,
         "requestFrom": "H6"
     }
-    
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(URL, params=PARAMS, headers=HEADERS)
-            if response.status_code == 200:
-                data = response.json().get("data", [])
-                print(f"✅ Fetched '{name}' [{provider}] - {len(data)} game(s)")
-                return data
-    except Exception as e:
-        print(f"❌ Error fetching '{name}' [{provider}]: {e}")
+
+    timeout = httpx.Timeout(connect=0.5, read=2.0, write=1.0, pool=2.0)
+
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.get(URL, params=PARAMS, headers=HEADERS)
+                if response.status_code == 200:
+                    data = response.json().get("data", [])
+                    print(f"✅ Fetched '{name}' [{provider}] - {len(data)} game(s)")
+                    return data
+        except httpx.RequestError as e:
+            print(f"⚠️ Network error on attempt {attempt+1} for '{name}': {e}")
+        await asyncio.sleep(1)
+
+    print(f"❌ Failed to fetch '{name}' after 2 attempts")
     return []
 
-# Main updater
-async def update_games():
+# Update cache and detect changes
+async def update_games() -> bool:
     tasks = [fetch_game(game["url"], game["name"], game["provider"]) for game in REGISTERED_GAMES]
     results = await asyncio.gather(*tasks)
 
@@ -59,22 +67,45 @@ async def update_games():
             if not any(g["id"] == game["id"] for g in combined):
                 combined.append(game)
 
-    if combined:
-        CACHE["games"] = combined
-        CACHE["last_updated"] = time.time()
-        print(f"🔄 Updated CACHE with {len(combined)} game(s)")
+    if not combined:
+        return False
 
-# Background loop
-async def refresh_loop(interval: int = 1):
+    new_hash = hash_games(combined)
+    if CACHE.get("last_snapshot") == new_hash:
+        print("🔁 No changes detected.")
+        return False
+
+    CACHE["games"] = combined
+    CACHE["last_updated"] = time.time()
+    CACHE["last_snapshot"] = new_hash
+    print(f"🔄 CACHE updated with {len(combined)} game(s)")
+    return True
+
+# Fast polling loop with backoff
+async def refresh_loop(base_interval: int = 5):
+    fail_count = 0
+    max_backoff = 25  # Max wait when no changes
+
     while True:
         if REGISTERED_GAMES:
-            await update_games()
-        await asyncio.sleep(interval)
+            changed = await update_games()
+            if changed:
+                fail_count = 0
+                wait = base_interval
+            else:
+                fail_count += 1
+                wait = base_interval + min(fail_count * 5, max_backoff)
+        else:
+            fail_count += 1
+            wait = base_interval + min(fail_count * 5, max_backoff)
 
-# FastAPI app with async lifespan
+        print(f"⏳ Sleeping for {wait} seconds...\n")
+        await asyncio.sleep(wait)
+
+# FastAPI app with managed lifespan
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(refresh_loop())
+    task = asyncio.create_task(refresh_loop(API_CONFIG.get("refresh_interval", 1)))
     yield
     task.cancel()
     try:
@@ -106,8 +137,13 @@ async def get_all_games():
         "status": 0,
         "data": CACHE["games"],
         "last_updated": CACHE["last_updated"],
-        "registered_games": REGISTERED_GAMES  # Now includes provider info
+        "registered_games": REGISTERED_GAMES
     }
 
 if __name__ == "__main__":
-    uvicorn.run(f"{Path(__file__).stem}:app", host=API_CONFIG.get('host'), port=API_CONFIG.get('port'), reload=API_CONFIG.get('reload'))
+    uvicorn.run(
+        f"{Path(__file__).stem}:app",
+        host=API_CONFIG.get("host"),
+        port=API_CONFIG.get("port"),
+        reload=API_CONFIG.get("reload")
+    )
