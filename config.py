@@ -143,6 +143,7 @@ GAME_CONFIGS = {
     "Super Egypt": GameConfig(False, True, True, None, False, True, "YB"),
     "Power Fortune": GameConfig(False, True, True, None, False, True, "YB"),
     "Dragon Gems": GameConfig(False, True, True, None, False, True, "YB"),
+    "Golden Aztec Mega": GameConfig(False, True, True, None, False, True, "YB"),
     "Fortune Gems 4": GameConfig(False, True, True, None, False, True, "RSG"),
     "Super Ace 2": GameConfig(False, True, True, None, False, True, "RSG"),
 }
