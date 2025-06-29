@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import os, platform, time, threading, random, pyautogui
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 from pynput.mouse import Listener as MouseListener, Button
@@ -414,7 +416,7 @@ def set_location(key):
             if key == 'r':
                 pyautogui.moveTo(x=random_x, y=random_y)
         else:
-            return
+            pyautogui.doubleClick(x=random_x, y=random_y)
     elif key == 'f' and state.feature: # FEATURE
         if state.game == "Fortune Goddess":
             pyautogui.click(x=random_x, y=random_y + 200)
