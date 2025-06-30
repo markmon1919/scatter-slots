@@ -75,5 +75,6 @@ dist/*
 **/node_modules/**
 **/.env*
 **/*.log*
+**/*.csv*
 **/.pnp/**
 **/.pnp.js/**
