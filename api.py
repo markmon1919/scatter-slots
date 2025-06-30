@@ -82,7 +82,7 @@ async def update_games() -> bool:
     return True
 
 # Fast polling loop with backoff
-async def refresh_loop(base_interval: int = 5):
+async def refresh_loop(base_interval: int = 1):
     fail_count = 0
     max_backoff = 25  # Max wait when no changes
 
