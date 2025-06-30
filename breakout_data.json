@@ -203,6 +203,10 @@
     "fortune gems 2": {
       "lowest_low": -35.48,
       "lowest_low_delta": -85.26
+    },
+    "fortune gems 3": {
+      "lowest_low": 29.18,
+      "lowest_low_delta": -0.52
     }
   }
 }

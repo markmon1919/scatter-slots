@@ -47,13 +47,13 @@ async def fetch_game(url: str, name: str, provider: str = 'JILI') -> List[Dict[s
                 response = await client.get(URL, params=PARAMS, headers=HEADERS)
                 if response.status_code == 200:
                     data = response.json().get("data", [])
-                    print(f"✅ Fetched '{name}' [{provider}] - {len(data)} game(s)")
+                    print(f"\n✅ Fetched '{name}' [{provider}] - {len(data)} game(s)")
                     return data
         except httpx.RequestError as e:
-            print(f"⚠️ Network error on attempt {attempt+1} for '{name}': {e}")
+            print(f"\n⚠️ Network error on attempt {attempt+1} for '{name}': {e}")
         await asyncio.sleep(1)
 
-    print(f"❌ Failed to fetch '{name}' after 2 attempts")
+    print(f"\n❌ Failed to fetch '{name}' after 2 attempts")
     return []
 
 # Update cache and detect changes
@@ -72,7 +72,7 @@ async def update_games() -> bool:
 
     new_hash = hash_games(combined)
     if CACHE.get("last_snapshot") == new_hash:
-        print("🔁 No changes detected.")
+        print("\n🔁 No changes detected.")
         return False
 
     CACHE["games"] = combined
@@ -99,7 +99,7 @@ async def refresh_loop(base_interval: int = 5):
             fail_count += 1
             wait = base_interval + min(fail_count * 5, max_backoff)
 
-        print(f"⏳ Sleeping for {wait} seconds...\n")
+        print(f"\n⏳ Sleeping for {wait} seconds...\n")
         await asyncio.sleep(wait)
 
 # FastAPI app with managed lifespan
@@ -121,8 +121,21 @@ async def register_game(game: GameRegistration):
     entry = {"url": game.url.strip(), "name": key, "provider": game.provider}
     if key and all(g["name"] != key for g in REGISTERED_GAMES):
         REGISTERED_GAMES.append(entry)
+        print(f"\n🎰 Registered: {key}\n")
         return {"status": "ok", "message": f"Registered '{key}' with provider '{game.provider}'"}
+    print(f"\n🎰 {key} already registered.\n")
     return {"status": "exists", "message": f"'{key}' already registered"}
+
+@app.post("/deregister")
+async def deregister_game(game: GameRegistration):
+    key = game.name.strip()
+    for i, g in enumerate(REGISTERED_GAMES):
+        if g["name"] == key:
+            REGISTERED_GAMES.pop(i)
+            print(f"\n🎰 De-Registered: {key}\n")
+            return {"status": "ok", "message": f"Deregistered '{key}'"}
+    print(f"\n🎰 {key} not found!")
+    return {"status": "not_found", "message": f"'{key}' not found"}
 
 @app.get("/game")
 async def get_game(name: str = Query(...)):

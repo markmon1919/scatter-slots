@@ -1,0 +1,13 @@
+{
+  "fortune gems": {
+    "name": "Fortune Gems",
+    "jackpot_meter": 40.76,
+    "color": "red",
+    "history": {
+      "10m": 21.56,
+      "1h": 12.43,
+      "3h": -16.99,
+      "6h": 37.5
+    }
+  }
+}

@@ -70,3 +70,10 @@ build/*
 dist/*
 *.spec
 *.py[cod]
+
+# # dependencies
+**/node_modules/**
+**/.env*
+**/*.log*
+**/.pnp/**
+**/.pnp.js/**

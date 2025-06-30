@@ -1115,7 +1115,7 @@ async def get_game_stats(game: str, provider: str, url: str) -> dict:
 
 def get_game_data_from_local_api(game: str):
     # response = requests.get("http://localhost:5555/game", params={"game": game, "provider": provider})
-    response = requests.get("http://localhost:4444/game", params={"name": game})
+    response = requests.get(f"http://localhost:{API_CONFIG.get('port')}/game", params={"name": game})
     return response.json()
 
 def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
@@ -1393,6 +1393,8 @@ if __name__ == "__main__":
                 if state.elapsed >= 60:
                     print("⚠️  No data received in 1 minute.")
                     state.elapsed = 0  # Optional: reset or exit
+            except AttributeError:
+                pass
 
             # Handle timeout signal from countdown
             # try:
@@ -1408,6 +1410,7 @@ if __name__ == "__main__":
         print("\n\t🤖❌  Main program interrupted.")
         stop_event.set()  # Stop the countdown thread
         
+    requests.post(f"http://{API_CONFIG.get('host')}:{API_CONFIG.get('port')}/register", json={'url': url, 'name': game, 'provider': provider})
     alert_thread.join(timeout=1)
     bet_thread.join(timeout=1)
     countdown_thread.join(timeout=1)
