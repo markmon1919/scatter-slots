@@ -1,5 +1,0 @@
-name = "api-jackpot"
-type = "javascript"
-main = "index.js"
-
-compatibility_date = "2025-06-30"

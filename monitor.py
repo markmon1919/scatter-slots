@@ -14,7 +14,7 @@ from queue import Queue as ThQueue, Empty
 #from webdriver_manager.chrome import ChromeDriverManager
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 # from pynput.mouse import Listener as MouseListener, Button
-from config import (GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, TIMEZONE, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, DEFAULT_VOICE, DELAY_RANGE, SPIN_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
+from config import (GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, TIMEZONE, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, DEFAULT_VOICE, DELAY_RANGE, SPIN_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
@@ -1114,8 +1114,9 @@ async def get_game_stats(game: str, provider: str, url: str) -> dict:
     #     return {}
 
 def get_game_data_from_local_api(game: str):
-    # response = requests.get("http://localhost:5555/game", params={"game": game, "provider": provider})
-    response = requests.get(f"http://localhost:{API_CONFIG.get('port')}/game", params={"name": game})
+    # response = requests.get("http://:5555/game", params={"game": game, "provider": provider})
+    # response = requests.get(f"http://localhost:{API_CONFIG.get('port')}/game", params={"name": game})
+    response = requests.get(f"{API_URL}/game", params={"name": game})
     return response.json()
 
 def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
@@ -1127,7 +1128,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
             # data = asyncio.run(get_game_stats(game, provider, url))
             data = get_game_data_from_local_api(game)
 
-            if data:
+            if data and "error" not in data:
                 # LUCKY SPIN HERE
                 # if previous_hash and state.auto_mode and state.dual_slots and state.prev_jackpot_val != 0.0 and state.prev_10m != 0.0 and state.last_pull_delta != 0.0:
                 if state.auto_mode and state.last_pull_delta != 0:
@@ -1144,14 +1145,20 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                             else:
                                 spin_queue.put(("low", None, None))
                             
+                # parsed_data = extract_game_data(data)
                 current_hash = hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
+                # print('\n\tTEST DATA >> ', data.get('min10'), data.get('hr1'))
+                # print(f"\tTEST HASH EQUAL >> {f'{BLRED}True{RES}' if current_hash == previous_hash else 'False'}\n")
+
+                # print(f"{data.get('min10')} --> {data.get('min10')}")
+                # print('state.prev_10m --> ', state.prev_10m)
 
                 if current_hash != previous_hash:
                     print('\nELAPSED >>> ', state.elapsed)
                     previous_hash = current_hash
                     data_queue.put(data)
             else:
-                print(f"⚠️  Game '{game}' not found")
+                print(f"\n\t⚠️  Game '{game}' not found")
         except Exception as e:
             print(f"🤖❌  {e}")
 
@@ -1291,7 +1298,13 @@ if __name__ == "__main__":
     #         print("\tPlease enter a valid number.")
 
     provider = GAME_CONFIGS.get(game).provider
-    requests.post(f"http://{API_CONFIG.get('host')}:{API_CONFIG.get('port')}/register", json={'url': url, 'name': game, 'provider': provider})
+    # requests.post(f"http://{API_CONFIG.get('host')}:{API_CONFIG.get('port')}/register", json={'url': url, 'name': game, 'provider': provider})
+    # Register a game
+    requests.post(f"{API_URL}/register", json={
+        'url': url,
+        'name': game,
+        'provider': provider
+    })
 
     print(f"\n\n\t{BLNK}{DGRY}🔔 Select Casino{RES}\n")
 
@@ -1340,6 +1353,22 @@ if __name__ == "__main__":
             if not left_slot:
                 enable_right = input(f"\n\n\tDo you want to enable {MAG}Right Slot{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
                 right_slot = enable_right in ("y", "yes")
+
+    if 'localhost' not in API_URL:
+        hostname = API_URL.replace("https://", "").split('/')[0]
+        # Run `dig +short hostname`
+        result = subprocess.run(["dig", "+short", hostname], capture_output=True, text=True)
+        # Extract the resolved IP (first line of stdout)
+        resolved_ip = result.stdout.strip().split("\n")[0]
+
+        print(f"\n\tResolved IP: {resolved_ip}")
+        print(f"\tExpected VPS IP: {VPS_IP}")
+
+        if resolved_ip != VPS_IP:
+            print("\n\t❌  IP Mismatch! Change your QOS.. Exiting...\n")
+            sys.exit(1)
+        else:
+            print("\n\t✅  IP Match!")
 
     print(f"\n\n\t... {WHTE}Starting real-time jackpot monitor.\n\t    Press ({BLMAG}Ctrl+C{RES}{WHTE}) to stop.{RES}\n")
     
@@ -1393,9 +1422,6 @@ if __name__ == "__main__":
                 if state.elapsed >= 60:
                     print("⚠️  No data received in 1 minute.")
                     state.elapsed = 0  # Optional: reset or exit
-            except AttributeError:
-                pass
-
             # Handle timeout signal from countdown
             # try:
             #     result = countdown_queue.get_nowait()
@@ -1410,7 +1436,16 @@ if __name__ == "__main__":
         print("\n\t🤖❌  Main program interrupted.")
         stop_event.set()  # Stop the countdown thread
         
-    requests.post(f"http://{API_CONFIG.get('host')}:{API_CONFIG.get('port')}/register", json={'url': url, 'name': game, 'provider': provider})
+    # requests.post(f"http://{API_CONFIG.get('host')}:{API_CONFIG.get('port')}/deregister", json={'url': url, 'name': game, 'provider': provider})
+    requests.post(f"{API_URL}/deregister", json={
+        'url': url,
+        'name': game,
+        'provider': provider
+    })
+    
+    if os.path.exists(DATA_FILE):
+        os.remove(DATA_FILE)
+
     alert_thread.join(timeout=1)
     bet_thread.join(timeout=1)
     countdown_thread.join(timeout=1)

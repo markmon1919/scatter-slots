@@ -1,0 +1,7 @@
+asyncio
+datetime
+fastapi[standard]
+httpx
+pydantic
+typing
+uvicorn[standard]
