@@ -1,13 +1,13 @@
 {
-  "fortune gems": {
-    "name": "Fortune Gems",
-    "jackpot_meter": 40.76,
-    "color": "red",
+  "super ace": {
+    "name": "Super Ace",
+    "jackpot_meter": 86.16,
+    "color": "green",
     "history": {
-      "10m": 21.56,
-      "1h": 12.43,
-      "3h": -16.99,
-      "6h": 37.5
+      "10m": 52.47,
+      "1h": 11.27,
+      "3h": 75.51,
+      "6h": -13.56
     }
   }
 }

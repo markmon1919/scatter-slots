@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import asyncio, httpx, time, uvicorn, hashlib, json
-from config import API_CONFIG
+# from config import API_CONFIG
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query
-from pathlib import Path
+# from pathlib import Path
 from pydantic import BaseModel
 from typing import Dict, Any, List
 
@@ -78,7 +78,7 @@ async def update_games() -> bool:
     CACHE["games"] = combined
     CACHE["last_updated"] = time.time()
     CACHE["last_snapshot"] = new_hash
-    print(f"🔄 CACHE updated with {len(combined)} game(s)")
+    print(f"\n🔄 CACHE updated with {len(combined)} game(s)")
     return True
 
 # Fast polling loop with backoff
@@ -105,7 +105,7 @@ async def refresh_loop(base_interval: int = 1):
 # FastAPI app with managed lifespan
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(refresh_loop(API_CONFIG.get("refresh_interval", 1)))
+    task = asyncio.create_task(refresh_loop(1))
     yield
     task.cancel()
     try:
@@ -153,10 +153,10 @@ async def get_all_games():
         "registered_games": REGISTERED_GAMES
     }
 
-if __name__ == "__main__":
-    uvicorn.run(
-        f"{Path(__file__).stem}:app",
-        host=API_CONFIG.get("host"),
-        port=API_CONFIG.get("port"),
-        reload=API_CONFIG.get("reload")
-    )
+# if __name__ == "__main__":
+#     uvicorn.run(
+#         f"{Path(__file__).stem}:app",
+#         host=API_CONFIG.get("host"),
+#         port=API_CONFIG.get("port"),
+#         reload=API_CONFIG.get("reload")
+#     )

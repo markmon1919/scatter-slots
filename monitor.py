@@ -14,7 +14,7 @@ from queue import Queue as ThQueue, Empty
 #from webdriver_manager.chrome import ChromeDriverManager
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 # from pynput.mouse import Listener as MouseListener, Button
-from config import (GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, TIMEZONE, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, DEFAULT_VOICE, DELAY_RANGE, SPIN_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
+from config import (GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, TIMEZONE, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, DEFAULT_VOICE, DELAY_RANGE, SPIN_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
@@ -1114,8 +1114,9 @@ async def get_game_stats(game: str, provider: str, url: str) -> dict:
     #     return {}
 
 def get_game_data_from_local_api(game: str):
-    # response = requests.get("http://localhost:5555/game", params={"game": game, "provider": provider})
-    response = requests.get(f"http://localhost:{API_CONFIG.get('port')}/game", params={"name": game})
+    # response = requests.get("http://:5555/game", params={"game": game, "provider": provider})
+    # response = requests.get(f"http://localhost:{API_CONFIG.get('port')}/game", params={"name": game})
+    response = requests.get(f"{API_URL}/game", params={"name": game})
     return response.json()
 
 def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
@@ -1127,24 +1128,29 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
             # data = asyncio.run(get_game_stats(game, provider, url))
             data = get_game_data_from_local_api(game)
 
-            if data:
+            if data and "error" not in data:
                 # LUCKY SPIN HERE
                 # if previous_hash and state.auto_mode and state.dual_slots and state.prev_jackpot_val != 0.0 and state.prev_10m != 0.0 and state.last_pull_delta != 0.0:
-                if state.auto_mode and state.last_pull_delta != 0:
-                    # print("data.get('min10') | state.prev_10m : ", data.get('min10'), state.prev_10m)
-                    # if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m:
-                    if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m or state.is_breakout or state.is_delta_breakout:
-                        get_delta = round(data.get('min10') - state.prev_10m, 2)
-                        if get_delta < state.last_pull_delta and get_delta <= -30 and data.get('min10') <= -30:
-                            if state.dual_slots:
-                                slots = ["left", "right"]
-                                random.shuffle(slots)  # Randomize order
-                                spin_queue.put(("low", None, slots[0]))
-                                spin_queue.put(("low", None, slots[1]))
-                            else:
-                                spin_queue.put(("low", None, None))
+                # if state.auto_mode and state.last_pull_delta != 0:
+                #     # print("data.get('min10') | state.prev_10m : ", data.get('min10'), state.prev_10m)
+                #     # if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m:
+                #     if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m or state.is_breakout or state.is_delta_breakout:
+                #         get_delta = round(data.get('min10') - state.prev_10m, 2)
+                #         if get_delta < state.last_pull_delta and get_delta <= -30 and data.get('min10') <= -30:
+                #             if state.dual_slots:
+                #                 slots = ["left", "right"]
+                #                 random.shuffle(slots)  # Randomize order
+                #                 spin_queue.put(("low", None, slots[0]))
+                #                 spin_queue.put(("low", None, slots[1]))
+                #             else:
+                #                 spin_queue.put(("low", None, None))
                             
+                # parsed_data = extract_game_data(data)
                 current_hash = hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
+                print('\nTEST >> ', data)
+
+                # print(f"{data.get('min10')} --> {data.get('min10')}")
+                # print('state.prev_10m --> ', state.prev_10m)
 
                 if current_hash != previous_hash:
                     print('\nELAPSED >>> ', state.elapsed)
@@ -1291,7 +1297,13 @@ if __name__ == "__main__":
     #         print("\tPlease enter a valid number.")
 
     provider = GAME_CONFIGS.get(game).provider
-    requests.post(f"http://{API_CONFIG.get('host')}:{API_CONFIG.get('port')}/register", json={'url': url, 'name': game, 'provider': provider})
+    # requests.post(f"http://{API_CONFIG.get('host')}:{API_CONFIG.get('port')}/register", json={'url': url, 'name': game, 'provider': provider})
+    # Register a game
+    requests.post(f"{API_URL}/register", json={
+        'url': url,
+        'name': game,
+        'provider': provider
+    })
 
     print(f"\n\n\t{BLNK}{DGRY}🔔 Select Casino{RES}\n")
 
@@ -1393,8 +1405,8 @@ if __name__ == "__main__":
                 if state.elapsed >= 60:
                     print("⚠️  No data received in 1 minute.")
                     state.elapsed = 0  # Optional: reset or exit
-            except AttributeError:
-                pass
+            # except AttributeError:
+            #     pass
 
             # Handle timeout signal from countdown
             # try:
@@ -1410,7 +1422,12 @@ if __name__ == "__main__":
         print("\n\t🤖❌  Main program interrupted.")
         stop_event.set()  # Stop the countdown thread
         
-    requests.post(f"http://{API_CONFIG.get('host')}:{API_CONFIG.get('port')}/register", json={'url': url, 'name': game, 'provider': provider})
+    # requests.post(f"http://{API_CONFIG.get('host')}:{API_CONFIG.get('port')}/deregister", json={'url': url, 'name': game, 'provider': provider})
+    requests.post(f"{API_URL}/deregister", json={
+        'url': url,
+        'name': game,
+        'provider': provider
+    })
     alert_thread.join(timeout=1)
     bet_thread.join(timeout=1)
     countdown_thread.join(timeout=1)

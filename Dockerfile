@@ -1,39 +1,18 @@
-# syntax = docker/dockerfile:1
+FROM python:3.13-slim
 
-# Adjust NODE_VERSION as desired
-ARG NODE_VERSION=20.18.0
-FROM node:${NODE_VERSION}-slim as base
-
-LABEL fly_launch_runtime="NodeJS"
-
-# NodeJS app lives here
 WORKDIR /app
 
-# Set production environment
-ENV NODE_ENV=production
+COPY requirements.txt .
 
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Throw-away build stage to reduce size of final image
-FROM base as build
+RUN apt update && \
+    apt install -y iputils-ping lsof vim
 
-# Install packages needed to build node modules
-RUN apt-get update -qq && \
-    apt-get install -y python-is-python3 pkg-config build-essential 
+COPY api.py .
 
-# Install node modules
-COPY --link package.json package-lock.json ./
-RUN npm install
+COPY config.py .
 
-# Copy application code
-COPY --link . .
+EXPOSE 8080
 
-
-
-# Final stage for app image
-FROM base
-
-# Copy built application
-COPY --from=build /app /app
-
-# Start the server by default, this can be overwritten at runtime
-CMD [ "npm", "run", "start" ]
+CMD [ "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8080" ]

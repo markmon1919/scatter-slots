@@ -208,5 +208,27 @@
       "lowest_low": 29.18,
       "lowest_low_delta": -0.52
     }
+  },
+  "2025-07-01": {
+    "fortune gems 2": {
+      "lowest_low": 41.33,
+      "lowest_low_delta": 48.76
+    },
+    "fortune gems": {
+      "lowest_low": -52.79,
+      "lowest_low_delta": -61.96
+    },
+    "fortune monkey": {
+      "lowest_low": -49.55,
+      "lowest_low_delta": 0.0
+    },
+    "wisdom of athena 1000": {
+      "lowest_low": 2.07,
+      "lowest_low_delta": 0.0
+    },
+    "super ace": {
+      "lowest_low": 52.47,
+      "lowest_low_delta": 57.57
+    }
   }
 }

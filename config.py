@@ -174,4 +174,7 @@ API_CONFIG = {
     "refresh_interval": 1  # fast initial poll interval
 }
 
+# API_URL = "http://localhost:8080"
+API_URL = "https://my-api-sg.fly.dev"
+
 CASINOS = [ "JLJL9", "Bingo Plus", "Casino Plus", "Rollem 88", "2JL" ]
