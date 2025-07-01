@@ -174,7 +174,8 @@ API_CONFIG = {
     "refresh_interval": 1  # fast initial poll interval
 }
 
-# API_URL = "http://localhost:8080"
-API_URL = "https://my-api-sg.fly.dev"
+API_URL = "http://localhost:8080"
+# API_URL = "https://api-jackpot.fly.dev"
+VPS_IP = "66.241.124.83"
 
 CASINOS = [ "JLJL9", "Bingo Plus", "Casino Plus", "Rollem 88", "2JL" ]

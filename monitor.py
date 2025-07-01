@@ -14,7 +14,7 @@ from queue import Queue as ThQueue, Empty
 #from webdriver_manager.chrome import ChromeDriverManager
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 # from pynput.mouse import Listener as MouseListener, Button
-from config import (GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, TIMEZONE, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, DEFAULT_VOICE, DELAY_RANGE, SPIN_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
+from config import (GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, TIMEZONE, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, DEFAULT_VOICE, DELAY_RANGE, SPIN_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
@@ -1131,23 +1131,24 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
             if data and "error" not in data:
                 # LUCKY SPIN HERE
                 # if previous_hash and state.auto_mode and state.dual_slots and state.prev_jackpot_val != 0.0 and state.prev_10m != 0.0 and state.last_pull_delta != 0.0:
-                # if state.auto_mode and state.last_pull_delta != 0:
-                #     # print("data.get('min10') | state.prev_10m : ", data.get('min10'), state.prev_10m)
-                #     # if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m:
-                #     if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m or state.is_breakout or state.is_delta_breakout:
-                #         get_delta = round(data.get('min10') - state.prev_10m, 2)
-                #         if get_delta < state.last_pull_delta and get_delta <= -30 and data.get('min10') <= -30:
-                #             if state.dual_slots:
-                #                 slots = ["left", "right"]
-                #                 random.shuffle(slots)  # Randomize order
-                #                 spin_queue.put(("low", None, slots[0]))
-                #                 spin_queue.put(("low", None, slots[1]))
-                #             else:
-                #                 spin_queue.put(("low", None, None))
+                if state.auto_mode and state.last_pull_delta != 0:
+                    # print("data.get('min10') | state.prev_10m : ", data.get('min10'), state.prev_10m)
+                    # if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m:
+                    if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m or state.is_breakout or state.is_delta_breakout:
+                        get_delta = round(data.get('min10') - state.prev_10m, 2)
+                        if get_delta < state.last_pull_delta and get_delta <= -30 and data.get('min10') <= -30:
+                            if state.dual_slots:
+                                slots = ["left", "right"]
+                                random.shuffle(slots)  # Randomize order
+                                spin_queue.put(("low", None, slots[0]))
+                                spin_queue.put(("low", None, slots[1]))
+                            else:
+                                spin_queue.put(("low", None, None))
                             
                 # parsed_data = extract_game_data(data)
                 current_hash = hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
-                print('\nTEST >> ', data)
+                # print('\n\tTEST DATA >> ', data.get('min10'), data.get('hr1'))
+                # print(f"\tTEST HASH EQUAL >> {f'{BLRED}True{RES}' if current_hash == previous_hash else 'False'}\n")
 
                 # print(f"{data.get('min10')} --> {data.get('min10')}")
                 # print('state.prev_10m --> ', state.prev_10m)
@@ -1157,7 +1158,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     previous_hash = current_hash
                     data_queue.put(data)
             else:
-                print(f"⚠️  Game '{game}' not found")
+                print(f"\n\t⚠️  Game '{game}' not found")
         except Exception as e:
             print(f"🤖❌  {e}")
 
@@ -1353,6 +1354,22 @@ if __name__ == "__main__":
                 enable_right = input(f"\n\n\tDo you want to enable {MAG}Right Slot{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
                 right_slot = enable_right in ("y", "yes")
 
+    if 'localhost' not in API_URL:
+        hostname = API_URL.replace("https://", "").split('/')[0]
+        # Run `dig +short hostname`
+        result = subprocess.run(["dig", "+short", hostname], capture_output=True, text=True)
+        # Extract the resolved IP (first line of stdout)
+        resolved_ip = result.stdout.strip().split("\n")[0]
+
+        print(f"\n\tResolved IP: {resolved_ip}")
+        print(f"\tExpected VPS IP: {VPS_IP}")
+
+        if resolved_ip != VPS_IP:
+            print("\n\t❌  IP Mismatch! Change your QOS.. Exiting...\n")
+            sys.exit(1)
+        else:
+            print("\n\t✅  IP Match!")
+
     print(f"\n\n\t... {WHTE}Starting real-time jackpot monitor.\n\t    Press ({BLMAG}Ctrl+C{RES}{WHTE}) to stop.{RES}\n")
     
     breakout = load_breakout_memory(game)
@@ -1405,9 +1422,6 @@ if __name__ == "__main__":
                 if state.elapsed >= 60:
                     print("⚠️  No data received in 1 minute.")
                     state.elapsed = 0  # Optional: reset or exit
-            # except AttributeError:
-            #     pass
-
             # Handle timeout signal from countdown
             # try:
             #     result = countdown_queue.get_nowait()
@@ -1428,6 +1442,10 @@ if __name__ == "__main__":
         'name': game,
         'provider': provider
     })
+    
+    if os.path.exists(DATA_FILE):
+        os.remove(DATA_FILE)
+
     alert_thread.join(timeout=1)
     bet_thread.join(timeout=1)
     countdown_thread.join(timeout=1)
