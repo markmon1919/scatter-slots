@@ -481,11 +481,12 @@ def compare_data(prev: dict, current: dict):
     state.last_spin = None
     state.last_trend = None
 
-    if state.auto_mode and state.dual_slots:
-        slots = ["left", "right"]
-        bet_queue.put((bet_level, True, slots[0]))
-        time.sleep(random.randint(*SPIN_DELAY_RANGE))
-        bet_queue.put((bet_level, True, slots[1]))
+    # if state.auto_mode and state.dual_slots:
+    #     slots = ["left", "right"]
+    #     bet_queue.put((bet_level, True, slots[0]))
+    #     time.sleep(random.randint(*SPIN_DELAY_RANGE))
+    #     bet_queue.put((bet_level, True, slots[1]))
+
     # elif state.left_slot:
     #     bet_queue.put((bet_level, True, slots[0]))
     # elif state.right_slot:
