@@ -1120,10 +1120,9 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
             data = get_game_data_from_local_api(game)
 
             if data and "error" not in data:
-                spin_done = False
                 # LUCKY SPIN HERE
                 # if previous_hash and state.auto_mode and state.dual_slots and state.prev_jackpot_val != 0.0 and state.prev_10m != 0.0 and state.last_pull_delta != 0.0:
-                if state.auto_mode and state.last_pull_delta != 0 and not spin_done:
+                if state.auto_mode and state.last_pull_delta != 0:
                     # print(f"\nstate.elapsed: {state.elapsed}")
                     # print(f"\nstate.curr_color: {state.curr_color}")
                     # print("data.get('min10') | state.prev_10m : ", data.get('min10'), state.prev_10m)
@@ -1142,10 +1141,8 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                                 random.shuffle(slots)  # Randomize order
                                 spin_queue.put(("low", None, slots[0]))
                                 spin_queue.put(("low", None, slots[1]))
-                                spin_done = True
                             else:
                                 spin_queue.put(("low", None, None))
-                                spin_done = True
                             
                 # parsed_data = extract_game_data(data)
                 current_hash = hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
@@ -1446,6 +1443,7 @@ if __name__ == "__main__":
                 save_current_data(all_data)
             except Empty:
                 state.elapsed += 1
+                response = requests.get(f"{api_server}/game", params={"name": game})
                 if state.elapsed >= 60:
                     print("⚠️  No data received in 1 minute.")
                     state.elapsed = 0  # Optional: reset or exit
