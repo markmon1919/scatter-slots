@@ -1,8 +1,8 @@
 #!/usr/bin/env .venv/bin/python
 # -*- coding: utf-8 -*-
 
-import asyncio, httpx, time, uvicorn, hashlib, json, copy
-# from config import API_CONFIG
+import asyncio, httpx, random, time, uvicorn, hashlib, json, copy
+from config import USER_AGENTS#, API_CONFIG
 from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query
@@ -36,31 +36,57 @@ def hash_games(games: List[Dict[str, Any]]) -> str:
     return hashlib.sha256(json.dumps(stable_games, sort_keys=True).encode()).hexdigest()
 
 # Fetch game data
-async def fetch_game(url: str, name: str, provider: str = 'JILI') -> List[Dict[str, Any]]:
+async def fetch_game(
+    url: str,
+    name: str,
+    provider: str = 'JILI',
+    user_agent: str = None
+) -> List[Dict[str, Any]]:
+    if user_agent is None:
+        user_agent = random.choice(USER_AGENTS)
+
+    if "Wild Ape" in name and "PG" in provider:
+        name = f"{name.replace("x10000", "#3258")}" if "x10000" in name else f"{name}#3258"
+
     URL = f"{url}/api/games"
+
     HEADERS = {
         "Accept": "application/json",
         "Referer": url,
-        "User-Agent": "Mozilla/5.0"
+        "User-Agent": user_agent
     }
+
     PARAMS = {
         "name": name,
         "manuf": provider,
         "requestFrom": "H6"
     }
+    
+    timeout = httpx.Timeout(connect=2.0, read=5.0, write=5.0, pool=5.0)
 
-    timeout = httpx.Timeout(connect=0.5, read=2.0, write=1.0, pool=2.0)
-
-    for attempt in range(2):
+    for attempt in range(1, 3):
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
+                HEADERS.update({"User-Agent": random.choice(USER_AGENTS)})
                 response = await client.get(URL, params=PARAMS, headers=HEADERS)
+
+                print(f"\nAttempt {attempt} → HTTP {response.status_code} → {response.url}")
+
                 if response.status_code == 200:
-                    data = response.json().get("data", [])
+                    try:
+                        data = response.json().get("data", [])
+                    except ValueError:
+                        print(f"\n❌ Response not JSON for '{name}': {response.text}")
+                        return []
+
                     print(f"\n✅ Fetched '{name}' [{provider}] - {len(data)} game(s)\n")
                     return data
+                else:
+                    print(f"\n❌ Non-200 response for '{name}': {response.status_code} → {response.text[:200]}")
+
         except httpx.RequestError as e:
-            print(f"\n⚠️ Network error on attempt {attempt+1} for '{name}': {e}\n")
+            print(f"\n⚠️ Network error on attempt {attempt} for '{name}': {e}\n")
+
         await asyncio.sleep(1)
 
     print(f"\n❌ Failed to fetch '{name}' after 2 attempts\n")
@@ -170,7 +196,11 @@ async def deregister_game(game: GameRegistration):
 
 @app.get("/game")
 async def get_game(name: str = Query(...)):
+    if "Wild Ape" in name:
+        name = f"{name.replace("x10000", "#3258")}" if "x10000" in name else f"{name}#3258"
+
     normalized = name.replace(" ", "").lower()
+
     for game in CACHE["games"]:
         if game["name"].replace(" ", "").lower() == normalized:
             LAST_ACCESSED[normalized] = datetime.utcnow()

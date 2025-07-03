@@ -104,6 +104,8 @@ GAME_CONFIGS = {
     "Royal Fishing": GameConfig(False, True, True, None, False, True, "JILI"),
     "Wild Bounty Showdown": GameConfig(False, True, True, None, False, False, "PG"),
     "Wild Bandito": GameConfig(False, True, True, None, False, False, "PG"),
+    "Wild Ape": GameConfig(False, True, True, None, False, False, "PG"),
+    "Wild Ape x10000": GameConfig(False, True, True, None, False, False, "PG"),
     "Wild Fireworks": GameConfig(False, True, True, None, False, False, "PG"),
     "Legendary Monkey King": GameConfig(False, True, True, None, False, False, "PG"),
     "Fortune Mouse": GameConfig(False, True, True, None, False, False, "PG"),
@@ -174,8 +176,27 @@ API_CONFIG = {
     "refresh_interval": 1  # fast initial poll interval
 }
 
-API_URL = "http://localhost:8080"
+API_URL = [ "http://localhost:8080", "https://api-jackpot.fly.dev" ]
 # API_URL = "https://api-jackpot.fly.dev"
 VPS_IP = "66.241.124.83"
 
 CASINOS = [ "JLJL9", "Bingo Plus", "Casino Plus", "Rollem 88", "2JL" ]
+
+USER_AGENTS = [
+    # Windows Chrome
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/114.0.5735.91 Safari/537.36",
+    # Mac Chrome
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+    "Version/16.1 Safari/605.1.15",
+    # Mobile Android Chrome
+    "Mozilla/5.0 (Linux; Android 11; Pixel 5) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/113.0.0.0 Mobile Safari/537.36",
+    # iPhone Safari
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 15_3 like Mac OS X) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+    "Version/15.3 Mobile/15E148 Safari/604.1"
+]

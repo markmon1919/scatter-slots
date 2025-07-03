@@ -65,11 +65,13 @@ override.tf.json
 assumerole_template.ps1
 
 # Python files
-__pycache__
+**/__pycache__/**
+**/.venv/**
 build/*
 dist/*
 *.spec
 *.py[cod]
+*.pyc
 
 # # dependencies
 **/node_modules/**

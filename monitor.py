@@ -20,7 +20,6 @@ from config import (GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_
 
 @dataclass
 class AutoState:
-    breakout: dict = field(default_factory=dict)
     spin: bool = False
     auto_spin: bool = True
     turbo: bool = True
@@ -29,6 +28,7 @@ class AutoState:
     widescreen: bool = False
     provider: str = None
     
+    api_server: str = None
     auto_mode: bool = False
     dual_slots: bool = False
     left_slot: bool = False
@@ -41,15 +41,17 @@ class AutoState:
     # move: bool = False
     # auto_play: bool = False
 
+    breakout: dict = field(default_factory=dict)
+    is_delta_breakout: bool = False
+    is_breakout: bool = False
     bet: int = 0
     bet_lvl: str = None
     last_spin: str = None
     last_trend: str = None
     last_pull_delta: float = 0.0
+    curr_color: str = None
     prev_jackpot_val: float = 0.0
     prev_10m: float = 0.0
-    is_delta_breakout: bool = False
-    is_breakout: bool = False
     elapsed: int = 0
 
 
@@ -71,7 +73,8 @@ def get_sleep_times(auto_play_menu: bool=False):
         'd': 0.001  # 400 cps
     }
 
-def configure_game(game: str, breakout: dict, auto_mode: bool=False, dual_slots: bool=False, left_slot: bool=False, right_slot: bool=False):
+def configure_game(game: str, breakout: dict, api_server: str, auto_mode: bool=False, dual_slots: bool=False, left_slot: bool=False, right_slot: bool=False):
+    state.api_server = api_server
     state.breakout = breakout
     state.auto_mode = auto_mode
     state.dual_slots = dual_slots
@@ -162,8 +165,10 @@ def save_current_data(data):
 #     return hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
 def compare_data(prev: dict, current: dict):
+    state.curr_color = current['color']
     state.prev_jackpot_val = pct(current['jackpot_meter'])
     state.prev_10m = pct(current['history'].get('10m'))
+
     slots = ["left", "right"]
     bet_level = None
     result = None
@@ -600,21 +605,27 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
             if time_left == 10:
                 alert_queue.put((None, f"{time_left} seconds remaining"))
                 spin_done = False
-            elif time_left < 6:
+            elif time_left <= 5:
+                # End countdown spin (luckyBet)
                 print('spin done >>> ', spin_done)
-                if state.auto_mode and state.elapsed == 0 and not spin_done:
+                if state.auto_mode and state.elapsed == 0 and state.curr_color == 'red' and not spin_done:
                     time.sleep(random.randint(*DELAY_RANGE))
                     if state.dual_slots:
+                        print(f"\nstate.elapsed: {state.elapsed}")
+                        print(f"\nstate.curr_color: {state.curr_color}")
+                        print(f"\n[test]state.prev_jackpot_val: {state.prev_jackpot_val}")
+                        print(f"\n[test]state.prev_10m: {state.prev_10m}")
+                        print(f"\n[test]state.last_pull_delta: {state.last_pull_delta}")
                         directions = ["left", "right"]
-                        random.shuffle(directions)  # Randomize order
+                        random.shuffle(directions)
                         spin_queue.put(("low", None, directions[0]))
                         spin_queue.put(("low", None, directions[1]))
                     else:
                         spin_queue.put(("low", None, None))
                     spin_done = True 
                     print('after spin done >>> ', spin_done)
-                elif state.elapsed != 0:
-                    spin_done = False
+                # elif state.elapsed != 0:
+                #     spin_done = True
                 alert_queue.put((None, time_left))
             timer = f"\t⏳ {text}: {BWHTE}... {BLNK}{BLRED}{secs}{RES}"
         else:
@@ -693,7 +704,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None):
     while True:
         try:
             bet_level, chosen_spin, slot_position = spin_queue.get(timeout=10)
-            spin_types = [ "normal", "board_spin", "board_spin_delay", "board_spin_turbo", "auto_spin", "turbo" ]
+            spin_types = [ "normal", "board_spin", "board_spin_delay", "board_spin_turbo", "board_spin_tap", "auto_spin", "turbo" ]
             chosen_spin = random.choice(spin_types) if chosen_spin is None else chosen_spin
             # chosen_spin = "normal"
             # bet_values = list()
@@ -780,21 +791,41 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None):
                     pyautogui.click(x=cx, y=cy)
                 elif provider in [ "PG", "PP" ]:
                     pyautogui.press('space')
-                    time.sleep(random.randint(*SPIN_DELAY_RANGE))
+                    time.sleep(random.randint(*DELAY_RANGE))
                     pyautogui.click(x=cx, y=cy)
             elif chosen_spin == "board_spin_delay":
                 if provider in [ "JILI", "FC" ]:
-                    pyautogui.click(x=cx, y=cy)
-                elif provider in [ "PG", "PP" ]:
-                    pyautogui.press('space')
+                    pyautogui.moveTo(x=cx, y=cy)
+                    pyautogui.mouseDown()
                     time.sleep(random.randint(*DELAY_RANGE))
-                    pyautogui.click(x=cx, y=cy)
+                    pyautogui.mouseUp()
+                elif provider in [ "PG", "PP" ]:
+                    pyautogui.keyDown('space')
+                    time.sleep(random.randint(*DELAY_RANGE))
+                    pyautogui.keyUp('space')
             elif chosen_spin == "board_spin_turbo":
                 if provider in [ "JILI", "FC" ]:
                     pyautogui.doubleClick(x=cx, y=cy)
                 elif provider in [ "PG", "PP" ]:
                     pyautogui.press('space')
                     pyautogui.click(x=cx, y=cy)
+            elif chosen_spin == "board_spin_tap":
+                if provider in [ "FC" ]:
+                    pyautogui.moveTo(x=cx, y=cy)
+                    pyautogui.mouseDown()
+                    time.sleep(random.randint(*DELAY_RANGE))
+                    pyautogui.mouseUp()
+                    pyautogui.click(x=cx, y=cy)
+                elif provider in [ "JILI", "PG", "PP" ]:
+                    pyautogui.keyDown('space')
+                    time.sleep(random.randint(*DELAY_RANGE))
+                    pyautogui.keyUp('space')
+                    action = random.choice([
+                        lambda: pyautogui.press('space'),
+                        lambda: pyautogui.doubleClick(x=cx, y=cy),
+                        lambda: pyautogui.click(x=cx, y=cy)
+                    ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 315)
+                    action()
             elif chosen_spin == "auto_spin":
                 if slot_position is None and state.widescreen and provider == "JILI":
                     pyautogui.doubleClick(x=cx + 380, y=cy + 325)
@@ -1116,7 +1147,7 @@ async def get_game_stats(game: str, provider: str, url: str) -> dict:
 def get_game_data_from_local_api(game: str):
     # response = requests.get("http://:5555/game", params={"game": game, "provider": provider})
     # response = requests.get(f"http://localhost:{API_CONFIG.get('port')}/game", params={"name": game})
-    response = requests.get(f"{API_URL}/game", params={"name": game})
+    response = requests.get(f"{api_server}/game", params={"name": game})
     return response.json()
 
 def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
@@ -1132,11 +1163,19 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                 # LUCKY SPIN HERE
                 # if previous_hash and state.auto_mode and state.dual_slots and state.prev_jackpot_val != 0.0 and state.prev_10m != 0.0 and state.last_pull_delta != 0.0:
                 if state.auto_mode and state.last_pull_delta != 0:
+                    print(f"\nstate.elapsed: {state.elapsed}")
+                    print(f"\nstate.curr_color: {state.curr_color}")
                     # print("data.get('min10') | state.prev_10m : ", data.get('min10'), state.prev_10m)
                     # if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m:
                     if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m or state.is_breakout or state.is_delta_breakout:
                         get_delta = round(data.get('min10') - state.prev_10m, 2)
-                        if get_delta < state.last_pull_delta and get_delta <= -30 and data.get('min10') <= -30:
+                        print(f"\ndata.get('value'): {data.get('value')}")
+                        print(f"\nstate.prev_jackpot_val: {state.prev_jackpot_val}")
+                        print(f"\ndata.get('min10'): {data.get('min10')}")
+                        print(f"\nstate.prev_10m: {state.prev_10m}")
+                        if get_delta < state.last_pull_delta and get_delta <= -50 and data.get('min10') <= -50:
+                            print(f"\nget_delta: {get_delta}")
+                            print(f"\nstate.last_pull_delta: {state.last_pull_delta}")
                             if state.dual_slots:
                                 slots = ["left", "right"]
                                 random.shuffle(slots)  # Randomize order
@@ -1158,7 +1197,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     previous_hash = current_hash
                     data_queue.put(data)
             else:
-                print(f"\n\t⚠️  Game '{game}' not found")
+                print(f"\n\t⚠️  Game '{game}' not found") if state.elapsed != 0 else None
         except Exception as e:
             print(f"🤖❌  {e}")
 
@@ -1298,9 +1337,50 @@ if __name__ == "__main__":
     #         print("\tPlease enter a valid number.")
 
     provider = GAME_CONFIGS.get(game).provider
-    # requests.post(f"http://{API_CONFIG.get('host')}:{API_CONFIG.get('port')}/register", json={'url': url, 'name': game, 'provider': provider})
+
+    print(f"\n\n\t{BLNK}{DGRY}🔔 Select Server{RES}\n")
+    print("  ".join(f"\n\t[{WHTE}{i}{RES}] - {'Local' if 'localhost' in host else 'VPS'}" for i, host in enumerate(API_URL, start=1)))
+
+    while True:
+        user_input = input(f"\n\n\t🔔 Choose your server ({DGRY}default: 1{RES}): ").strip()
+        
+        if not user_input:
+            api_server = API_URL[0]
+            print("\t⚠️  Invalid input. Defaulting to Local network.")
+            break
+        elif user_input.isdigit():
+            choice = int(user_input)
+            if 1 <= choice <= len(API_URL):
+                api_server = API_URL[choice - 1]
+                print(f"\n\tSelected: {WHTE}{'Local' if 'localhost' in api_server else 'VPS'}{RES}")
+                break
+        else:
+            api_server = API_URL[0]
+            print("\t⚠️  Invalid input. Defaulting to Local network.")
+            break
+
+    if 'localhost' in api_server:
+        print(f"{os.getpid()}")
+        # subprocess.run(["bash", "killall.sh", f"{os.getpid()}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # subprocess.run(["bash", "api_restart.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        subprocess.run(["bash", "flush_dns.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        hostname = api_server.replace("https://", "").split('/')[0]
+        result = subprocess.run(["dig", "+short", hostname], capture_output=True, text=True)
+        resolved_ip = result.stdout.strip().split("\n")[0]
+
+        # print(f"\n\tResolved IP: {resolved_ip}")
+        # print(f"\tExpected VPS IP: {VPS_IP}")
+
+        if resolved_ip != VPS_IP:
+            print("\n\t❌  IP Mismatch! Change your QOS.. Exiting...\n")
+            sys.exit(1)
+        else:
+            print("\n\t✅  IP Match!")
+
     # Register a game
-    requests.post(f"{API_URL}/register", json={
+    requests.post(f"{api_server}/register", json={
         'url': url,
         'name': game,
         'provider': provider
@@ -1354,28 +1434,12 @@ if __name__ == "__main__":
                 enable_right = input(f"\n\n\tDo you want to enable {MAG}Right Slot{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
                 right_slot = enable_right in ("y", "yes")
 
-    if 'localhost' not in API_URL:
-        hostname = API_URL.replace("https://", "").split('/')[0]
-        # Run `dig +short hostname`
-        result = subprocess.run(["dig", "+short", hostname], capture_output=True, text=True)
-        # Extract the resolved IP (first line of stdout)
-        resolved_ip = result.stdout.strip().split("\n")[0]
-
-        print(f"\n\tResolved IP: {resolved_ip}")
-        print(f"\tExpected VPS IP: {VPS_IP}")
-
-        if resolved_ip != VPS_IP:
-            print("\n\t❌  IP Mismatch! Change your QOS.. Exiting...\n")
-            sys.exit(1)
-        else:
-            print("\n\t✅  IP Match!")
-
     print(f"\n\n\t... {WHTE}Starting real-time jackpot monitor.\n\t    Press ({BLMAG}Ctrl+C{RES}{WHTE}) to stop.{RES}\n")
     
     breakout = load_breakout_memory(game)
 
     state = AutoState()
-    settings = configure_game(game, breakout, auto_mode, dual_slots, left_slot, right_slot)
+    settings = configure_game(game, breakout, api_server, auto_mode, dual_slots, left_slot, right_slot)
 
     stop_event = threading.Event()
     reset_event = threading.Event()
