@@ -41,11 +41,14 @@ async def fetch_game(
     url: str,
     name: str,
     provider: str = 'JILI',
-    user_agent: str = None
+    user_agent: str = None,
+    requestFrom: str = None
 ) -> List[Dict[str, Any]]:
     REQ_FROM = [ "H5", "H6" ]
-    if user_agent is None:
+
+    if user_agent is None or requestFrom is None:
         user_agent = random.choice(USER_AGENTS)
+        requestFrom = random.choice(REQ_FROM)
 
     if "Wild Ape" in name and "PG" in provider:
         name = f"{name.replace("x10000", "#3258")}" if "x10000" in name else f"{name}#3258"
@@ -63,7 +66,7 @@ async def fetch_game(
     PARAMS = {
         "name": name,
         "manuf": provider,
-        "requestFrom": REQ_FROM
+        "requestFrom": requestFrom
     }
     
     timeout = httpx.Timeout(connect=2.0, read=5.0, write=5.0, pool=5.0)

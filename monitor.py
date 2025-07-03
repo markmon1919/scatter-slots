@@ -1193,7 +1193,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                 # print('state.prev_10m --> ', state.prev_10m)
 
                 if current_hash != previous_hash:
-                    print('\nELAPSED >>> ', state.elapsed)
+                    print(f"\n\tElapsed Time: {state.elapsed}")
                     previous_hash = current_hash
                     data_queue.put(data)
             else:
