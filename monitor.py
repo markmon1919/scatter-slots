@@ -201,13 +201,13 @@ def compare_data(prev: dict, current: dict):
         sign = "+" if delta > 0 else ""
         diff = f"({YEL}Prev{RES}: {prev_jackpot}{percent} {LMAG}Δ{RES}: {sign}{colored_delta}{percent})"
 
-        print(f"\n\n\t\t⏰ {LBLU}{TIMEZONE.strftime('%I:%M %p')}{LGRY} {TIMEZONE.strftime('%a')}{RES}")
+        print(f"\n\n\t\t⏰ {LBLU}{TIMEZONE.strftime('%I:%M:%S %p')}{LGRY} {TIMEZONE.strftime('%a')}{RES}")
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {BLRED}{current_jackpot}{RES}{percent} {diff} ✅") if current_jackpot < prev_jackpot else \
             print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {current_jackpot}{percent} {diff} ❌")
         print(f"\n\t{jackpot_bar} {BLRED if current_jackpot < prev_jackpot else BLGRE}{current_jackpot}{percent}\n")
     else:
-        print(f"\n\n\t\t⏰ {LBLU}{TIMEZONE.strftime('%I:%M %p')}{LGRY} {TIMEZONE.strftime('%a')}{RES}")
+        print(f"\n\n\t\t⏰ {LBLU}{TIMEZONE.strftime('%I:%M:%S %p')}{LGRY} {TIMEZONE.strftime('%a')}{RES}")
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {current_jackpot}{percent}")
         print(f"\n\t{jackpot_bar} {current_jackpot}{percent}\n")
@@ -602,10 +602,11 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
             if time_left == 10:
                 alert_queue.put((None, f"{time_left} seconds remaining"))
                 spin_done = False
-                random.shuffle(slots)
-                bet_queue.put((None, True, slots[0]))
-                time.sleep(random.randint(*SPIN_DELAY_RANGE))
-                bet_queue.put((None, True, slots[1]))
+                if state.auto_mode and state.dual_slots:
+                    random.shuffle(slots)
+                    bet_queue.put(("low", True, slots[0]))
+                    time.sleep(random.randint(*SPIN_DELAY_RANGE))
+                    bet_queue.put(("low", True, slots[1]))
             elif time_left <= 5:
                 # End countdown spin (luckyBet)
                 # print('spin done >>> ', spin_done)
@@ -688,7 +689,7 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
 
             if slot_position is not None and state.auto_mode:
                 pyautogui.doubleClick(x=cx, y=y2)
-                time.sleep(0.5)
+                time.sleep(1)
                 if extra_bet and game.startswith("Fortune Gems"):
                     pyautogui.click(x=cx-228, y=cy-126)
                     pyautogui.doubleClick(x=cx-100, y=cy-126)
