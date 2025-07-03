@@ -74,7 +74,7 @@ async def fetch_game(
                 HEADERS.update({"User-Agent": random.choice(USER_AGENTS), "requestFrom": random.choice(REQ_FROM)})
                 response = await client.get(URL, params=PARAMS, headers=HEADERS)
 
-                print(f"\n{WHTE}Attempt #{attempt}{RES} → HTTP {BWHTE}{response.status_code}{RES} \n→ {WHTE}{response.url}{RES}")
+                print(f"\n{WHTE}Attempt #{attempt}{RES} → HTTP {BWHTE}{response.status_code}{RES} \n→ {BLU}{response.url}{RES}")
 
                 if response.status_code == 200:
                     try:
