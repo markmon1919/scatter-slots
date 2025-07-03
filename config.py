@@ -146,8 +146,12 @@ GAME_CONFIGS = {
     "Power Fortune": GameConfig(False, True, True, None, False, True, "YB"),
     "Dragon Gems": GameConfig(False, True, True, None, False, True, "YB"),
     "Golden Aztec Mega": GameConfig(False, True, True, None, False, True, "YB"),
+    "Fortune Gems (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
+    "Fortune Gems 2 (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
+    "Fortune Gems 3 (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
     "Fortune Gems 4": GameConfig(False, True, True, None, False, True, "RSG"),
     "Super Ace 2": GameConfig(False, True, True, None, False, True, "RSG"),
+    "Maya Gems": GameConfig(False, True, True, None, False, True, "R88"),
 }
 
 DEFAULT_GAME_CONFIG = GameConfig(False, True, True, None, False, False, None)
@@ -161,6 +165,8 @@ PROVIDERS = {
     "PP": ProviderProps("Pragmatic Play", LMAG),
     "JDB": ProviderProps("JDB", LBLU),
     "YB": ProviderProps("Yellow Bat", LYEL),
+    "JFF": ProviderProps("JFF", MAG),
+    "R88": ProviderProps("R88", LGRY),
     "RSG": ProviderProps("Royal Slot Gaming", CYN),
 }
 

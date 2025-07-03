@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import asyncio, httpx, random, time, uvicorn, hashlib, json, copy
-from config import USER_AGENTS#, API_CONFIG
+from config import (USER_AGENTS, #API_CONFIG,
+                    LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query
@@ -42,11 +43,14 @@ async def fetch_game(
     provider: str = 'JILI',
     user_agent: str = None
 ) -> List[Dict[str, Any]]:
+    REQ_FROM = [ "H5", "H6" ]
     if user_agent is None:
         user_agent = random.choice(USER_AGENTS)
 
     if "Wild Ape" in name and "PG" in provider:
         name = f"{name.replace("x10000", "#3258")}" if "x10000" in name else f"{name}#3258"
+    elif "Fortune Gems" or "Super Ace" in name:
+        name = name.split("(", 1)[0].strip()
 
     URL = f"{url}/api/games"
 
@@ -59,7 +63,7 @@ async def fetch_game(
     PARAMS = {
         "name": name,
         "manuf": provider,
-        "requestFrom": "H6"
+        "requestFrom": REQ_FROM
     }
     
     timeout = httpx.Timeout(connect=2.0, read=5.0, write=5.0, pool=5.0)
@@ -67,10 +71,10 @@ async def fetch_game(
     for attempt in range(1, 3):
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
-                HEADERS.update({"User-Agent": random.choice(USER_AGENTS)})
+                HEADERS.update({"User-Agent": random.choice(USER_AGENTS), "requestFrom": random.choice(REQ_FROM)})
                 response = await client.get(URL, params=PARAMS, headers=HEADERS)
 
-                print(f"\nAttempt {attempt} → HTTP {response.status_code} → {response.url}")
+                print(f"\n{WHTE}Attempt #{attempt}{RES} → HTTP {BWHTE}{response.status_code}{RES} → {response.url}")
 
                 if response.status_code == 200:
                     try:
@@ -79,7 +83,7 @@ async def fetch_game(
                         print(f"\n❌ Response not JSON for '{name}': {response.text}")
                         return []
 
-                    print(f"\n✅ Fetched '{name}' [{provider}] - {len(data)} game(s)\n")
+                    print(f"\n✅ Fetched {BMAG}'{name}' [{provider}]{RES} - {len(data)} game(s)\n")
                     return data
                 else:
                     print(f"\n❌ Non-200 response for '{name}': {response.status_code} → {response.text[:200]}")
@@ -111,7 +115,6 @@ async def update_games() -> bool:
 
     new_hash = hash_games(combined)
     previous_hash = CACHE.get("last_snapshot")
-    print(f"\nHash Equal: {'\033[91mTrue\033[0m' if new_hash == previous_hash else 'False'}\n")
 
     if new_hash == previous_hash:
         print("\n🔁 No changes detected.\n")
@@ -120,7 +123,7 @@ async def update_games() -> bool:
     CACHE["games"] = combined
     CACHE["last_updated"] = time.time()
     CACHE["last_snapshot"] = new_hash
-    print(f"\n🔄 CACHE updated with {len(combined)} game(s)")
+    print(f"\n🔄 CACHE updated with {len(combined)} game(s) -->" f"{BLYEL}{[(g['name'], round(g.get('value', 0), 2)) for g in combined]}{RES}")
     return True
 
 # Auto-remove inactive games
@@ -137,7 +140,7 @@ def auto_deregister_inactive():
     for game in inactive_games:
         REGISTERED_GAMES.remove(game)
         LAST_ACCESSED.pop(game["name"].replace(" ", "").lower(), None)
-        print(f"\n🕛 Auto-deregistered: {game['name']} (inactive > {TIMEOUT_SECONDS}s)\n")
+        print(f"\n🕛 Auto-deregistered: {LGRY}{game['name']}{RES} (inactive > {TIMEOUT_SECONDS}s)\n")
 
 # Background polling loop
 async def refresh_loop(base_interval: int = 1):
@@ -177,7 +180,7 @@ async def register_game(game: GameRegistration):
     if key and all(g["name"] != key for g in REGISTERED_GAMES):
         REGISTERED_GAMES.append(entry)
         LAST_ACCESSED[key.replace(" ", "").lower()] = datetime.utcnow()
-        print(f"\n🎰 Registered: {key}\n")
+        print(f"\n🎰 Registered: {BLRED}{key}{RES}\n")
         return {"status": "ok", "message": f"Registered '{key}' with provider '{game.provider}'"}
     print(f"\n🎰 {key} already registered.\n")
     return {"status": "exists", "message": f"'{key}' already registered"}
@@ -189,7 +192,7 @@ async def deregister_game(game: GameRegistration):
         if g["name"] == key:
             REGISTERED_GAMES.pop(i)
             LAST_ACCESSED.pop(key.replace(" ", "").lower(), None)
-            print(f"\n🎰 De-Registered: {key}\n")
+            print(f"\n🎰 De-Registered: {LGRY}{key}{RES}\n")
             return {"status": "ok", "message": f"Deregistered '{key}'"}
     print(f"\n🎰 {key} not found!")
     return {"status": "not_found", "message": f"'{key}' not found"}
@@ -198,6 +201,8 @@ async def deregister_game(game: GameRegistration):
 async def get_game(name: str = Query(...)):
     if "Wild Ape" in name:
         name = f"{name.replace("x10000", "#3258")}" if "x10000" in name else f"{name}#3258"
+    elif "Fortune Gems" or "Super Ace" in name:
+        name = name.split("(", 1)[0].strip()
 
     normalized = name.replace(" ", "").lower()
 

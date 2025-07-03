@@ -787,14 +787,14 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None):
                 else:
                     pyautogui.press('space')
             elif chosen_spin == "board_spin":  # Click confirm during first board spin    
-                if provider in [ "JILI", "FC" ]:
+                if provider in [ "JILI", "FC", "JFF", "R88" ]:
                     pyautogui.click(x=cx, y=cy)
                 elif provider in [ "PG", "PP" ]:
                     pyautogui.press('space')
                     time.sleep(random.randint(*DELAY_RANGE))
                     pyautogui.click(x=cx, y=cy)
             elif chosen_spin == "board_spin_delay":
-                if provider in [ "JILI", "FC" ]:
+                if provider in [ "JILI", "FC", "JFF", "R88" ]:
                     pyautogui.moveTo(x=cx, y=cy)
                     pyautogui.mouseDown()
                     time.sleep(random.randint(*DELAY_RANGE))
@@ -804,7 +804,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None):
                     time.sleep(random.randint(*DELAY_RANGE))
                     pyautogui.keyUp('space')
             elif chosen_spin == "board_spin_turbo":
-                if provider in [ "JILI", "FC" ]:
+                if provider in [ "JILI", "FC", "JFF", "R88" ]:
                     pyautogui.doubleClick(x=cx, y=cy)
                 elif provider in [ "PG", "PP" ]:
                     pyautogui.press('space')
@@ -816,7 +816,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None):
                     time.sleep(random.randint(*DELAY_RANGE))
                     pyautogui.mouseUp()
                     pyautogui.click(x=cx, y=cy)
-                elif provider in [ "JILI", "PG", "PP" ]:
+                elif provider in [ "JILI", "PG", "PP", "JFF", "R88" ]:
                     pyautogui.keyDown('space')
                     time.sleep(random.randint(*DELAY_RANGE))
                     pyautogui.keyUp('space')
@@ -827,7 +827,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None):
                     ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 315)
                     action()
             elif chosen_spin == "auto_spin":
-                if slot_position is None and state.widescreen and provider == "JILI":
+                if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
                     pyautogui.doubleClick(x=cx + 380, y=cy + 325)
                 else:
                     action = random.choice([
@@ -837,7 +837,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None):
                     ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 315)
                     action()
             elif chosen_spin == "turbo":
-                if slot_position is None and state.widescreen and provider == "JILI":
+                if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
                     pyautogui.doubleClick(x=cx + 450, y=cy + 325)
                 else:
                     action = random.choice([
@@ -1335,7 +1335,6 @@ if __name__ == "__main__":
     #             print("\tInvalid choice. Try again.")
     #     except ValueError:
     #         print("\tPlease enter a valid number.")
-
     provider = GAME_CONFIGS.get(game).provider
 
     print(f"\n\n\t{BLNK}{DGRY}🔔 Select Server{RES}\n")
