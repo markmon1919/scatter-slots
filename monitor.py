@@ -586,6 +586,7 @@ def play_alert(bet_level: str=None, say: str=None):
 
 def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, countdown_queue: ThQueue, seconds: int = 60):
     time_left = seconds
+    slots = ["left", "right"]
     
     while not stop_event.is_set():
         if reset_event.is_set():
@@ -601,6 +602,7 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
             if time_left == 10:
                 alert_queue.put((None, f"{time_left} seconds remaining"))
                 spin_done = False
+                random.shuffle(slots)
                 bet_queue.put((None, True, slots[0]))
                 time.sleep(random.randint(*SPIN_DELAY_RANGE))
                 bet_queue.put((None, True, slots[1]))
@@ -615,10 +617,9 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
                         # print(f"\n[test]state.prev_jackpot_val: {state.prev_jackpot_val}")
                         # print(f"\n[test]state.prev_10m: {state.prev_10m}")
                         # print(f"\n[test]state.last_pull_delta: {state.last_pull_delta}")
-                        directions = ["left", "right"]
-                        random.shuffle(directions)
-                        spin_queue.put(("low", None, directions[0]))
-                        spin_queue.put(("low", None, directions[1]))
+                        random.shuffle(slots)
+                        spin_queue.put(("low", None, slots[0]))
+                        spin_queue.put(("low", None, slots[1]))
                     else:
                         spin_queue.put(("low", None, None))
                     spin_done = True 
