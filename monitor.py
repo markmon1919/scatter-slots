@@ -525,6 +525,8 @@ def pct(p):
 
 def load_breakout_memory(game: str):
     today = now_time().strftime("%Y-%m-%d")
+    print('Load Today >>> ', today)
+
     if os.path.exists(BREAKOUT_FILE):
         with open(BREAKOUT_FILE, 'r') as f:
             data = json.load(f)
@@ -534,6 +536,7 @@ def load_breakout_memory(game: str):
 
 def save_breakout_memory(game: str, lowest_low: float, lowest_low_delta: float):
     today = now_time().strftime("%Y-%m-%d")
+    print('SAVE Today >>> ', today)
     data = {}
 
     if os.path.exists(BREAKOUT_FILE):

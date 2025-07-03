@@ -151,7 +151,7 @@ async def refresh_loop(base_interval: int = 1):
     max_backoff = 25
 
     while True:
-        auto_deregister_inactive()
+        # auto_deregister_inactive()
 
         if REGISTERED_GAMES:
             changed = await update_games()
