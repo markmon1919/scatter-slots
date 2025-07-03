@@ -611,11 +611,11 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
                 if state.auto_mode and state.elapsed == 0 and state.curr_color == 'red' and not spin_done:
                     time.sleep(random.randint(*DELAY_RANGE))
                     if state.dual_slots:
-                        print(f"\nstate.elapsed: {state.elapsed}")
-                        print(f"\nstate.curr_color: {state.curr_color}")
-                        print(f"\n[test]state.prev_jackpot_val: {state.prev_jackpot_val}")
-                        print(f"\n[test]state.prev_10m: {state.prev_10m}")
-                        print(f"\n[test]state.last_pull_delta: {state.last_pull_delta}")
+                        # print(f"\nstate.elapsed: {state.elapsed}")
+                        # print(f"\nstate.curr_color: {state.curr_color}")
+                        # print(f"\n[test]state.prev_jackpot_val: {state.prev_jackpot_val}")
+                        # print(f"\n[test]state.prev_10m: {state.prev_10m}")
+                        # print(f"\n[test]state.last_pull_delta: {state.last_pull_delta}")
                         directions = ["left", "right"]
                         random.shuffle(directions)
                         spin_queue.put(("low", None, directions[0]))
@@ -1163,19 +1163,19 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                 # LUCKY SPIN HERE
                 # if previous_hash and state.auto_mode and state.dual_slots and state.prev_jackpot_val != 0.0 and state.prev_10m != 0.0 and state.last_pull_delta != 0.0:
                 if state.auto_mode and state.last_pull_delta != 0:
-                    print(f"\nstate.elapsed: {state.elapsed}")
-                    print(f"\nstate.curr_color: {state.curr_color}")
+                    # print(f"\nstate.elapsed: {state.elapsed}")
+                    # print(f"\nstate.curr_color: {state.curr_color}")
                     # print("data.get('min10') | state.prev_10m : ", data.get('min10'), state.prev_10m)
                     # if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m:
                     if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m or state.is_breakout or state.is_delta_breakout:
                         get_delta = round(data.get('min10') - state.prev_10m, 2)
-                        print(f"\ndata.get('value'): {data.get('value')}")
-                        print(f"\nstate.prev_jackpot_val: {state.prev_jackpot_val}")
-                        print(f"\ndata.get('min10'): {data.get('min10')}")
-                        print(f"\nstate.prev_10m: {state.prev_10m}")
+                        # print(f"\ndata.get('value'): {data.get('value')}")
+                        # print(f"\nstate.prev_jackpot_val: {state.prev_jackpot_val}")
+                        # print(f"\ndata.get('min10'): {data.get('min10')}")
+                        # print(f"\nstate.prev_10m: {state.prev_10m}")
                         if get_delta < state.last_pull_delta and get_delta <= -50 and data.get('min10') <= -50:
-                            print(f"\nget_delta: {get_delta}")
-                            print(f"\nstate.last_pull_delta: {state.last_pull_delta}")
+                            # print(f"\nget_delta: {get_delta}")
+                            # print(f"\nstate.last_pull_delta: {state.last_pull_delta}")
                             if state.dual_slots:
                                 slots = ["left", "right"]
                                 random.shuffle(slots)  # Randomize order

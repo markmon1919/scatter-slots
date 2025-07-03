@@ -108,7 +108,7 @@ async def update_games() -> bool:
                 combined.append(game)
 
     if not combined:
-        print("\n⚠️ No game data returned, skipping update.\n")
+        print(f"\n⚠️ {DGRY}No game data returned, skipping update.{RES}\n")
         return False
 
     print("\n🔍 Combined Snapshot:", [(g["id"], g["name"], round(g.get("value", 0), 2)) for g in combined])
@@ -117,7 +117,7 @@ async def update_games() -> bool:
     previous_hash = CACHE.get("last_snapshot")
 
     if new_hash == previous_hash:
-        print("\n🔁 No changes detected.\n")
+        print(f"\n🔁 {DGRY}No changes detected.{RES}\n")
         return False
 
     CACHE["games"] = combined
