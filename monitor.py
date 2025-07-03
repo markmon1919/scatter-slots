@@ -1129,12 +1129,12 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     # print("data.get('min10') | state.prev_10m : ", data.get('min10'), state.prev_10m)
                     # if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m:
                     get_delta = round(data.get('min10') - state.prev_10m, 2)
-                    if (data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m) or (data.get('min10') < state.breakout["lowest_low"] and state.breakout["lowest_low"] <= -50) or (get_delta < state.breakout["lowest_low_delta"] and state.breakout["lowest_low_delta"] <= -50):
+                    if (data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m) or (data.get('min10') < state.breakout["lowest_low"] and state.breakout["lowest_low"] < 0) or (get_delta < state.breakout["lowest_low_delta"] and state.breakout["lowest_low_delta"] < 0):
                         # print(f"\ndata.get('value'): {data.get('value')}")
                         # print(f"\nstate.prev_jackpot_val: {state.prev_jackpot_val}")
                         # print(f"\ndata.get('min10'): {data.get('min10')}")
                         # print(f"\nstate.prev_10m: {state.prev_10m}")
-                        if (get_delta < state.last_pull_delta and get_delta <= -50 and data.get('min10') <= -50) or (data.get('min10') < state.breakout["lowest_low"] and state.breakout["lowest_low"] <= -50) or (get_delta < state.breakout["lowest_low_delta"] and state.breakout["lowest_low_delta"] <= -50):
+                        if (get_delta < state.last_pull_delta and get_delta <= -50 and data.get('min10') <= -50) or (data.get('min10') < state.breakout["lowest_low"] and state.breakout["lowest_low"] < 0) or (get_delta < state.breakout["lowest_low_delta"] and state.breakout["lowest_low_delta"] < 0):
                             # print(f"\nget_delta: {get_delta}")
                             # print(f"\nstate.last_pull_delta: {state.last_pull_delta}")
                             if state.dual_slots:
