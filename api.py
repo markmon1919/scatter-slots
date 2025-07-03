@@ -19,7 +19,7 @@ CACHE: Dict[str, Any] = {
 }
 REGISTERED_GAMES: List[Dict[str, str]] = []
 LAST_ACCESSED: Dict[str, datetime] = {}
-TIMEOUT_SECONDS = 60  # Auto-deregister timeout
+TIMEOUT_SECONDS = 120  # Auto-deregister timeout
 
 class GameRegistration(BaseModel):
     url: str
