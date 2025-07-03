@@ -191,8 +191,6 @@ def compare_data(prev: dict, current: dict):
     jackpot_bar = get_jackpot_bar(current_jackpot, current['color'])
     is_breakout = False
     is_breakout_delta = False
-    state.is_breakout = False
-    state.is_delta_breakout = False
     lowest_low = state.breakout["lowest_low"]
     lowest_low_delta = state.breakout["lowest_low_delta"]
 
@@ -244,7 +242,6 @@ def compare_data(prev: dict, current: dict):
                         lowest_low = round(new_num, 2)
                         state.breakout["lowest_low"] = lowest_low
                         is_breakout = True
-                        state.is_breakout = True
                         alert_queue.put((None, "break_out"))
                         updated = True
 
@@ -252,7 +249,6 @@ def compare_data(prev: dict, current: dict):
                         lowest_low_delta = round(delta, 2)
                         state.breakout["lowest_low_delta"] = lowest_low_delta
                         is_breakout_delta = True
-                        state.is_delta_breakout = True
                         alert_queue.put((None, "delta_break_out"))
                         updated = True
 
@@ -1167,13 +1163,13 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     # print(f"\nstate.curr_color: {state.curr_color}")
                     # print("data.get('min10') | state.prev_10m : ", data.get('min10'), state.prev_10m)
                     # if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m:
-                    if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m or state.is_breakout or state.is_delta_breakout:
-                        get_delta = round(data.get('min10') - state.prev_10m, 2)
+                    get_delta = round(data.get('min10') - state.prev_10m, 2)
+                    if (data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m) or data.get('min10') < state.breakout["lowest_low"] or get_delta < state.breakout["lowest_low_delta"]:
                         # print(f"\ndata.get('value'): {data.get('value')}")
                         # print(f"\nstate.prev_jackpot_val: {state.prev_jackpot_val}")
                         # print(f"\ndata.get('min10'): {data.get('min10')}")
                         # print(f"\nstate.prev_10m: {state.prev_10m}")
-                        if get_delta < state.last_pull_delta and get_delta <= -50 and data.get('min10') <= -50:
+                        if (get_delta < state.last_pull_delta and get_delta <= -50 and data.get('min10') <= -50) or data.get('min10') < state.breakout["lowest_low"] or get_delta < state.breakout["lowest_low_delta"]:
                             # print(f"\nget_delta: {get_delta}")
                             # print(f"\nstate.last_pull_delta: {state.last_pull_delta}")
                             if state.dual_slots:
