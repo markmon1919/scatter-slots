@@ -5,7 +5,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from collections import namedtuple
 
-TIMEZONE = datetime.now(ZoneInfo("Asia/Manila"))
+TIMEZONE = ZoneInfo("Asia/Manila")
 BREAKOUT_FILE = "breakout_data.json"
 DATA_FILE = "previous_data.json"
 

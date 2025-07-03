@@ -164,11 +164,8 @@ def save_current_data(data):
 # def hash_data(data):
 #     return hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
-def now_datetime():
-    today = datetime.now(TIMEZONE)
-    return f"{LBLU}{today.strftime('%I:%M:%S %p')}{LGRY} {today.strftime('%a')}{RES}"
-
 def compare_data(prev: dict, current: dict):
+    today = f"{LBLU}{TIMEZONE.strftime('%I:%M:%S %p')}{LGRY} {TIMEZONE.strftime('%a')}{RES}"
     state.curr_color = current['color']
     state.prev_jackpot_val = pct(current['jackpot_meter'])
     state.prev_10m = pct(current['history'].get('10m'))
@@ -205,13 +202,13 @@ def compare_data(prev: dict, current: dict):
         sign = "+" if delta > 0 else ""
         diff = f"({YEL}Prev{RES}: {prev_jackpot}{percent} {LMAG}Δ{RES}: {sign}{colored_delta}{percent})"
 
-        print(f"\n\n\t\t⏰ {now_datetime()}")
+        print(f"\n\n\t\t⏰ {today}")
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {BLRED}{current_jackpot}{RES}{percent} {diff} ✅") if current_jackpot < prev_jackpot else \
             print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {current_jackpot}{percent} {diff} ❌")
         print(f"\n\t{jackpot_bar} {BLRED if current_jackpot < prev_jackpot else BLGRE}{current_jackpot}{percent}\n")
     else:
-        print(f"\n\n\t\t⏰ {now_datetime()}")
+        print(f"\n\n\t\t⏰ {today}")
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {current_jackpot}{percent}")
         print(f"\n\t{jackpot_bar} {current_jackpot}{percent}\n")
