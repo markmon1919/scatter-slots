@@ -482,6 +482,7 @@ def compare_data(prev: dict, current: dict):
     state.last_trend = None
 
     if state.auto_mode and state.dual_slots:
+        slots = ["left", "right"]
         bet_queue.put((bet_level, True, slots[0]))
         time.sleep(random.randint(*SPIN_DELAY_RANGE))
         bet_queue.put((bet_level, True, slots[1]))
@@ -600,7 +601,6 @@ def play_alert(bet_level: str=None, say: str=None):
 
 def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, countdown_queue: ThQueue, seconds: int = 60):
     time_left = seconds
-    slots = ["left", "right"]
     
     while not stop_event.is_set():
         if reset_event.is_set():
@@ -627,6 +627,7 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
                         # print(f"\n[test]state.prev_jackpot_val: {state.prev_jackpot_val}")
                         # print(f"\n[test]state.prev_10m: {state.prev_10m}")
                         # print(f"\n[test]state.last_pull_delta: {state.last_pull_delta}")
+                        slots = ["left", "right"]
                         random.shuffle(slots)
                         spin_queue.put(("low", None, slots[0]))
                         spin_queue.put(("low", None, slots[1]))
@@ -683,7 +684,7 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
 def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=None):
     while True:
         try:
-            bet_level, extra_bet, slot_position = bet_queue.get(timeout=4)
+            bet_level, extra_bet, slot_position = bet_queue.get(timeout=10)
 
             if state.left_slot and slot_position == "left":
                 center_x, center_y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("center_y")

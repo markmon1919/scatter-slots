@@ -37,7 +37,7 @@ SOUND_ENABLED = True
 
 # === Default Timeouts ===
 DELAY_RANGE = (2, 4)  # Used with random.randint(*DELAY_RANGE)
-SPIN_DELAY_RANGE = (10, 15)  # Used with random.randint(*SPIN_DELAY_RANGE)
+SPIN_DELAY_RANGE = (2, 4)  # Used with random.randint(*SPIN_DELAY_RANGE)
 
 # COLORS
 RED='\033[31m'; GRE='\033[32m'; YEL='\033[33m'
