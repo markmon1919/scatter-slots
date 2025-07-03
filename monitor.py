@@ -164,6 +164,10 @@ def save_current_data(data):
 # def hash_data(data):
 #     return hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
+def now_datetime():
+    today = datetime.now(TIMEZONE)
+    return f"{LBLU}{today.strftime('%I:%M:%S %p')}{LGRY} {today.strftime('%a')}{RES}"
+
 def compare_data(prev: dict, current: dict):
     state.curr_color = current['color']
     state.prev_jackpot_val = pct(current['jackpot_meter'])
@@ -201,13 +205,13 @@ def compare_data(prev: dict, current: dict):
         sign = "+" if delta > 0 else ""
         diff = f"({YEL}Prev{RES}: {prev_jackpot}{percent} {LMAG}Δ{RES}: {sign}{colored_delta}{percent})"
 
-        print(f"\n\n\t\t⏰ {LBLU}{TIMEZONE.strftime('%I:%M:%S %p')}{LGRY} {TIMEZONE.strftime('%a')}{RES}")
+        print(f"\n\n\t\t⏰ {now_datetime()}")
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {BLRED}{current_jackpot}{RES}{percent} {diff} ✅") if current_jackpot < prev_jackpot else \
             print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {current_jackpot}{percent} {diff} ❌")
         print(f"\n\t{jackpot_bar} {BLRED if current_jackpot < prev_jackpot else BLGRE}{current_jackpot}{percent}\n")
     else:
-        print(f"\n\n\t\t⏰ {LBLU}{TIMEZONE.strftime('%I:%M:%S %p')}{LGRY} {TIMEZONE.strftime('%a')}{RES}")
+        print(f"\n\n\t\t⏰ {now_datetime()}")
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {current_jackpot}{percent}")
         print(f"\n\t{jackpot_bar} {current_jackpot}{percent}\n")
@@ -352,6 +356,15 @@ def compare_data(prev: dict, current: dict):
                             bet_level = "low"
                         else:
                             bet_level = None
+                            
+                        if state.auto_mode and state.dual_slots:
+                            bet_queue.put((bet_level, True, slots[0]))
+                            time.sleep(random.randint(*SPIN_DELAY_RANGE))
+                            bet_queue.put((bet_level, True, slots[1]))
+                        elif state.left_slot:
+                            bet_queue.put((bet_level, True, slots[0]))
+                        elif state.right_slot:
+                            bet_queue.put((bet_level, True, slots[1]))
 
                         # AUTO SPIN
                         # if state.auto_mode and bet_level in [ "max", "high" ] and score >= 5:
@@ -407,6 +420,7 @@ def compare_data(prev: dict, current: dict):
                         #         bet_queue.put((bet_level, True, slots[0]))
                         #     elif state.right_slot:
                         #         bet_queue.put((bet_level, True, slots[1]))
+                        
 
         print(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:  {colored_value}{percent} {diff}") if period == "10m" and pct(value) >= 0 else \
             print(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}: {colored_value}{percent} {diff}") if period == "10m" and pct(value) < 0 else \
@@ -602,11 +616,6 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
             if time_left == 10:
                 alert_queue.put((None, f"{time_left} seconds remaining"))
                 spin_done = False
-                if state.auto_mode and state.dual_slots:
-                    random.shuffle(slots)
-                    bet_queue.put(("low", True, slots[0]))
-                    time.sleep(random.randint(*SPIN_DELAY_RANGE))
-                    bet_queue.put(("low", True, slots[1]))
             elif time_left <= 5:
                 # End countdown spin (luckyBet)
                 # print('spin done >>> ', spin_done)
@@ -674,7 +683,7 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
 def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=None):
     while True:
         try:
-            bet_level, extra_bet, slot_position = bet_queue.get(timeout=10)
+            bet_level, extra_bet, slot_position = bet_queue.get(timeout=4)
 
             if state.left_slot and slot_position == "left":
                 center_x, center_y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("center_y")
