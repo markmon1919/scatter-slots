@@ -686,9 +686,9 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
         try:
             bet_level, extra_bet, slot_position = bet_queue.get(timeout=10)
 
-            if state.left_slot and slot_position == "left":
+            if state.left_slot or slot_position == "left":
                 center_x, center_y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("center_y")
-            elif state.right_slot and slot_position == "right":
+            elif state.right_slot or slot_position == "right":
                 center_x, center_y = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("center_y")
             else:
                 center_x, center_y = SCREEN_POS.get("center_x"), SCREEN_POS.get("center_y")
@@ -1119,9 +1119,10 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
             data = get_game_data_from_local_api(game)
 
             if data and "error" not in data:
+                spin_done = False
                 # LUCKY SPIN HERE
                 # if previous_hash and state.auto_mode and state.dual_slots and state.prev_jackpot_val != 0.0 and state.prev_10m != 0.0 and state.last_pull_delta != 0.0:
-                if state.auto_mode and state.last_pull_delta != 0:
+                if state.auto_mode and state.last_pull_delta != 0 and not spin_done:
                     # print(f"\nstate.elapsed: {state.elapsed}")
                     # print(f"\nstate.curr_color: {state.curr_color}")
                     # print("data.get('min10') | state.prev_10m : ", data.get('min10'), state.prev_10m)
@@ -1140,8 +1141,10 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                                 random.shuffle(slots)  # Randomize order
                                 spin_queue.put(("low", None, slots[0]))
                                 spin_queue.put(("low", None, slots[1]))
+                                spin_done = True
                             else:
                                 spin_queue.put(("low", None, None))
+                                spin_done = True
                             
                 # parsed_data = extract_game_data(data)
                 current_hash = hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
