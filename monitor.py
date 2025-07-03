@@ -601,9 +601,12 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
             if time_left == 10:
                 alert_queue.put((None, f"{time_left} seconds remaining"))
                 spin_done = False
+                bet_queue.put((None, True, slots[0]))
+                time.sleep(random.randint(*SPIN_DELAY_RANGE))
+                bet_queue.put((None, True, slots[1]))
             elif time_left <= 5:
                 # End countdown spin (luckyBet)
-                print('spin done >>> ', spin_done)
+                # print('spin done >>> ', spin_done)
                 if state.auto_mode and state.elapsed == 0 and state.curr_color == 'red' and not spin_done:
                     time.sleep(random.randint(*DELAY_RANGE))
                     if state.dual_slots:
@@ -619,7 +622,7 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
                     else:
                         spin_queue.put(("low", None, None))
                     spin_done = True 
-                    print('after spin done >>> ', spin_done)
+                    # print('after spin done >>> ', spin_done)
                 # elif state.elapsed != 0:
                 #     spin_done = True
                 alert_queue.put((None, time_left))
@@ -1090,56 +1093,6 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None):
     # except KeyboardInterrupt:
     #     print("\n\n[!] Program interrupted by user. Exiting cleanly...\n")
 
-async def get_game_stats(game: str, provider: str, url: str) -> dict:
-    URL = f"{url}/api/games"
-
-    PARAMS = {
-        "manuf": provider,
-        "name": game,
-        "requestFrom": "H5"
-    }
-
-    HEADERS = {
-        "Accept": "application/json",
-        "Referer": "https://www.helpslot.win/",
-        "User-Agent": "Mozilla/5.0"
-    }
-
-    async with httpx.AsyncClient(headers=HEADERS) as client:
-        try:
-            response = await client.get(URL, params=PARAMS)
-            response.raise_for_status()  # Raises error on 4xx/5xx
-            data = response.json().get("data", [])
-            # Filter exact match
-            result = next((g for g in data if g.get("name", "").lower() == game.lower()), None)
-
-            if not result:
-                print(f"❌ Game '{game}' not found exactly in results.")
-                return {}
-            
-            return result
-        
-        except httpx.RequestError as e:
-            print(f"❗ Request failed: {e}")
-            return {}
-        except httpx.HTTPStatusError as e:
-            print(f"❗ HTTP error: {e.response.status_code}")
-            return {}
-
-    # with httpx.Client(timeout=10.0) as client:
-    #     response = client.get(URL, params=PARAMS, headers=HEADERS)
-
-    # if response.status_code == 200:
-    #     data = response.json().get("data", [])
-
-    #     result = next((g for g in data if g.get("name", "").lower() == game.lower()), None)
-
-    #     return result if result else print(f"❌ No exact match found for game: {game}")
-
-    # else:
-    #     print(f"❌ Failed to fetch data: {response.status_code}")
-    #     return {}
-
 def get_game_data_from_local_api(game: str):
     # response = requests.get("http://:5555/game", params={"game": game, "provider": provider})
     # response = requests.get(f"http://localhost:{API_CONFIG.get('port')}/game", params={"name": game})
@@ -1151,8 +1104,6 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
 
     while True:
         try:
-            # data = get_game_stats(game, provider, url)
-            # data = asyncio.run(get_game_stats(game, provider, url))
             data = get_game_data_from_local_api(game)
 
             if data and "error" not in data:
@@ -1331,6 +1282,7 @@ if __name__ == "__main__":
     #             print("\tInvalid choice. Try again.")
     #     except ValueError:
     #         print("\tPlease enter a valid number.")
+    
     provider = GAME_CONFIGS.get(game).provider
 
     print(f"\n\n\t{BLNK}{DGRY}🔔 Select Server{RES}\n")
