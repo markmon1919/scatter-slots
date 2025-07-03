@@ -164,8 +164,11 @@ def save_current_data(data):
 # def hash_data(data):
 #     return hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
+def now_time():
+    return datetime.now(TIMEZONE)
+
 def compare_data(prev: dict, current: dict):
-    today = f"{LBLU}{TIMEZONE.strftime('%I:%M:%S %p')}{LGRY} {TIMEZONE.strftime('%a')}{RES}"
+    today = now_time()
     state.curr_color = current['color']
     state.prev_jackpot_val = pct(current['jackpot_meter'])
     state.prev_10m = pct(current['history'].get('10m'))
@@ -202,13 +205,13 @@ def compare_data(prev: dict, current: dict):
         sign = "+" if delta > 0 else ""
         diff = f"({YEL}Prev{RES}: {prev_jackpot}{percent} {LMAG}Δ{RES}: {sign}{colored_delta}{percent})"
 
-        print(f"\n\n\t\t⏰ {today}")
+        print(f"\n\n\t\t⏰ {f"{LBLU}{today.strftime('%I:%M:%S %p')}{LGRY} {today.strftime('%a')}{RES}"}")
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {BLRED}{current_jackpot}{RES}{percent} {diff} ✅") if current_jackpot < prev_jackpot else \
             print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {current_jackpot}{percent} {diff} ❌")
         print(f"\n\t{jackpot_bar} {BLRED if current_jackpot < prev_jackpot else BLGRE}{current_jackpot}{percent}\n")
     else:
-        print(f"\n\n\t\t⏰ {today}")
+        print(f"\n\n\t\t⏰ {f"{LBLU}{today.strftime('%I:%M:%S %p')}{LGRY} {today.strftime('%a')}{RES}"}")
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {current_jackpot}{percent}")
         print(f"\n\t{jackpot_bar} {current_jackpot}{percent}\n")
@@ -353,15 +356,6 @@ def compare_data(prev: dict, current: dict):
                             bet_level = "low"
                         else:
                             bet_level = None
-                            
-                        if state.auto_mode and state.dual_slots:
-                            bet_queue.put((bet_level, True, slots[0]))
-                            time.sleep(random.randint(*SPIN_DELAY_RANGE))
-                            bet_queue.put((bet_level, True, slots[1]))
-                        elif state.left_slot:
-                            bet_queue.put((bet_level, True, slots[0]))
-                        elif state.right_slot:
-                            bet_queue.put((bet_level, True, slots[1]))
 
                         # AUTO SPIN
                         # if state.auto_mode and bet_level in [ "max", "high" ] and score >= 5:
@@ -486,6 +480,15 @@ def compare_data(prev: dict, current: dict):
     state.bet_lvl = bet_level
     state.last_spin = None
     state.last_trend = None
+
+    if state.auto_mode and state.dual_slots:
+        bet_queue.put((bet_level, True, slots[0]))
+        time.sleep(random.randint(*SPIN_DELAY_RANGE))
+        bet_queue.put((bet_level, True, slots[1]))
+    # elif state.left_slot:
+    #     bet_queue.put((bet_level, True, slots[0]))
+    # elif state.right_slot:
+    #     bet_queue.put((bet_level, True, slots[1]))
     
     # if bet_level is not None:
     #     print(f"\n\t>>> Bet [ {BLYEL}{bet_level.upper()}{RES} ]\n\n")
@@ -519,7 +522,7 @@ def pct(p):
         return 0.0
 
 def load_breakout_memory(game: str):
-    today = TIMEZONE.strftime("%Y-%m-%d")
+    today = now_time().strftime("%Y-%m-%d")
     if os.path.exists(BREAKOUT_FILE):
         with open(BREAKOUT_FILE, 'r') as f:
             data = json.load(f)
@@ -528,7 +531,7 @@ def load_breakout_memory(game: str):
     return {"lowest_low": 0, "lowest_low_delta": 0}
 
 def save_breakout_memory(game: str, lowest_low: float, lowest_low_delta: float):
-    today = TIMEZONE.strftime("%Y-%m-%d")
+    today = now_time().strftime("%Y-%m-%d")
     data = {}
 
     if os.path.exists(BREAKOUT_FILE):
@@ -692,8 +695,8 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
 
             cx, cy = center_x, center_y
             x1, x2, y1, y2 = 0, SCREEN_POS.get("right_x"), 0, SCREEN_POS.get("bottom_y")
-
-            if slot_position is not None and state.auto_mode:
+            
+            if slot_position is not None or state.dual_slots:
                 pyautogui.doubleClick(x=cx, y=y2)
                 time.sleep(1)
                 if extra_bet and game.startswith("Fortune Gems"):
@@ -1148,7 +1151,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                 # print('state.prev_10m --> ', state.prev_10m)
 
                 if current_hash != previous_hash:
-                    print(f"\n\tElapsed Time: {state.elapsed}")
+                    print(f"\n\n\tElapsed Time: {state.elapsed}")
                     previous_hash = current_hash
                     data_queue.put(data)
             else:

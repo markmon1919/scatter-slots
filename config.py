@@ -1,7 +1,6 @@
 #!/usr/bin/env .venv/bin/python
 
 import pyautogui
-from datetime import datetime
 from zoneinfo import ZoneInfo
 from collections import namedtuple
 
