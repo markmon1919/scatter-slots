@@ -11,6 +11,7 @@ from config import (
 from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query
+# from pathlib import Path
 from pydantic import BaseModel
 from typing import Dict, Any, List
 
@@ -74,8 +75,8 @@ async def fetch_game(
     print('Secs:', secs)
     print('Secs Round:', round(secs / 5) * 5)
 
-    # Loosen timeouts for longer cycle
-    timeout = httpx.Timeout(connect=0.3, read=1.0, write=1.0, pool=2.0)
+    # Shorter timeouts to fit 5s cycle
+    timeout = httpx.Timeout(connect=0.1, read=0.3, write=0.3, pool=1.0)
 
     for attempt in range(1, 3):
         try:
@@ -103,7 +104,7 @@ async def fetch_game(
         except httpx.RequestError as e:
             print(f"\n⚠️ Network error on attempt {attempt} for '{name}': {e}\n")
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.5)
 
     print(f"\n❌ Failed to fetch '{name}' after 2 attempts\n")
     return []
@@ -140,9 +141,9 @@ async def update_games() -> bool:
           f"{BLYEL}{[(g['name'], round(g.get('value', 0), 2)) for g in combined]}{RES}")
     return True
 
-async def refresh_loop(cycle_seconds: int = 55):
+async def refresh_loop(cycle_seconds: int = 5):
     fail_count = 0
-    max_backoff = 25
+    max_backoff = 5
 
     while True:
         cycle_start = time.time()
@@ -155,11 +156,8 @@ async def refresh_loop(cycle_seconds: int = 55):
             fail_count += 1
 
         elapsed = time.time() - cycle_start
-        next_cycle_start = cycle_start + cycle_seconds
-        wait = max(0, next_cycle_start - time.time())
-
-        backoff = min(fail_count * 5, max_backoff)
-        wait += backoff
+        backoff = min(fail_count * 1, max_backoff)
+        wait = max(0, cycle_seconds - elapsed + backoff)
 
         print(f"\n⏳ Sleeping {wait:.2f}s until next refresh cycle.\n")
         await asyncio.sleep(wait)
@@ -181,7 +179,7 @@ def auto_deregister_inactive():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(refresh_loop(55))
+    task = asyncio.create_task(refresh_loop(5))
     yield
     task.cancel()
     try:
@@ -238,3 +236,11 @@ async def get_all_games():
         "last_updated": CACHE["last_updated"],
         "registered_games": REGISTERED_GAMES
     }
+
+# if __name__ == "__main__":
+#     uvicorn.run(
+#         f"{Path(__file__).stem}:app",
+#         host=API_CONFIG.get("host"),
+#         port=API_CONFIG.get("port"),
+#         reload=API_CONFIG.get("reload")
+#     )

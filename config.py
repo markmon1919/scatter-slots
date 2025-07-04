@@ -1,10 +1,14 @@
 #!/usr/bin/env .venv/bin/python
 
 import pyautogui
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from collections import namedtuple
 
-TIMEZONE = ZoneInfo("Asia/Manila")
+def datetime_now():
+    TIMEZONE = datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Manila"))
+    return TIMEZONE
+
 BREAKOUT_FILE = "breakout_data.json"
 DATA_FILE = "previous_data.json"
 

@@ -14,7 +14,7 @@ from queue import Queue as ThQueue, Empty
 #from webdriver_manager.chrome import ChromeDriverManager
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 # from pynput.mouse import Listener as MouseListener, Button
-from config import (GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, TIMEZONE, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, DEFAULT_VOICE, DELAY_RANGE, SPIN_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
+from config import (datetime_now, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, DEFAULT_VOICE, DELAY_RANGE, SPIN_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
@@ -168,11 +168,11 @@ def save_current_data(data):
 # def hash_data(data):
 #     return hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
-def now_time():
-    return datetime.now(TIMEZONE)
+# def now_time():
+#     return datetime.now(TIMEZONE)
 
 def compare_data(prev: dict, current: dict):
-    today = now_time()
+    # today = now_time()
     state.curr_color = current['color']
     state.prev_jackpot_val = pct(current['jackpot_meter'])
     state.prev_10m = pct(current['history'].get('10m'))
@@ -211,13 +211,13 @@ def compare_data(prev: dict, current: dict):
         sign = "+" if delta > 0 else ""
         diff = f"({YEL}Prev{RES}: {prev_jackpot}{percent} {LMAG}Δ{RES}: {sign}{colored_delta}{percent})"
 
-        print(f"\n\n\t\t⏰ {f"{LBLU}{today.strftime('%I:%M:%S %p')}{LGRY} {today.strftime('%a')}{RES}"}")
+        print(f"\n\n\t\t⏰ {f"{LBLU}{datetime_now().strftime('%I:%M:%S %p')}{LGRY} {datetime_now().strftime('%a')}{RES}"}")
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {BLRED}{current_jackpot}{RES}{percent} {diff} ✅") if current_jackpot < prev_jackpot else \
             print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {current_jackpot}{percent} {diff} ❌")
         print(f"\n\t{jackpot_bar} {BLRED if current_jackpot < prev_jackpot else BLGRE}{current_jackpot}{percent}\n")
     else:
-        print(f"\n\n\t\t⏰ {f"{LBLU}{today.strftime('%I:%M:%S %p')}{LGRY} {today.strftime('%a')}{RES}"}")
+        print(f"\n\n\t\t⏰ {f"{LBLU}{datetime_now().strftime('%I:%M:%S %p')}{LGRY} {datetime_now().strftime('%a')}{RES}"}")
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {current_jackpot}{percent}")
         print(f"\n\t{jackpot_bar} {current_jackpot}{percent}\n")
@@ -533,7 +533,7 @@ def pct(p):
         return 0.0
 
 def load_breakout_memory(game: str):
-    today = now_time().strftime("%Y-%m-%d")
+    today = datetime_now().strftime("%Y-%m-%d")
 
     if os.path.exists(BREAKOUT_FILE):
         with open(BREAKOUT_FILE, 'r') as f:
@@ -543,7 +543,7 @@ def load_breakout_memory(game: str):
     return {"lowest_low": 0, "lowest_low_delta": 0}
 
 def save_breakout_memory(game: str, lowest_low: float, lowest_low_delta: float):
-    today = now_time().strftime("%Y-%m-%d")
+    today = datetime_now().strftime("%Y-%m-%d")
     data = {}
 
     if os.path.exists(BREAKOUT_FILE):
@@ -615,7 +615,8 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
     
     while not stop_event.is_set():
         # last_time = state.last_time
-        time_secs = int(now_time().strftime('%S'))
+        # time_secs = int(now_time().strftime('%S'))
+        time_secs = datetime_now().second
         text = f"[{BWHTE}{time_secs}--{state.last_time}{RES}] Betting Ends In" if state.bet_lvl is not None else f"[{BWHTE}{time_secs}--{state.last_time}{RES}] Waiting For Next Iteration"
 
         if reset_event.is_set():
@@ -631,7 +632,7 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
             if time_left == 10:
                 alert_queue.put((None, f"{time_left} seconds remaining"))
             elif time_left <= 5:
-                alert_queue.put((None, seconds-time_secs))
+                alert_queue.put((None, time_left))
                 # End countdown spin (luckyBet)
                 # print('spin done >>> ', spin_done)
                 if time_left == 1 and state.auto_mode and state.elapsed == 0 and state.curr_color == 'red' and not spin_done:
@@ -1216,7 +1217,11 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                 # print('state.prev_10m --> ', state.prev_10m)
 
                 if current_hash != previous_hash:
-                    state.last_time = round(int(now_time().strftime('%S')), 5)
+                    # ls = round(int(now_time().astimezone().strftime('%S')), 5)
+                    # state.last_time = round(int(now_time().strftime('%S')), 5)
+                    state.last_time = round(datetime_now().second / 5) * 5
+                    print('State Last Time: ', state.last_time)
+
                     print(f"\n\n\tElapsed Time: {state.elapsed}")
                     previous_hash = current_hash
                     data_queue.put(data)
@@ -1385,7 +1390,8 @@ if __name__ == "__main__":
             break
 
     if 'localhost' in api_server:
-        print(f"{os.getpid()}")
+        pass
+        # print(f"{os.getpid()}")
         # subprocess.run(["bash", "killall.sh", f"{os.getpid()}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         # subprocess.run(["bash", "api_restart.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     else:
@@ -1480,14 +1486,14 @@ if __name__ == "__main__":
     countdown_thread = threading.Thread(target=countdown_timer, args=(stop_event, reset_event, countdown_queue, 55,), daemon=True)
     monitor_thread = threading.Thread(target=monitor_game_info, args=(game, provider, url, data_queue,), daemon=True)
     spin_thread = threading.Thread(target=spin, daemon=True)
-    time_thread = threading.Thread(target=now_time, daemon=True)
+    # time_thread = threading.Thread(target=now_time, daemon=True)
 
     alert_thread.start()
     bet_thread.start()
     countdown_thread.start()
     monitor_thread.start()
     spin_thread.start()
-    time_thread.start()
+    # time_thread.start()
 
     state.elapsed = 0
 
@@ -1545,6 +1551,6 @@ if __name__ == "__main__":
     countdown_thread.join(timeout=1)
     spin_thread.join(timeout=1)
     monitor_thread.join(timeout=1)
-    time_thread.join(timeout=1)
+    # time_thread.join(timeout=1)
     print("🤖❌  All threads shut down.")
     
