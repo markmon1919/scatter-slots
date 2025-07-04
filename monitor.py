@@ -611,7 +611,7 @@ def play_alert(bet_level: str=None, say: str=None):
         pass
 
 def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, countdown_queue: ThQueue, seconds: int = 55):
-    time_left = seconds
+    time_left = abs(seconds - state.last_time)
     
     while not stop_event.is_set():
         # last_time = state.last_time
@@ -619,7 +619,7 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
         text = f"[{BWHTE}{time_secs}--{state.last_time}{RES}] Betting Ends In" if state.bet_lvl is not None else f"[{BWHTE}{time_secs}--{state.last_time}{RES}] Waiting For Next Iteration"
 
         if reset_event.is_set():
-            time_left = seconds
+            time_left = abs(seconds - state.last_time)
             reset_event.clear()
             sys.stdout.write("\r" + " " * 80 + "\r")
             sys.stdout.flush()
@@ -1216,7 +1216,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                 # print('state.prev_10m --> ', state.prev_10m)
 
                 if current_hash != previous_hash:
-                    state.last_time = round(int(now_time().strftime('%S')), 5) * 5
+                    state.last_time = round(int(now_time().strftime('%S')), 5)
                     print(f"\n\n\tElapsed Time: {state.elapsed}")
                     previous_hash = current_hash
                     data_queue.put(data)
