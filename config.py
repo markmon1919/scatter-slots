@@ -118,6 +118,8 @@ GAME_CONFIGS = {
     "Queen of Bounty": GameConfig(False, True, True, None, False, False, "PG"),
     "Captain's Bounty": GameConfig(False, True, True, None, False, False, "PG"),
     "Treasures of Aztec": GameConfig(False, True, True, None, False, False, "PG"),
+    "Oishi Delights": GameConfig(False, True, True, None, False, False, "PG"),
+    "Ways of the Qilin": GameConfig(False, True, True, None, False, False, "PG"),
     "Lucky Neko": GameConfig(False, True, True, None, False, False, "PG"),
     "Grand Blue": GameConfig(True, True, True, None, False, False, "FC"),
     "Golden Genie": GameConfig(True, True, True, None, False, False, "FC"),

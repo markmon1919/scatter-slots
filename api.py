@@ -69,7 +69,10 @@ async def fetch_game(
         "requestFrom": requestFrom
     }
     
-    timeout = httpx.Timeout(connect=2.0, read=5.0, write=5.0, pool=5.0)
+    secs = int(datetime.utcnow().second)
+    timeout_secs = round(secs / 5) / 5
+    print('round(secs / 5) >> ', timeout_secs, secs)
+    timeout = httpx.Timeout(connect=1.75, read=5.0, write=5.0, pool=5.0)
 
     for attempt in range(1, 3):
         try:
@@ -101,10 +104,11 @@ async def fetch_game(
 
 # Combine all games and update cache
 async def update_games() -> bool:
+    now = datetime.utcnow().second
     tasks = [fetch_game(game["url"], game["name"], game["provider"]) for game in REGISTERED_GAMES]
     results = await asyncio.gather(*tasks)
-
     combined = []
+
     for games in results:
         for game in games:
             if not any(g["id"] == game["id"] for g in combined):
@@ -126,7 +130,8 @@ async def update_games() -> bool:
     CACHE["games"] = combined
     CACHE["last_updated"] = time.time()
     CACHE["last_snapshot"] = new_hash
-    print(f"\n🔄 CACHE updated with {len(combined)} game(s) -->" f"{BLYEL}{[(g['name'], round(g.get('value', 0), 2)) for g in combined]}{RES}")
+    print('\nTime.Time() : ', time.time())
+    print(f"\n🔄 [{BWHTE}{now}{RES}] CACHE updated with {len(combined)} game(s) -->" f"{BLYEL}{[(g['name'], round(g.get('value', 0), 2)) for g in combined]}{RES}")
     return True
 
 # Auto-remove inactive games

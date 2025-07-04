@@ -56,6 +56,7 @@ class AutoState:
     last_slot: str = None
     non_stop: bool = False
     elapsed: int = 0
+    last_time: int = 0
 
 
 @dataclass
@@ -609,28 +610,32 @@ def play_alert(bet_level: str=None, say: str=None):
     else:
         pass
 
-def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, countdown_queue: ThQueue, seconds: int = 60):
+def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, countdown_queue: ThQueue, seconds: int = 55):
     time_left = seconds
     
     while not stop_event.is_set():
+        # last_time = state.last_time
+        time_secs = int(now_time().strftime('%S'))
+        text = f"[{BWHTE}{time_secs}--{state.last_time}{RES}] Betting Ends In" if state.bet_lvl is not None else f"[{BWHTE}{time_secs}--{state.last_time}{RES}] Waiting For Next Iteration"
+
         if reset_event.is_set():
             time_left = seconds
             reset_event.clear()
             sys.stdout.write("\r" + " " * 80 + "\r")
             sys.stdout.flush()
 
-        mins, secs = divmod(time_left, 60)
-        text = "Betting Ends In" if state.bet_lvl is not None else "Waiting For Next Iteration"
+        mins, secs = divmod(time_left, seconds)
+        spin_done = False
 
         if time_left <= 10:
             if time_left == 10:
                 alert_queue.put((None, f"{time_left} seconds remaining"))
-                spin_done = False
             elif time_left <= 5:
+                alert_queue.put((None, seconds-time_secs))
                 # End countdown spin (luckyBet)
                 # print('spin done >>> ', spin_done)
-                if state.auto_mode and state.elapsed == 0 and state.curr_color == 'red' and not spin_done:
-                    time.sleep(random.randint(*DELAY_RANGE))
+                if time_left == 1 and state.auto_mode and state.elapsed == 0 and state.curr_color == 'red' and not spin_done:
+                    # time.sleep(random.randint(*DELAY_RANGE))
                     if state.dual_slots:
                         # print(f"\nstate.elapsed: {state.elapsed}")
                         # print(f"\nstate.curr_color: {state.curr_color}")
@@ -647,10 +652,9 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
                     # print('after spin done >>> ', spin_done)
                 # elif state.elapsed != 0:
                 #     spin_done = True
-                alert_queue.put((None, time_left))
             timer = f"\t⏳ {text}: {BWHTE}... {BLNK}{BLRED}{secs}{RES}"
         else:
-            timer = f"\t⏳ {text}: {BLYEL}{mins:02d}{BLNK}{BWHTE}:{RES}{BLYEL}{secs:02d}{RES}  [ {CYN}{game}{RES} ]"
+            timer = f"\t⏳ {text}: {BLYEL}{mins:02d}{BLNK}{BWHTE}:{RES}{BLYEL}{secs:02d}{RES}  ( {CYN}{game}{RES} )"
 
         countdown_queue.put(time_left)
         sys.stdout.write(f"\r{timer.ljust(80)}")
@@ -1212,6 +1216,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                 # print('state.prev_10m --> ', state.prev_10m)
 
                 if current_hash != previous_hash:
+                    state.last_time = round(int(now_time().strftime('%S')), 5) * 5
                     print(f"\n\n\tElapsed Time: {state.elapsed}")
                     previous_hash = current_hash
                     data_queue.put(data)
@@ -1472,29 +1477,31 @@ if __name__ == "__main__":
     
     alert_thread = threading.Thread(target=play_alert, daemon=True)
     bet_thread = threading.Thread(target=bet_switch, daemon=True)
-    countdown_thread = threading.Thread(target=countdown_timer, args=(stop_event, reset_event, countdown_queue,), daemon=True)
+    countdown_thread = threading.Thread(target=countdown_timer, args=(stop_event, reset_event, countdown_queue, 55,), daemon=True)
     monitor_thread = threading.Thread(target=monitor_game_info, args=(game, provider, url, data_queue,), daemon=True)
     spin_thread = threading.Thread(target=spin, daemon=True)
+    time_thread = threading.Thread(target=now_time, daemon=True)
 
     alert_thread.start()
     bet_thread.start()
     countdown_thread.start()
     monitor_thread.start()
     spin_thread.start()
+    time_thread.start()
 
     state.elapsed = 0
 
     try:
         while True:
             try:
-                # Wait for new data from monitor thread (max 60s)
-                data = data_queue.get(timeout=60)
-                alert_queue.put((None, game))
-                parsed_data = extract_game_data(data)
-
                 # Reset the countdown because data came in
                 reset_event.set()
                 state.elapsed = 0  # Reset elapsed on data
+
+                # Wait for new data from monitor thread (max 60s)
+                data = data_queue.get(timeout=55)
+                alert_queue.put((None, game))
+                parsed_data = extract_game_data(data)
 
                 all_data = load_previous_data()
                 previous_data = all_data.get(game.lower())
@@ -1506,7 +1513,7 @@ if __name__ == "__main__":
                 if state.elapsed == 2:
                     print('Restarting API Service...')
                     subprocess.run(["bash", "api_restart.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                if state.elapsed >= 60:
+                if state.elapsed >= 55:
                     print("⚠️  No data received in 1 minute.")
                     state.elapsed = 0  # Optional: reset or exit
             # Handle timeout signal from countdown
@@ -1538,5 +1545,6 @@ if __name__ == "__main__":
     countdown_thread.join(timeout=1)
     spin_thread.join(timeout=1)
     monitor_thread.join(timeout=1)
+    time_thread.join(timeout=1)
     print("🤖❌  All threads shut down.")
     
