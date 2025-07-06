@@ -627,29 +627,20 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 50):
                 spin_done = False
             elif time_left <= 5:
                 alert_queue.put((None, time_left))
-                if time_left < 5 and not spin_done and not state.non_stop:# and state.last_time != 0:
-                    print('\n\tCATCH 0 seconds --> ', time_left)
-                    # time.sleep(random.randint(*DELAY_RANGE))
-                    if time_left <= 3 and state.dual_slots:# and state.elapsed == 0:
+                if time_left < 5 and not spin_done and not state.non_stop:
+                    if time_left <= 3 and state.dual_slots:
                         if state.auto_mode and state.last_time != 0:
                             slots = ["left", "right"]
                             random.shuffle(slots)
                             spin_queue.put((None, None, slots[0], False))
                             spin_queue.put((None, None, slots[1], False))
-                            print('\n\tCATCH 1 seconds --> ', time_left)
-                            print('\n\tbefore spin done >>> ', spin_done)
 
                     elif time_left <= 2 and not state.dual_slots:# and state.elapsed == 0:
                         if state.auto_mode and state.last_time != 0:
                             spin_queue.put((None, None, None, False))
-                            print('\n\tCATCH 1 seconds --> ', time_left)
-                            print('\n\tbefore spin done >>> ', spin_done)
 
                     elif time_left == 0:
                         spin_done = True
-
-                    print('\n\tafter spin done >>> ', spin_done)
-
 
                     # if state.dual_slots and state.auto_mode:
                     #     print('\tCATCH 1 seconds --> ', time_left)
@@ -1205,7 +1196,6 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     get_delta = round(data.get('min10') - state.prev_10m, 2)
 
                     state.non_stop = (get_delta <= state.last_pull_delta and get_delta <= -10 and data.get('min10') <= -10) or state.is_breakout or state.is_delta_breakout
-                    print('\n\tSTATE NON STOP HERE >> ', state.non_stop, data.get('min10'))
                     # is_breakout = (data.get('min10') < state.breakout["lowest_low"] and data.get('min10') < state.breakout["lowest_low"]) if provider != "PG" else (state.is_breakout and data.get('min10') < state.breakout["lowest_low"])
                     # is_delta_breakout = (get_delta < state.breakout["lowest_low_delta"] and state.breakout["lowest_low_delta"] < 0) if provider != "PG" else (state.is_delta_breakout and get_delta < state.breakout["lowest_low_delta"])
                     # print('GET 10M values >>> ', data.get('min10'), state.last_10m)
@@ -1265,10 +1255,6 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
 
                 if current_hash != previous_hash:
                     state.last_time = int(round(data.get('last_updated') % 60))
-                    
-                    print('\n\n\tState Last Time: ', state.last_time)
-                    print(f"\n\n\tElapsed Time: {state.elapsed}")
-
                     previous_hash = current_hash
                     data_queue.put(data)
             else:
