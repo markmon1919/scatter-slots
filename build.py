@@ -1,4 +1,4 @@
-#!/usr/bin/env venv/bin/python
+#!/usr/bin/env .venv/bin/python
 
 import subprocess
 
@@ -7,7 +7,7 @@ compile_api = [
     '--onefile',
     '--clean',
     '--noconfirm',
-    '--windowed',
+    # '--windowed',
     '--icon=monitor.ico',
     '--name', 'Scatter Slot API Service',
     'api.py'
@@ -18,7 +18,7 @@ compile_app = [
     '--onefile',
     '--clean',
     '--noconfirm',
-    '--windowed',
+    # '--windowed',
     '--icon=slot.ico',
     '--name', 'Scatter Slot Monitor',
     'monitor.py'

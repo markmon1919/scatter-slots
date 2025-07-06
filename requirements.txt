@@ -3,5 +3,5 @@ datetime
 fastapi[standard]
 httpx
 pydantic
-typing
+pyautogui
 uvicorn[standard]

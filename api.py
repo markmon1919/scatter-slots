@@ -2,17 +2,17 @@
 # -*- coding: utf-8 -*-
 
 import asyncio, httpx, random, time, uvicorn, hashlib, json, copy
-from config import (
-    datetime_now, USER_AGENTS,
-    LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, CYN, BLU,
-    WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG,
-    BCYN, BWHTE, DGRY, BLNK, CLEAR, RES
-)
 from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query
 from pydantic import BaseModel
 from typing import Dict, Any, List
+from config import (
+    USER_AGENTS,
+    LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, CYN, BLU,
+    WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG,
+    BCYN, BWHTE, DGRY, BLNK, CLEAR, RES
+)
 
 # Shared state
 CACHE: Dict[str, Any] = {
@@ -69,11 +69,11 @@ async def fetch_game(
         "manuf": provider,
         "requestFrom": requestFrom
     }
+    
+    secs_timetime = time.time()
 
-    secs = datetime_now().second
-    print('Secs:', secs)
-    print('Secs Round:', round(secs / 5) * 5)
-
+    print(f"\nSecs (time.time): {secs_timetime % 60:.2f} seconds")
+    
     # Loosen timeouts for longer cycle
     timeout = httpx.Timeout(connect=0.3, read=1.0, write=1.0, pool=2.0)
 
@@ -92,7 +92,7 @@ async def fetch_game(
                     try:
                         data = response.json().get("data", [])
                     except ValueError:
-                        print(f"\n❌ Response not JSON for '{name}': {response.text}")
+                        print(f"\n❌  Response not JSON for '{name}': {response.text}")
                         return []
 
                     print(f"\n✅ Fetched {BMAG}'{name}' [{provider}]{RES} - {len(data)} game(s)\n")
@@ -101,11 +101,11 @@ async def fetch_game(
                     print(f"\n❌ Non-200 response for '{name}': {response.status_code} → {response.text[:200]}")
 
         except httpx.RequestError as e:
-            print(f"\n⚠️ Network error on attempt {attempt} for '{name}': {e}\n")
+            print(f"\n⚠️  Network error on attempt {attempt} for '{name}': {e}\n")
 
         await asyncio.sleep(1)
 
-    print(f"\n❌ Failed to fetch '{name}' after 2 attempts\n")
+    print(f"\n❌  Failed to fetch '{name}' after 2 attempts\n")
     return []
 
 async def update_games() -> bool:
@@ -134,58 +134,119 @@ async def update_games() -> bool:
     CACHE["games"] = combined
     CACHE["last_updated"] = time.time()
     CACHE["last_snapshot"] = new_hash
-    dt = datetime.fromtimestamp(time.time())
-    print(dt.second)
-    print(f"\n🔄 [{BWHTE}{dt.second}{RES}] CACHE updated with {len(combined)} game(s) -->"
-          f"{BLYEL}{[(g['name'], round(g.get('value', 0), 2)) for g in combined]}{RES}")
+
+    print(f"\n🔄 [{BLYEL}{BLNK}{CACHE['last_updated'] % 60:.2f}{RES} secs] CACHE updated with {len(combined)} game(s) -->"
+          f"{YEL}{[(g['name'], round(g.get('value', 0), 2)) for g in combined]}{RES}")
+
     return True
+
+# async def refresh_loop(cycle_seconds: int = 50):
+#     fail_count = 0
+#     max_backoff = 25
+
+#     # Align to next second divisible by 10
+#     now = time.time()
+#     secs = int(now % 60)
+#     delay = (10 - (secs % 10)) % 10
+#     if delay > 0:
+#         print(f"\n🔄 Aligning refresh loop. Waiting {delay} second(s) to reach next 10s boundary.")
+#         await asyncio.sleep(delay)
+#     else:
+#         print(f"\n✅ Already aligned at second {secs}.")
+
+#     while True:
+#         cycle_start = time.time()
+
+#         if REGISTERED_GAMES:
+#             changed = await update_games()
+#             fail_count = 0 if changed else fail_count + 1
+#         else:
+#             print(f"\n⚠️  No registered games. Skipping fetch.\n")
+#             fail_count += 1
+
+#         print(f'\nCycle Start @: {BWHTE}{datetime.fromtimestamp(cycle_start).strftime("%M:%S")}{RES}')
+#         print(f'Cycle Seconds: {BWHTE}{datetime.fromtimestamp(cycle_seconds).strftime("%M:%S")}{RES}')
+
+#         elapsed = time.time() - cycle_start
+#         print(f'\nElapsed: {BWHTE}{datetime.fromtimestamp(elapsed).strftime("%M:%S")}{RES}')
+#         next_cycle_start = cycle_start + cycle_seconds
+#         print(f'Next Cycle Start: {BWHTE}{datetime.fromtimestamp(next_cycle_start).strftime("%M:%S")}{RES}')
+#         wait = max(0, next_cycle_start - time.time())
+#         print(f'Wait[Init]: {BWHTE}{datetime.fromtimestamp(wait).strftime("%M:%S")}{RES}')
+
+#         backoff = min(fail_count * 5, max_backoff)
+#         print(f'Backoff: {BWHTE}{datetime.fromtimestamp(backoff).strftime("%M:%S")}{RES}')
+#         wait += backoff
+#         print(f'Wait[Final]: {BWHTE}{datetime.fromtimestamp(wait).strftime("%M:%S")}{RES}')
+
+#         print(f"\n⏳ Sleeping {MAG}{wait:.2f}{RES} secs until next refresh cycle.\n")
+#         await asyncio.sleep(wait)
+
+async def probe_mode(max_probe_seconds: int = 60, probe_interval: int = 10) -> bool:
+    """
+    Probe every few seconds until a change is detected,
+    or until max_probe_seconds expires.
+    """
+    print(f"\n🚀 Entering probe mode every {probe_interval}s for up to {max_probe_seconds}s...\n")
+
+    deadline = time.time() + max_probe_seconds
+    while time.time() < deadline:
+        changed = await update_games()
+        if changed:
+            print(f"\n🎯 Change detected during probe mode. Exiting probe mode.\n")
+            return True
+        print(f"🔄 No change detected. Sleeping {probe_interval}s...\n")
+        await asyncio.sleep(probe_interval)
+
+    print(f"\n⚠️ Probe mode timeout reached. Proceeding to normal loop.\n")
+    return False
 
 async def refresh_loop(cycle_seconds: int = 50):
     fail_count = 0
     max_backoff = 25
 
     while True:
-        if not REGISTERED_GAMES:
-            print(f"\n⚠️ No registered games. Waiting 10s before checking again.\n")
-            await asyncio.sleep(10)
-            continue
+        now = datetime.now()
+        
+        # If we are at a new hour boundary, run probe mode
+        if now.minute == 0 and now.second < 5:
+            print(f"\n⏱️  New hour detected at {now.strftime('%H:%M:%S')}. Starting probe mode.\n")
+            await probe_mode()
 
         cycle_start = time.time()
-        print(f'\nCycle Start @: {BWHTE}{datetime.fromtimestamp(cycle_start).strftime("%M:%S")}{RES}')
-        print(f'Cycle Seconds: {BWHTE}{datetime.fromtimestamp(cycle_seconds).strftime("%M:%S")}{RES}')
 
-        changed = await update_games()
-        fail_count = 0 if changed else fail_count + 1
+        if REGISTERED_GAMES:
+            changed = await update_games()
+            fail_count = 0 if changed else fail_count + 1
+        else:
+            print(f"\n⚠️  {DGRY}No registered games. Skipping fetch.{RES}\n")
+            fail_count += 1
 
         elapsed = time.time() - cycle_start
-        print(f'Elapsed: {BWHTE}{datetime.fromtimestamp(elapsed).strftime("%M:%S")}{RES}')
         next_cycle_start = cycle_start + cycle_seconds
-        print(f'Next Cycle Start: {BWHTE}{datetime.fromtimestamp(next_cycle_start).strftime("%M:%S")}{RES}')
         wait = max(0, next_cycle_start - time.time())
-        print(f'Wait[Init]: {BWHTE}{datetime.fromtimestamp(wait).strftime("%M:%S")}{RES}')
 
         backoff = min(fail_count * 5, max_backoff)
-        print(f'Backoff: {BWHTE}{datetime.fromtimestamp(backoff).strftime("%M:%S")}{RES}')
         wait += backoff
-        print(f'Wait[Final]: {BWHTE}{datetime.fromtimestamp(wait).strftime("%M:%S")}{RES}')
 
-        print(f"\n⏳ Sleeping {wait:.2f}s until next refresh cycle.\n")
+        print(f"\n⏳ Sleeping {MAG}{wait:.2f}{RES} secs until next refresh cycle.\n")
         await asyncio.sleep(wait)
 
 def auto_deregister_inactive():
-    now = datetime.utcnow()
+    today = datetime.fromtimestamp(time.time())
+
     inactive_games = []
 
     for game in REGISTERED_GAMES:
         key = game["name"].replace(" ", "").lower()
         last_seen = LAST_ACCESSED.get(key)
-        if not last_seen or (now - last_seen).total_seconds() > TIMEOUT_SECONDS:
+        if not last_seen or (today - last_seen).total_seconds() > TIMEOUT_SECONDS:
             inactive_games.append(game)
 
     for game in inactive_games:
         REGISTERED_GAMES.remove(game)
         LAST_ACCESSED.pop(game["name"].replace(" ", "").lower(), None)
-        print(f"\n🕛 Auto-deregistered: {LGRY}{game['name']}{RES} (inactive > {TIMEOUT_SECONDS}s)\n")
+        print(f"\n🕛 Auto-deregistered: {RED}{game['name']}{RES} (inactive > {TIMEOUT_SECONDS}s)\n")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -205,8 +266,8 @@ async def register_game(game: GameRegistration):
     entry = {"url": game.url.strip(), "name": key, "provider": game.provider}
     if key and all(g["name"] != key for g in REGISTERED_GAMES):
         REGISTERED_GAMES.append(entry)
-        LAST_ACCESSED[key.replace(" ", "").lower()] = datetime.utcnow()
-        print(f"\n🎰 Registered: {BLRED}{key}{RES}\n")
+        LAST_ACCESSED[key.replace(" ", "").lower()] = datetime.fromtimestamp(time.time())
+        print(f"\n🎰 Registered: {BLCYN}{BLNK}{key}{RES}\n")
         return {"status": "ok", "message": f"Registered '{key}' with provider '{game.provider}'"}
     print(f"\n🎰 {key} already registered.\n")
     return {"status": "exists", "message": f"'{key}' already registered"}
@@ -218,7 +279,7 @@ async def deregister_game(game: GameRegistration):
         if g["name"] == key:
             REGISTERED_GAMES.pop(i)
             LAST_ACCESSED.pop(key.replace(" ", "").lower(), None)
-            print(f"\n🎰 De-Registered: {LGRY}{key}{RES}\n")
+            print(f"\n🎰 De-Registered: {RED}{key}{RES}\n")
             return {"status": "ok", "message": f"Deregistered '{key}'"}
     print(f"\n🎰 {key} not found!")
     return {"status": "not_found", "message": f"'{key}' not found"}
@@ -234,8 +295,10 @@ async def get_game(name: str = Query(...)):
 
     for game in CACHE["games"]:
         if game["name"].replace(" ", "").lower() == normalized:
-            LAST_ACCESSED[normalized] = datetime.utcnow()
+            LAST_ACCESSED[normalized] = datetime.fromtimestamp(time.time())
+            game.update({"last_updated": CACHE["last_updated"]})
             return game
+            
     return {"error": f"Game '{name}' not found."}
 
 @app.get("/games")

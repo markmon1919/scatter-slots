@@ -27,13 +27,13 @@ class AutoState:
     auto_play_menu: bool = False
     widescreen: bool = False
     provider: str = None
-    
-    api_server: str = None
+
     auto_mode: bool = False
     dual_slots: bool = False
     split_screen: bool = False
     left_slot: bool = False
     right_slot: bool = False
+    forever_spin: bool = False
     # hotkeys: bool = True
     # running: bool = True
     # pressing: bool = False
@@ -78,14 +78,14 @@ def get_sleep_times(auto_play_menu: bool=False):
         'd': 0.001  # 400 cps
     }
 
-def configure_game(game: str, breakout: dict, api_server: str, auto_mode: bool=False, dual_slots: bool=False, split_screen: bool=False, left_slot: bool=False, right_slot: bool=False):
-    state.api_server = api_server
+def configure_game(game: str, api_server: str, breakout: dict, auto_mode: bool=False, dual_slots: bool=False, split_screen: bool=False, left_slot: bool=False, right_slot: bool=False, forever_spin: bool=False):
     state.breakout = breakout
     state.auto_mode = auto_mode
     state.dual_slots = dual_slots
     state.split_screen = split_screen
     state.left_slot = left_slot
     state.right_slot = right_slot
+    state.forever_spin = forever_spin
 
     config = GAME_CONFIGS.get(game, DEFAULT_GAME_CONFIG)
     (
@@ -170,11 +170,7 @@ def save_current_data(data):
 # def hash_data(data):
 #     return hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
-# def now_time():
-#     return datetime.now(TIMEZONE)
-
 def compare_data(prev: dict, current: dict):
-    # today = now_time()
     state.curr_color = current['color']
     state.prev_jackpot_val = pct(current['jackpot_meter'])
     state.prev_10m = pct(current['history'].get('10m'))
@@ -188,7 +184,7 @@ def compare_data(prev: dict, current: dict):
     border = f"{'-' * 32}"
     margin_left = len(str(border).expandtabs().strip()) - 2
     padding = margin_left - len(str(PROVIDERS.get(provider).provider).expandtabs().strip()) - 1
-    slot_mode = f"{RED}dual{RES}" if state.dual_slots else f"{BLU}left{RES}" if state.left_slot else f"{MAG}right{RES}" if state.right_slot else f"{DGRY}solo{RES}"
+    slot_mode = f"{RED}dual{RES}" if state.dual_slots else f"{LBLU}split screen{RES}" if state.split_screen else f"{BLU}left{RES}" if state.left_slot else f"{MAG}right{RES}" if state.right_slot else f"{DGRY}single{RES}"
 
     banner = f'''\t♦️  {border}  ♠️
         \t{BCYN}{game.upper()}{RES}
@@ -565,7 +561,7 @@ def save_breakout_memory(game: str, lowest_low: float, lowest_low_delta: float):
 
 def play_alert(bet_level: str=None, say: str=None):
     if platform.system() == "Darwin":
-        while True:
+        while not stop_event.is_set():
             try:
                 bet_level, say = alert_queue.get(timeout=10)
 
@@ -612,69 +608,76 @@ def play_alert(bet_level: str=None, say: str=None):
     else:
         pass
 
-def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, countdown_queue: ThQueue, seconds: int = 50):
-    # time_left = abs(seconds - state.last_time)
-    # time_left = abs(seconds - datetime_now().second)
+def countdown_timer(countdown_queue: ThQueue, seconds: int = 50):
     time_left = seconds
 
-    while not stop_event.is_set():
-        # last_time = state.last_time
-        # time_secs = int(now_time().strftime('%S'))
-        # time_secs = datetime_now().second
-        # text = f"[{BWHTE}{time_secs}--{state.last_time}{RES}] Betting Ends In" if state.bet_lvl is not None else f"[{BWHTE}{time_secs}--{state.last_time}{RES}] Waiting For Next Iteration"
-        # text = f"[{BWHTE}{time_secs}--{time_left}{RES}] Betting Ends In" if state.bet_lvl is not None else f"[{BWHTE}{time_secs}--{time_left}{RES}] Waiting For Next Iteration"
-
+    while not stop_event.is_set() and state.elapsed == 0:
         if reset_event.is_set():
-            # time_left = abs(seconds - state.last_time)
             time_left = seconds
             reset_event.clear()
             sys.stdout.write("\r" + " " * 80 + "\r")
             sys.stdout.flush()
 
-        today = datetime_now().strftime("%H:%M:%S")
-
-        text = f"[{BWHTE}{today}--{time_left}{RES}] Betting Ends In" if state.bet_lvl is not None else f"[{BWHTE}{today}--{time_left}{RES}] Waiting For Next Iteration"
-
+        text = f"Betting Ends In" if state.bet_lvl is not None else f"Waiting For Next Iteration"
         mins, secs = divmod(time_left, seconds)
 
-        if time_left <= 10:
+        if time_left <= 10 and state.elapsed == 0:
             if time_left == 10:
                 alert_queue.put((None, f"{time_left} seconds remaining"))
                 spin_done = False
-            elif time_left <= 8:
+            elif time_left <= 5:
                 alert_queue.put((None, time_left))
-                # End countdown spin (luckyBet)
-                # print('spin done >>> ', spin_done)
-                # if time_left <= 4 and state.auto_mode and state.elapsed == 0 and state.curr_color == 'red' and not spin_done:
-                # time.sleep(random.randint(*DELAY_RANGE))
-                print('\n\tSPIN DONE ---> ', spin_done)
-                print('\tNON STOP ---> ', state.non_stop)
-                if time_left < 5 and state.elapsed == 0 and not spin_done and not state.non_stop:
-                    print('\tCATCH 0 seconds --> ', time_left)
-                    time.sleep(random.randint(*DELAY_RANGE))
-                    if state.dual_slots and state.auto_mode:
-                        print('\tCATCH 1 seconds --> ', time_left)
-                        # print(f"\nstate.elapsed: {state.elapsed}")
-                        # print(f"\nstate.curr_color: {state.curr_color}")
-                        # print(f"\n[test]state.prev_jackpot_val: {state.prev_jackpot_val}")
-                        # print(f"\n[test]state.prev_10m: {state.prev_10m}")
-                        # print(f"\n[test]state.last_pull_delta: {state.last_pull_delta}")
-                        slots = ["left", "right"]
-                        random.shuffle(slots)
-                        print('\tCATCH 2 seconds --> ', time_left)
-                        spin_queue.put((None, None, slots[0], False))
-                        spin_queue.put((None, None, slots[1], False))
-                        print('\tCATCH 3 seconds --> ', time_left)
-                        print('\tCATCH 4 seconds --> ', time_left)
-                    else:
-                        spin_queue.put((None, None, None, False))
-                    spin_done = True
+                if time_left < 5 and not spin_done and not state.non_stop:# and state.last_time != 0:
+                    print('\n\tCATCH 0 seconds --> ', time_left)
+                    # time.sleep(random.randint(*DELAY_RANGE))
+                    if time_left <= 3 and state.dual_slots:# and state.elapsed == 0:
+                        if state.auto_mode and state.last_time != 0:
+                            slots = ["left", "right"]
+                            random.shuffle(slots)
+                            spin_queue.put((None, None, slots[0], False))
+                            spin_queue.put((None, None, slots[1], False))
+                            print('\n\tCATCH 1 seconds --> ', time_left)
+                            print('\n\tbefore spin done >>> ', spin_done)
+
+                    elif time_left <= 2 and not state.dual_slots:# and state.elapsed == 0:
+                        if state.auto_mode and state.last_time != 0:
+                            spin_queue.put((None, None, None, False))
+                            print('\n\tCATCH 1 seconds --> ', time_left)
+                            print('\n\tbefore spin done >>> ', spin_done)
+
+                    elif time_left == 0:
+                        spin_done = True
+
+                    print('\n\tafter spin done >>> ', spin_done)
+
+
+                    # if state.dual_slots and state.auto_mode:
+                    #     print('\tCATCH 1 seconds --> ', time_left)
+                    #     # print(f"\nstate.elapsed: {state.elapsed}")
+                    #     # print(f"\nstate.curr_color: {state.curr_color}")
+                    #     # print(f"\n[test]state.prev_jackpot_val: {state.prev_jackpot_val}")
+                    #     # print(f"\n[test]state.prev_10m: {state.prev_10m}")
+                    #     # print(f"\n[test]state.last_pull_delta: {state.last_pull_delta}")
+                    #     slots = ["left", "right"]
+                    #     random.shuffle(slots)
+                    #     print('\tCATCH 2 seconds --> ', time_left)
+                    #     spin_queue.put((None, None, slots[0], False))
+                    #     spin_queue.put((None, None, slots[1], False))
+                    #     print('\tCATCH 3 seconds --> ', time_left)
+                    #     print('\tCATCH 4 seconds --> ', time_left)
+                    # else:
+                    #     spin_queue.put((None, None, None, False))
+                    # spin_done = True
                     # print('after spin done >>> ', spin_done)
                 # elif state.elapsed != 0:
+            # End countdown spin (luckyBet)
+            # print('spin done >>> ', spin_done)
+            # if time_left <= 4 and state.auto_mode and state.elapsed == 0 and state.curr_color == 'red' and not spin_done:
+            # time.sleep(random.randint(*DELAY_RANGE))
             timer = f"\t⏳ {text}: {BWHTE}... {BLNK}{BLRED}{secs}{RES}"
         else:
             timer = f"\t⏳ {text}: {BLYEL}{mins:02d}{BLNK}{BWHTE}:{RES}{BLYEL}{secs:02d}{RES}  ( {CYN}{game}{RES} )"
-
+            
         countdown_queue.put(time_left)
         sys.stdout.write(f"\r{timer.ljust(80)}")
         sys.stdout.flush()
@@ -686,7 +689,7 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
         #     countdown_queue.put("Timeout")
         #     print("\n[⏰ Timer] Countdown finished.")
 
-    print("\n[⏳ Timer] Exiting countdown.")
+    # print("\n[⏳ Timer] Exiting countdown.")
 
 # def countdown_timer(bet_level: str=None, seconds: int=59, stop_event: threading.Event=None):
 #     while True:
@@ -715,7 +718,7 @@ def countdown_timer(stop_event: threading.Event, reset_event: threading.Event, c
 #             continue
 
 def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=None):
-    while True:
+    while not stop_event.is_set():
         try:
             bet_level, extra_bet, slot_position = bet_queue.get(timeout=10)
 
@@ -745,7 +748,7 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
             continue
 
 def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, stop_spin: bool=False):
-    while True:
+    while not stop_event.is_set():
         try:
             bet_level, chosen_spin, slot_position, stop_spin = spin_queue.get(timeout=10)
             spin_types = [ "normal", "board_spin", "board_spin_delay", "board_spin_turbo", "board_spin_tap", "auto_spin", "turbo" ]
@@ -756,10 +759,6 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             # bet_reset = False
             # lucky_bet_value = 1
             bet = 0
-
-            print('\n\tslot_position: ', slot_position)
-            print('\tstate.non_stop: ', state.non_stop)
-            print('\tstate.last_slot: ', state.last_slot)
             
             center_x, center_y = SCREEN_POS.get("center_x"), SCREEN_POS.get("center_y")
 
@@ -943,9 +942,9 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             state.last_spin = chosen_spin
             alert_queue.put((None, "spin_type"))
 
-            print(f"\n\t*** {state.last_trend} ***")
-            print(f"\tBet: {bet} ({chosen_spin.replace('_', ' ').upper()})\n")
-            print(f"\tSlot: {slot_position}\n") if state.dual_slots or state.left_slot or state.right_slot else None
+            print(f"\n\t*** {state.last_trend} ***") if state.last_trend is not None else None
+            print(f"\n\tBet: {bet} ({BLNK}{RED}{chosen_spin.replace('_', ' ').upper()}{RES})\n")
+            print(f"\tSlot: {BLBLU}{slot_position}{RES}\n") if state.dual_slots or state.split_screen or state.left_slot or state.right_slot else None
 
             # if non_stop and not (state.is_breakout or state.is_delta_breakout):
             #     break
@@ -1192,37 +1191,13 @@ def get_game_data_from_local_api(game: str):
 def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
     previous_hash = None
 
-    while True:
+    while not stop_event.is_set():
         try:
             data = get_game_data_from_local_api(game)
 
             if data and "error" not in data:
-                
-                # print(f"\nstate.curr_color: {state.curr_color}")
-                # if state.curr_color == 'red': # # FOREVER SPIN    
-                #     if state.dual_slots: 
-                #         slots = ["left", "right"]
-                #         if state.last_slot is None:
-                #             # First run → spin both slots
-                #             random.shuffle(slots)
-                #             chosen_slot = slots
-                #         else:
-                #             # Only spin other slot
-                #             other_slot = "right" if state.last_slot == "left" else "left"
-                #             chosen_slot = [other_slot, state.last_slot]
-
-                #         # Enqueue spins
-                #         spin_queue.put(("low", None, chosen_slot[0], False))
-                #         spin_queue.put(("low", None, chosen_slot[1], False))
-
-                #         # Save slot for next time
-                #         state.last_slot = chosen_slot[1]
-                #     else:
-                #         spin_queue.put((None, None, None, False))
-                        
-                # LUCKY SPIN HERE
                 # if previous_hash and state.auto_mode and state.dual_slots and state.prev_jackpot_val != 0.0 and state.prev_10m != 0.0 and state.last_pull_delta != 0.0:
-                if state.auto_mode and state.last_pull_delta != 0:
+                if not forever_spin and state.auto_mode and state.last_pull_delta != 0:
                     # print(f"\nstate.elapsed: {state.elapsed}")
                     # print(f"\nstate.curr_color: {state.curr_color}")
                     # print("data.get('min10') | state.prev_10m : ", data.get('min10'), state.prev_10m)
@@ -1230,7 +1205,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     get_delta = round(data.get('min10') - state.prev_10m, 2)
 
                     state.non_stop = (get_delta <= state.last_pull_delta and get_delta <= -10 and data.get('min10') <= -10) or state.is_breakout or state.is_delta_breakout
-
+                    print('\n\tSTATE NON STOP HERE >> ', state.non_stop, data.get('min10'))
                     # is_breakout = (data.get('min10') < state.breakout["lowest_low"] and data.get('min10') < state.breakout["lowest_low"]) if provider != "PG" else (state.is_breakout and data.get('min10') < state.breakout["lowest_low"])
                     # is_delta_breakout = (get_delta < state.breakout["lowest_low_delta"] and state.breakout["lowest_low_delta"] < 0) if provider != "PG" else (state.is_delta_breakout and get_delta < state.breakout["lowest_low_delta"])
                     # print('GET 10M values >>> ', data.get('min10'), state.last_10m)
@@ -1250,52 +1225,50 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                                 # if state.is_breakout or state.is_delta_breakout or get_delta <= -50 or data.get('min10') <= -50:
                                 slots = ["left", "right"]
                                 if state.last_slot is None:
-                                    # First run → spin both slots
                                     random.shuffle(slots)
                                     chosen_slot = slots
                                 else:
-                                    # Only spin other slot
                                     other_slot = "right" if state.last_slot == "left" else "left"
                                     chosen_slot = [other_slot, state.last_slot]
 
-                                # Enqueue spins
                                 spin_queue.put((None, None, chosen_slot[0], False))
                                 spin_queue.put((None, None, chosen_slot[1], True))
 
-                                # Save slot for next time
                                 state.last_slot = chosen_slot[1] if state.non_stop else None
                                 time.sleep(random.randint(*DELAY_RANGE)) if state.non_stop else None
-                                # elif (get_delta < state.last_pull_delta and get_delta <= -50 and data.get('min10') <= -50):
-                                #     slots = ["left", "right"]
-                                #     random.shuffle(slots)  # Randomize order
-                                #     spin_queue.put(("low", None, slots[0], False))
-                                #     spin_queue.put(("low", None, slots[1], False))
-                                # else:
-                                #     spin_queue.put((None, None, None, False))
                             else:
-                                # if get_delta <= state.breakout["lowest_low_delta"]:
-                                # if state.is_breakout or state.is_delta_breakout:
                                 spin_queue.put((None, None, None, True))
-                                # elif (get_delta < state.last_pull_delta and get_delta <= -50 and data.get('min10') <= -50):
-                                #     spin_queue.put(("low", None, None, False))
-                                # else:
-                                #     spin_queue.put((None, None, None, False))
+                # Forever Spin
+                elif forever_spin:
+                    print(f"\nstate.curr_color: {state.curr_color}")
+                    if state.curr_color == 'red':
+                        if state.dual_slots: 
+                            slots = ["left", "right"]
+                            if state.last_slot is None:
+                                random.shuffle(slots)
+                                chosen_slot = slots
+                            else:
+                                other_slot = "right" if state.last_slot == "left" else "left"
+                                chosen_slot = [other_slot, state.last_slot]
 
-                # parsed_data = extract_game_data(data)
+                            spin_queue.put(("low", None, chosen_slot[0], False))
+                            spin_queue.put(("low", None, chosen_slot[1], False))
+
+                            state.last_slot = chosen_slot[1]
+                        else:
+                            spin_queue.put((None, None, None, False))
+
+                        state.last_slot = chosen_slot[1] if state.non_stop else None
+                        time.sleep(random.randint(*DELAY_RANGE)) if state.non_stop else None
+
                 current_hash = hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
-                # print('\n\tTEST DATA >> ', data.get('min10'), data.get('hr1'))
-                # print(f"\tTEST HASH EQUAL >> {f'{BLRED}True{RES}' if current_hash == previous_hash else 'False'}\n")
-
-                # print(f"{data.get('min10')} --> {data.get('min10')}")
-                # print('state.prev_10m --> ', state.prev_10m)
 
                 if current_hash != previous_hash:
-                    # ls = round(int(now_time().astimezone().strftime('%S')), 5)
-                    # state.last_time = round(int(now_time().strftime('%S')), 5)
-                    state.last_time = round(datetime_now().second / 5) * 5
-                    print('\nState Last Time: ', state.last_time)
-
+                    state.last_time = int(round(data.get('last_updated') % 60))
+                    
+                    print('\n\n\tState Last Time: ', state.last_time)
                     print(f"\n\n\tElapsed Time: {state.elapsed}")
+
                     previous_hash = current_hash
                     data_queue.put(data)
             else:
@@ -1483,13 +1456,6 @@ if __name__ == "__main__":
         else:
             print("\n\t✅  IP Match!")
 
-    # Register a game
-    requests.post(f"{api_server}/register", json={
-        'url': url,
-        'name': game,
-        'provider': provider
-    })
-
     print(f"\n\n\t{BLNK}{DGRY}🔔 Select Casino{RES}\n")
 
     casinos = list(CASINOS)
@@ -1520,6 +1486,7 @@ if __name__ == "__main__":
     dual_slots = False
     split_screen = False
     left_slot = right_slot = False
+    forever_spin = False
 
     if auto_mode:
         user_input = input(f"\n\n\tDo you want to enable {CYN}Dual Slots{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
@@ -1537,12 +1504,18 @@ if __name__ == "__main__":
                     enable_right = input(f"\n\n\tDo you want to enable {MAG}Right Slot{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
                     right_slot = enable_right in ("y", "yes")
 
+        user_input = input(f"\n\n\tDo you want to enable {CYN}Forever Spin{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
+        forever_spin = user_input in ("y", "yes")
+
     print(f"\n\n\t... {WHTE}Starting real-time jackpot monitor.\n\t    Press ({BLMAG}Ctrl+C{RES}{WHTE}) to stop.{RES}\n")
-    
+
+    # Register a game
+    requests.post(f"{api_server}/register", json={'url': url, 'name': game, 'provider': provider})
+
     breakout = load_breakout_memory(game)
 
     state = AutoState()
-    settings = configure_game(game, breakout, api_server, auto_mode, dual_slots, split_screen, left_slot, right_slot)
+    settings = configure_game(game, api_server, breakout, auto_mode, dual_slots, split_screen, left_slot, right_slot, forever_spin)
 
     stop_event = threading.Event()
     reset_event = threading.Event()
@@ -1555,32 +1528,30 @@ if __name__ == "__main__":
     
     alert_thread = threading.Thread(target=play_alert, daemon=True)
     bet_thread = threading.Thread(target=bet_switch, daemon=True)
-    countdown_thread = threading.Thread(target=countdown_timer, args=(stop_event, reset_event, countdown_queue, 50,), daemon=True)
+    countdown_thread = threading.Thread(target=countdown_timer, args=(countdown_queue, 50,), daemon=True)
     monitor_thread = threading.Thread(target=monitor_game_info, args=(game, provider, url, data_queue,), daemon=True)
     spin_thread = threading.Thread(target=spin, daemon=True)
-    # time_thread = threading.Thread(target=now_time, daemon=True)
 
     alert_thread.start()
     bet_thread.start()
     countdown_thread.start()
     monitor_thread.start()
     spin_thread.start()
-    # time_thread.start()
 
     state.elapsed = 0
 
     try:
         while True:
             try:
+                # Wait for new data from monitor thread (max 60s)
+                data = data_queue.get(timeout=51)
+
                 # Reset the countdown because data came in
                 reset_event.set()
                 state.elapsed = 0  # Reset elapsed on data
 
-                # Wait for new data from monitor thread (max 60s)
-                data = data_queue.get(timeout=52)
                 alert_queue.put((None, game))
                 parsed_data = extract_game_data(data)
-
                 all_data = load_previous_data()
                 previous_data = all_data.get(game.lower())
                 compare_data(previous_data, parsed_data)
@@ -1588,12 +1559,12 @@ if __name__ == "__main__":
                 save_current_data(all_data)
             except Empty:
                 state.elapsed += 1
-                if state.elapsed == 2:
-                    print('Restarting API Service...')
-                    subprocess.run(["bash", "api_restart.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                if state.elapsed >= 52:
-                    print("⚠️  No data received in 1 minute.")
-                    state.elapsed = 0  # Optional: reset or exit
+                # if state.elapsed == 2:
+                #     print('Restarting API Service...')
+                #     subprocess.run(["bash", "api_restart.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                # if state.elapsed >= 50:
+                #     print("⚠️  No data received in 1 minute.")
+                #     state.elapsed = 0  # Optional: reset or exit
             # Handle timeout signal from countdown
             # try:
             #     result = countdown_queue.get_nowait()
@@ -1605,11 +1576,11 @@ if __name__ == "__main__":
             # except Empty:
             #     pass  # No timer event
     except KeyboardInterrupt:
-        print("\n\t🤖❌  Main program interrupted.")
-        stop_event.set()  # Stop the countdown thread
-        
+        print("\n\n\t🤖❌  Main program interrupted.")
+        stop_event.set()  # Stop all threads
+
     # requests.post(f"http://{API_CONFIG.get('host')}:{API_CONFIG.get('port')}/deregister", json={'url': url, 'name': game, 'provider': provider})
-    requests.post(f"{API_URL}/deregister", json={
+    requests.post(f"{api_server}/deregister", json={
         'url': url,
         'name': game,
         'provider': provider
@@ -1618,11 +1589,4 @@ if __name__ == "__main__":
     if os.path.exists(DATA_FILE):
         os.remove(DATA_FILE)
 
-    alert_thread.join(timeout=1)
-    bet_thread.join(timeout=1)
-    countdown_thread.join(timeout=1)
-    spin_thread.join(timeout=1)
-    monitor_thread.join(timeout=1)
-    # time_thread.join(timeout=1)
-    print("🤖❌  All threads shut down.")
-    
+    print("\n\n\t🤖❌  All threads shut down.")

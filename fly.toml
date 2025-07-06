@@ -1,23 +1,22 @@
-# fly.toml app configuration file generated for api-jackpot on 2025-07-01T12:27:22+08:00
+# fly.toml app configuration file generated for api-jackpot-cold-firefly-6839 on 2025-07-07T03:28:06+08:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'api-jackpot'
+app = 'api-jackpot-cold-firefly-6839'
 primary_region = 'sin'
 
 [build]
-  dockerfile = 'Dockerfile'
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = 'off'
+  auto_stop_machines = 'stop'
   auto_start_machines = true
-  min_machines_running = 1
+  min_machines_running = 0
   processes = ['app']
 
 [[vm]]
-  memory = '2gb'
+  memory = '1gb'
   cpu_kind = 'shared'
-  cpus = 2
+  cpus = 1
