@@ -66,6 +66,8 @@ GAME_CONFIGS = {
     "Fortune Gems 3": GameConfig(False, True, True, None, False, True, "JILI"),
     "Fortune Gems Scratch": GameConfig(False, True, True, None, False, True, "JILI"),
     "Fortune Monkey": GameConfig(False, True, True, None, False, True, "JILI"),
+    "Super Rich": GameConfig(False, True, True, None, False, True, "JILI"),
+    "Lucky Gaming": GameConfig(False, True, True, None, False, True, "JILI"),
     "Super Ace": GameConfig(False, True, True, None, False, False, "JILI"),
     "Super Ace II": GameConfig(False, True, True, None, False, False, "JILI"),
     "Super Ace Deluxe": GameConfig(False, True, True, None, False, False, "JILI"),
@@ -83,6 +85,7 @@ GAME_CONFIGS = {
     "Shōgun": GameConfig(False, True, True, None, False, True, "JILI"),
     "Pirate Queen": GameConfig(False, True, True, None, False, True, "JILI"),
     "Pirate Queen 2": GameConfig(False, True, True, None, False, True, "JILI"),
+    "Jungle King": GameConfig(False, True, True, None, False, True, "JILI"),
     "Neko Fortune": GameConfig(False, True, True, None, False, True, "JILI"),
     "Chin Shi Huang": GameConfig(False, True, True, None, False, True, "JILI"),
     "Charge Buffalo": GameConfig(False, True, True, None, False, True, "JILI"),
@@ -191,7 +194,7 @@ API_URL = [ "http://localhost:8080", "https://api-jackpot.fly.dev" ]
 # API_URL = "https://api-jackpot.fly.dev"
 VPS_IP = "66.241.124.83"
 
-CASINOS = [ "JLJL9", "Bingo Plus", "Casino Plus", "Rollem 88", "2JL" ]
+CASINOS = [ "JLJL9", "Bingo Plus", "Win PH", "Casino Plus", "Rollem 88", "2JL" ]
 
 USER_AGENTS = [
     # Windows Chrome

@@ -140,26 +140,34 @@ async def update_games() -> bool:
           f"{BLYEL}{[(g['name'], round(g.get('value', 0), 2)) for g in combined]}{RES}")
     return True
 
-async def refresh_loop(cycle_seconds: int = 55):
+async def refresh_loop(cycle_seconds: int = 50):
     fail_count = 0
     max_backoff = 25
 
     while True:
-        cycle_start = time.time()
+        if not REGISTERED_GAMES:
+            print(f"\n⚠️ No registered games. Waiting 10s before checking again.\n")
+            await asyncio.sleep(10)
+            continue
 
-        if REGISTERED_GAMES:
-            changed = await update_games()
-            fail_count = 0 if changed else fail_count + 1
-        else:
-            print(f"\n⚠️ No registered games. Skipping fetch.\n")
-            fail_count += 1
+        cycle_start = time.time()
+        print(f'\nCycle Start @: {BWHTE}{datetime.fromtimestamp(cycle_start).strftime("%M:%S")}{RES}')
+        print(f'Cycle Seconds: {BWHTE}{datetime.fromtimestamp(cycle_seconds).strftime("%M:%S")}{RES}')
+
+        changed = await update_games()
+        fail_count = 0 if changed else fail_count + 1
 
         elapsed = time.time() - cycle_start
+        print(f'Elapsed: {BWHTE}{datetime.fromtimestamp(elapsed).strftime("%M:%S")}{RES}')
         next_cycle_start = cycle_start + cycle_seconds
+        print(f'Next Cycle Start: {BWHTE}{datetime.fromtimestamp(next_cycle_start).strftime("%M:%S")}{RES}')
         wait = max(0, next_cycle_start - time.time())
+        print(f'Wait[Init]: {BWHTE}{datetime.fromtimestamp(wait).strftime("%M:%S")}{RES}')
 
         backoff = min(fail_count * 5, max_backoff)
+        print(f'Backoff: {BWHTE}{datetime.fromtimestamp(backoff).strftime("%M:%S")}{RES}')
         wait += backoff
+        print(f'Wait[Final]: {BWHTE}{datetime.fromtimestamp(wait).strftime("%M:%S")}{RES}')
 
         print(f"\n⏳ Sleeping {wait:.2f}s until next refresh cycle.\n")
         await asyncio.sleep(wait)
@@ -181,7 +189,7 @@ def auto_deregister_inactive():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(refresh_loop(55))
+    task = asyncio.create_task(refresh_loop(50))
     yield
     task.cancel()
     try:
