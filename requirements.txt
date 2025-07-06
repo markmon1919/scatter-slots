@@ -4,4 +4,5 @@ fastapi[standard]
 httpx
 pydantic
 pyautogui
+pyinstaller
 uvicorn[standard]
