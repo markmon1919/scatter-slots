@@ -1195,7 +1195,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     # if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m:
                     get_delta = round(data.get('min10') - state.prev_10m, 2)
 
-                    state.non_stop = (get_delta <= state.last_pull_delta and get_delta <= -10 and data.get('min10') <= -10) or state.is_breakout or state.is_delta_breakout
+                    state.non_stop = (get_delta <= state.last_pull_delta and get_delta <= -30 and data.get('min10') <= -30) or state.is_breakout or state.is_delta_breakout
                     # is_breakout = (data.get('min10') < state.breakout["lowest_low"] and data.get('min10') < state.breakout["lowest_low"]) if provider != "PG" else (state.is_breakout and data.get('min10') < state.breakout["lowest_low"])
                     # is_delta_breakout = (get_delta < state.breakout["lowest_low_delta"] and state.breakout["lowest_low_delta"] < 0) if provider != "PG" else (state.is_delta_breakout and get_delta < state.breakout["lowest_low_delta"])
                     # print('GET 10M values >>> ', data.get('min10'), state.last_10m)
@@ -1230,26 +1230,27 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                                 spin_queue.put((None, None, None, True))
                 # Forever Spin
                 elif forever_spin:
-                    print(f"\nstate.curr_color: {state.curr_color}")
-                    if state.curr_color == 'red':
-                        if state.dual_slots: 
-                            slots = ["left", "right"]
-                            if state.last_slot is None:
-                                random.shuffle(slots)
-                                chosen_slot = slots
-                            else:
-                                other_slot = "right" if state.last_slot == "left" else "left"
-                                chosen_slot = [other_slot, state.last_slot]
-
-                            spin_queue.put(("low", None, chosen_slot[0], False))
-                            spin_queue.put(("low", None, chosen_slot[1], False))
-
-                            state.last_slot = chosen_slot[1]
+                    # print(f"\nstate.curr_color: {state.curr_color}")
+                # if state.curr_color == 'red':
+                    if state.dual_slots: 
+                        slots = ["left", "right"]
+                        if state.last_slot is None:
+                            random.shuffle(slots)
+                            chosen_slot = slots
                         else:
-                            spin_queue.put((None, None, None, False))
+                            other_slot = "right" if state.last_slot == "left" else "left"
+                            chosen_slot = [other_slot, state.last_slot]
 
-                        state.last_slot = chosen_slot[1] if state.non_stop else None
-                        time.sleep(random.randint(*DELAY_RANGE)) if state.non_stop else None
+                        spin_queue.put(("low", None, chosen_slot[0], False))
+                        spin_queue.put(("low", None, chosen_slot[1], False))
+
+                        state.last_slot = chosen_slot[1]
+                    else:
+                        time.sleep(random.randint(*DELAY_RANGE))
+                        spin_queue.put((None, None, None, False))
+
+                    state.last_slot = chosen_slot[1] if state.non_stop else None
+                    time.sleep(random.randint(*DELAY_RANGE)) if state.non_stop else None
 
                 current_hash = hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
