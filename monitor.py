@@ -635,12 +635,15 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 50):
                             spin_queue.put((None, None, slots[0], False))
                             spin_queue.put((None, None, slots[1], False))
 
+                        if time_left == 0:
+                            spin_done = True
+
                     elif time_left <= 2 and not state.dual_slots:# and state.elapsed == 0:
                         if state.auto_mode and state.last_time != 0:
                             spin_queue.put((None, None, None, False))
 
-                    elif time_left == 0:
-                        spin_done = True
+                        if time_left == 0:
+                            spin_done = True
 
                     # if state.dual_slots and state.auto_mode:
                     #     print('\tCATCH 1 seconds --> ', time_left)
