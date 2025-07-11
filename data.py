@@ -9,7 +9,12 @@ import json
 from contextlib import asynccontextmanager
 from decimal import Decimal
 # import uvicorn
-from config import USER_AGENTS
+from config import (
+    USER_AGENTS,
+    LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, CYN, BLU,
+    WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG,
+    BCYN, BWHTE, DGRY, BLNK, CLEAR, RES
+)
 
 # ──────────────
 # FASTAPI APP
@@ -111,9 +116,9 @@ async def poller_loop():
                                 if min10 != last_min10:
                                     if key in last_change_times:
                                         interval = now_time - last_change_times[key]
-                                        print(f"✅ [{name} | {requestFrom}] min10 changed → {min10} (Δ {interval}s)")
+                                        print(f"\n✅ [{BLBLU}{name}{RES} | {BWHTE}{requestFrom}{RES}] Changed → {MAG}{min10}{RES} (Δ {BLYEL}{interval}{RES}s)\n")
                                     else:
-                                        print(f"✅ [{name} | {requestFrom}] First min10: {min10}")
+                                        print(f"\n✅ [{BLBLU}{name}{RES} | {BWHTE}{requestFrom}{RES}] First → {MAG}{min10}{RES}\n")
 
                                     # prepare a new data object
                                     new_data = json.loads(json.dumps(data[0]))
@@ -131,7 +136,7 @@ async def poller_loop():
                                     last_hashes[key] = hash_val
 
                                 else:
-                                    print(f"→ [{name} | {requestFrom}] min10 still {min10}")
+                                    print(f"\n❌ [{BLBLU}{name}{RES} | {BWHTE}{requestFrom}{RES}] Still → {RED}{min10}{RES}\n")
 
                         else:
                             print(f"⚠️ [{name} | {requestFrom}] No data returned.")
@@ -179,7 +184,8 @@ async def register_game(req: RegisterRequest):
         "name": req.name,
         "manuf": req.provider
     }
-    print(f"\n🎰 Registered: {req.name} ({req.provider})\n")
+
+    print(f"\n🎰 Registered: {BLCYN}{BLNK}{req.name}{RES} ({BLRED}{req.provider}{RES})\n")
     return {"status": "registered", "message": f"Registered {req.name} with provider {req.provider}"}
 
 @app.get("/game")

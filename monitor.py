@@ -254,7 +254,7 @@ def compare_data(prev: dict, current: dict):
 
                     updated = False
 
-                    if lowest_low == 0 or new_num < lowest_low:
+                    if lowest_low <= 0 and new_num < lowest_low:
                         lowest_low = round(new_num, 2)
                         state.breakout["lowest_low"] = lowest_low
                         is_breakout = True
@@ -262,7 +262,7 @@ def compare_data(prev: dict, current: dict):
                         alert_queue.put((None, "break_out"))
                         updated = True
 
-                    if lowest_low_delta == 0 or delta < lowest_low_delta:
+                    if lowest_low_delta <= 0 and delta < lowest_low_delta:
                         lowest_low_delta = round(delta, 2)
                         state.breakout["lowest_low_delta"] = lowest_low_delta
                         is_breakout_delta = True
@@ -712,7 +712,7 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 50):
                 # if data.get('value') < state.prev_jackpot_val and data.get('min10') < state.prev_10m:
                 get_delta = round(state.new_10m - state.prev_10m, 2)
                 # state.non_stop = (get_delta < state.last_pull_delta and get_delta <= -30 and state.new_10m <= -30) or state.is_breakout or state.is_delta_breakout or state.is_reversal or state.bet_lvl in [ "max", "high" ]
-                state.non_stop = (state.new_jackpot_val < state.prev_jackpot_val and state.new_10m < state.prev_10m and get_delta < state.last_pull_delta) or state.is_breakout or state.is_delta_breakout or state.is_reversal or state.bet_lvl in [ "max", "high" ]
+                state.non_stop = (state.new_jackpot_val < state.prev_jackpot_val and state.new_10m < state.prev_10m and get_delta < state.prev_pull_delta) or state.is_breakout or state.is_delta_breakout or state.is_reversal or state.bet_lvl in [ "max", "high" ]
                 # print('\n\tget_delta >> ', get_delta)
                 # print('\n\tstate.prev_pull_delta >> ', state.prev_pull_delta)
                 # print('\n\tstate.new_jackpot_val >> ', state.new_jackpot_val)
