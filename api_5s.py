@@ -141,7 +141,7 @@ async def update_games() -> bool:
           f"{BLYEL}{[(g['name'], round(g.get('value', 0), 2)) for g in combined]}{RES}")
     return True
 
-async def refresh_loop(cycle_seconds: int = 5):
+async def refresh_loop(cycle_seconds: int = 1):
     fail_count = 0
     max_backoff = 5
 
@@ -163,7 +163,8 @@ async def refresh_loop(cycle_seconds: int = 5):
         await asyncio.sleep(wait)
 
 def auto_deregister_inactive():
-    now = datetime.utcnow()
+    # now = datetime.utcnow()
+    today = datetime.fromtimestamp(time.time())
     inactive_games = []
 
     for game in REGISTERED_GAMES:
@@ -179,7 +180,7 @@ def auto_deregister_inactive():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(refresh_loop(5))
+    task = asyncio.create_task(refresh_loop(1))
     yield
     task.cancel()
     try:
@@ -195,7 +196,8 @@ async def register_game(game: GameRegistration):
     entry = {"url": game.url.strip(), "name": key, "provider": game.provider}
     if key and all(g["name"] != key for g in REGISTERED_GAMES):
         REGISTERED_GAMES.append(entry)
-        LAST_ACCESSED[key.replace(" ", "").lower()] = datetime.utcnow()
+        # LAST_ACCESSED[key.replace(" ", "").lower()] = datetime.utcnow()
+        LAST_ACCESSED[key.replace(" ", "").lower()] = datetime.fromtimestamp(time.time())
         print(f"\n🎰 Registered: {BLRED}{key}{RES}\n")
         return {"status": "ok", "message": f"Registered '{key}' with provider '{game.provider}'"}
     print(f"\n🎰 {key} already registered.\n")
@@ -224,7 +226,9 @@ async def get_game(name: str = Query(...)):
 
     for game in CACHE["games"]:
         if game["name"].replace(" ", "").lower() == normalized:
-            LAST_ACCESSED[normalized] = datetime.utcnow()
+            # LAST_ACCESSED[normalized] = datetime.utcnow()
+            LAST_ACCESSED[normalized] = datetime.fromtimestamp(time.time())
+            game.update({"last_updated": CACHE["last_updated"]})
             return game
     return {"error": f"Game '{name}' not found."}
 
@@ -232,7 +236,7 @@ async def get_game(name: str = Query(...)):
 async def get_all_games():
     return {
         "status": 0,
-        "data": CACHE["games"],
+        "data": CACHE["games"], 
         "last_updated": CACHE["last_updated"],
         "registered_games": REGISTERED_GAMES
     }
