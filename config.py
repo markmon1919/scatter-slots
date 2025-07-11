@@ -40,8 +40,8 @@ DEFAULT_VOICE = "Samantha"
 SOUND_ENABLED = True
 
 # === Default Timeouts ===
-SPIN_DELAY_RANGE = (2, 4)  # Used with random.uniform(*SPIN_DELAY_RANGE)
-TIMEOUT_DELAY_RANGE = (0, 4)  # Used with random.uniform(*TIMEOUT_DELAY_RANGE)
+SPIN_DELAY_RANGE = (1, 3)  # Used with random.uniform(*SPIN_DELAY_RANGE)
+TIMEOUT_DELAY_RANGE = (1, 5)  # Used with random.uniform(*TIMEOUT_DELAY_RANGE)
 
 # COLORS
 RED='\033[31m'; GRE='\033[32m'; YEL='\033[33m'
