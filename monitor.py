@@ -646,6 +646,7 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
                         spin_queue.put((None, None, slots[1], False))
                     elif not state.dual_slots and state.auto_mode and state.curr_color == 'red':
                         spin_queue.put((None, None, None, False))
+                    time.sleep(random.uniform(*TIMEOUT_DELAY_RANGE))
         else:
             if not forever_spin and state.auto_mode and state.prev_pull_delta != 0.0:
                 # print(f"\nstate.elapsed: {state.elapsed}")
