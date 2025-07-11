@@ -755,10 +755,10 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 50):
                             spin_queue.put((None, None, chosen_slot[1], True))
 
                             state.last_slot = chosen_slot[1] if state.non_stop else None
-                            time.sleep(random.randint(*DELAY_RANGE)) if state.non_stop else None
+                            time.sleep(random.uniform(*SPIN_DELAY_RANGE)) if state.non_stop else None
                         else:
                             spin_queue.put((None, None, None, True))
-                            time.sleep(random.randint(*DELAY_RANGE))
+                            time.sleep(random.uniform(*SPIN_DELAY_RANGE))
             # Forever Spin
             elif forever_spin:
                 # print(f"\nstate.curr_color: {state.curr_color}")
@@ -777,11 +777,11 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 50):
 
                     state.last_slot = chosen_slot[1]
                 else:
-                    time.sleep(random.randint(*DELAY_RANGE))
+                    time.sleep(random.uniform(*DELAY_RANGE))
                     spin_queue.put((None, None, None, False))
 
                 state.last_slot = chosen_slot[1] if state.non_stop else None
-                time.sleep(random.randint(*DELAY_RANGE)) if state.non_stop else None
+                time.sleep(random.uniform(*DELAY_RANGE)) if state.non_stop else None
             
         countdown_queue.put(time_left)
         sys.stdout.write(f"\r{timer.ljust(80)}")
@@ -962,17 +962,17 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     pyautogui.click(x=cx, y=cy)
                 elif provider in [ "PG", "PP" ]:
                     pyautogui.press('space')
-                    time.sleep(random.randint(*DELAY_RANGE))
+                    time.sleep(random.uniform(*DELAY_RANGE))
                     pyautogui.click(x=cx, y=cy)
             elif chosen_spin == "board_spin_delay":
                 if provider in [ "JILI", "FC", "JFF", "R88" ]:
                     pyautogui.moveTo(x=cx, y=cy)
                     pyautogui.mouseDown()
-                    time.sleep(random.randint(*DELAY_RANGE))
+                    time.sleep(random.uniform(*DELAY_RANGE))
                     pyautogui.mouseUp()
                 elif provider in [ "PG", "PP" ]:
                     pyautogui.keyDown('space')
-                    time.sleep(random.randint(*DELAY_RANGE))
+                    time.sleep(random.uniform(*DELAY_RANGE))
                     pyautogui.keyUp('space')
             elif chosen_spin == "board_spin_turbo":
                 if provider in [ "JILI", "FC", "JFF", "R88" ]:
@@ -984,12 +984,12 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                 if provider in [ "FC" ]:
                     pyautogui.moveTo(x=cx, y=cy)
                     pyautogui.mouseDown()
-                    time.sleep(random.randint(*DELAY_RANGE))
+                    time.sleep(random.uniform(*DELAY_RANGE))
                     pyautogui.mouseUp()
                     pyautogui.click(x=cx, y=cy)
                 elif provider in [ "JILI", "PG", "PP", "JFF", "R88" ]:
                     pyautogui.keyDown('space')
-                    time.sleep(random.randint(*DELAY_RANGE))
+                    time.sleep(random.uniform(*DELAY_RANGE))
                     pyautogui.keyUp('space')
                     action = random.choice([
                         lambda: pyautogui.press('space'),
