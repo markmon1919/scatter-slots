@@ -204,7 +204,7 @@ def compare_data(prev: dict, current: dict):
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {BLRED if current_jackpot < prev_jackpot else BLGRE}{current_jackpot}{percent} {diff}")
         print(f"\n\t{jackpot_bar} {BLRED}{current_jackpot}{RES}{percent}  ✅\n") if current_jackpot < prev_jackpot else \
-            print(f"\n\t{jackpot_bar}: {BLGRE}{current_jackpot}{RES}{percent}  ❌\n")
+            print(f"\n\t{jackpot_bar} {BLGRE}{current_jackpot}{RES}{percent}  ❌\n")
     else:
         print(f"\n\n\t\t⏰ {f"{LBLU}{datetime_now().strftime('%I:%M:%S %p')}{LGRY} {datetime_now().strftime('%a')}{RES}"}")
         print(f"{banner}")
