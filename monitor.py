@@ -652,7 +652,7 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
                 # print(f"\nstate.curr_color: {state.curr_color}")
                 # print("data.get('min10') | state.prev_10m : ", data.get('min10'), state.prev_10m)
                 get_delta = round(state.new_10m - state.prev_10m, 2)
-                state.non_stop = (state.new_jackpot_val < state.prev_jackpot_val and state.new_10m < state.prev_10m and get_delta < state.prev_pull_delta and get_delta <= -30 and state.new_10m <= -30) or state.is_breakout or state.is_delta_breakout or state.is_reversal or state.bet_lvl in [ "max", "high" ]
+                state.non_stop = (state.new_jackpot_val < state.prev_jackpot_val and state.new_10m < state.prev_10m and get_delta < state.prev_pull_delta) or state.is_breakout or state.is_delta_breakout or state.is_reversal or state.bet_lvl in [ "max", "high" ]
                 # print('\n\tget_delta >> ', get_delta)
                 # print('\n\tstate.prev_pull_delta >> ', state.prev_pull_delta)
                 # print('\n\tstate.new_jackpot_val >> ', state.new_jackpot_val)
@@ -665,7 +665,7 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
                 # print('\n\tBREAKOUT >> ', state.is_breakout)
                 # print('\n\tDELTA BREAKOUT >> ', state.is_delta_breakout)
                 # print('\n\tBET LVL >> ', state.bet_lvl)
-                if state.non_stop and state.curr_color == 'red':
+                if get_delta <= -30 and state.new_10m <= -30 and state.curr_color == 'red':
                     alert_queue.put((None, "non stop spin"))
                     if state.dual_slots:
                         slots = ["left", "right"]
