@@ -635,18 +635,19 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
                 state.non_stop = False
             elif time_left <= 5:
                 alert_queue.put((None, time_left))
-                if time_left < 5 and not state.non_stop:
+                if time_left < 5 and not state.non_stop and state.curr_color == 'red':
                     # print('\n\tLucky Bet: curr_color >> ', state.curr_color)
                     # print('\n\tLucky Bet: prev_pull_delta >> ', state.prev_pull_delta)
                     # print('\n\tLucky Bet: non_stop >> ', state.non_stop)
-                    if state.dual_slots and state.auto_mode and state.curr_color == 'red':
+                    if state.dual_slots and state.auto_mode:
                         slots = ["left", "right"]
                         random.shuffle(slots)
                         spin_queue.put((None, None, slots[0], False))
                         spin_queue.put((None, None, slots[1], False))
-                    elif not state.dual_slots and state.auto_mode and state.curr_color == 'red':
+                        time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+                    elif not state.dual_slots and state.auto_mode:
                         spin_queue.put((None, None, None, False))
-                    time.sleep(random.uniform(*TIMEOUT_DELAY_RANGE))
+                        time.sleep(random.uniform(*SPIN_DELAY_RANGE))
         else:
             if not forever_spin and state.auto_mode and state.prev_pull_delta != 0.0:
                 # print(f"\nstate.elapsed: {state.elapsed}")
