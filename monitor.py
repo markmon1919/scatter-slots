@@ -14,7 +14,7 @@ from queue import Queue as ThQueue, Empty
 #from webdriver_manager.chrome import ChromeDriverManager
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 # from pynput.mouse import Listener as MouseListener, Button
-from config import (datetime_now, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, DEFAULT_VOICE, DELAY_RANGE, SPIN_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
+from config import (datetime_now, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, DEFAULT_VOICE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
@@ -699,7 +699,7 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 50):
             # End countdown spin (luckyBet)
             # print('spin done >>> ', spin_done)
             # if time_left <= 4 and state.auto_mode and state.elapsed == 0 and state.curr_color == 'red' and not spin_done:
-            # time.sleep(random.randint(*DELAY_RANGE))
+            # time.sleep(random.randint(*SPIN_DELAY_RANGE))
             # timer = f"\t⏳ {text}: {BWHTE}... {BLNK}{BLRED}{secs}{RES}"
         else:
             timer = f"\t⏳ {text}: {BLYEL}{mins:02d}{BLNK}{BWHTE}:{RES}{BLYEL}{secs:02d}{RES}  ( {CYN}{game}{RES} )"
@@ -755,10 +755,10 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 50):
                             spin_queue.put((None, None, chosen_slot[1], True))
 
                             state.last_slot = chosen_slot[1] if state.non_stop else None
-                            time.sleep(random.uniform(*SPIN_DELAY_RANGE)) if state.non_stop else None
+                            time.sleep(random.uniform(*TIMEOUT_DELAY_RANGE)) if state.non_stop else None
                         else:
                             spin_queue.put((None, None, None, True))
-                            time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+                            time.sleep(random.uniform(*TIMEOUT_DELAY_RANGE))
             # Forever Spin
             elif forever_spin:
                 # print(f"\nstate.curr_color: {state.curr_color}")
@@ -777,11 +777,11 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 50):
 
                     state.last_slot = chosen_slot[1]
                 else:
-                    time.sleep(random.uniform(*DELAY_RANGE))
+                    time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                     spin_queue.put((None, None, None, False))
 
                 state.last_slot = chosen_slot[1] if state.non_stop else None
-                time.sleep(random.uniform(*DELAY_RANGE)) if state.non_stop else None
+                time.sleep(random.uniform(*SPIN_DELAY_RANGE)) if state.non_stop else None
             
         countdown_queue.put(time_left)
         sys.stdout.write(f"\r{timer.ljust(80)}")
@@ -960,24 +960,24 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             elif chosen_spin == "spin_hold":
                 pyautogui.doubleClick(x=cx, y=cy + 315)
                 pyautogui.mouseDown()
-                time.sleep(random.uniform(*DELAY_RANGE))
+                time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                 pyautogui.mouseUp()
             elif chosen_spin == "board_spin":  # Click confirm during first board spin    
                 if provider in [ "JILI", "FC", "JFF", "R88" ]:
                     pyautogui.click(x=cx, y=cy)
                 elif provider in [ "PG", "PP" ]:
                     pyautogui.press('space')
-                    time.sleep(random.uniform(*DELAY_RANGE))
+                    time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                     pyautogui.click(x=cx, y=cy)
             elif chosen_spin == "board_spin_delay":
                 if provider in [ "JILI", "FC", "JFF", "R88" ]:
                     pyautogui.moveTo(x=cx, y=cy)
                     pyautogui.mouseDown()
-                    time.sleep(random.uniform(*DELAY_RANGE))
+                    time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                     pyautogui.mouseUp()
                 elif provider in [ "PG", "PP" ]:
                     pyautogui.keyDown('space')
-                    time.sleep(random.uniform(*DELAY_RANGE))
+                    time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                     pyautogui.keyUp('space')
             elif chosen_spin == "board_spin_turbo":
                 if provider in [ "JILI", "FC", "JFF", "R88" ]:
@@ -989,12 +989,12 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                 if provider in [ "FC" ]:
                     pyautogui.moveTo(x=cx, y=cy)
                     pyautogui.mouseDown()
-                    time.sleep(random.uniform(*DELAY_RANGE))
+                    time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                     pyautogui.mouseUp()
                     pyautogui.click(x=cx, y=cy)
                 elif provider in [ "JILI", "PG", "PP", "JFF", "R88" ]:
                     pyautogui.keyDown('space')
-                    time.sleep(random.uniform(*DELAY_RANGE))
+                    time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                     pyautogui.keyUp('space')
                     action = random.choice([
                         lambda: pyautogui.press('space'),
@@ -1387,7 +1387,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                 #                 spin_queue.put((None, None, chosen_slot[1], True))
 
                 #                 state.last_slot = chosen_slot[1] if state.non_stop else None
-                #                 time.sleep(random.randint(*DELAY_RANGE)) if state.non_stop else None
+                #                 time.sleep(random.randint(*SPIN_DELAY_RANGE)) if state.non_stop else None
                 #             else:
                 #                 spin_queue.put((None, None, None, True))
                 # # Forever Spin
@@ -1408,11 +1408,11 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
 
                 #         state.last_slot = chosen_slot[1]
                 #     else:
-                #         time.sleep(random.randint(*DELAY_RANGE))
+                #         time.sleep(random.randint(*SPIN_DELAY_RANGE))
                 #         spin_queue.put((None, None, None, False))
 
                 #     state.last_slot = chosen_slot[1] if state.non_stop else None
-                #     time.sleep(random.randint(*DELAY_RANGE)) if state.non_stop else None
+                #     time.sleep(random.randint(*SPIN_DELAY_RANGE)) if state.non_stop else None
 
                 # current_hash = hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
