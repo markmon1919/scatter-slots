@@ -952,11 +952,16 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     
             #     time.sleep(1)
                 
-            if chosen_spin == "normal":  # optimize later for space or click dynamics
+            if chosen_spin == "normal_spin":  # optimize later for space or click dynamics
                 if state.spin:
                     pyautogui.doubleClick(x=cx, y=cy + 315)
                 else:
                     pyautogui.press('space')
+            elif chosen_spin == "spin_hold":
+                pyautogui.doubleClick(x=cx, y=cy + 315)
+                pyautogui.mouseDown()
+                time.sleep(random.uniform(*DELAY_RANGE))
+                pyautogui.mouseUp()
             elif chosen_spin == "board_spin":  # Click confirm during first board spin    
                 if provider in [ "JILI", "FC", "JFF", "R88" ]:
                     pyautogui.click(x=cx, y=cy)
@@ -1007,7 +1012,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                         lambda: pyautogui.click(x=cx, y=cy)
                     ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 315)
                     action()
-            elif chosen_spin == "turbo":
+            elif chosen_spin == "turbo_spin":
                 if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
                     pyautogui.doubleClick(x=cx + 450, y=cy + 325)
                 else:
@@ -1018,7 +1023,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 315)
                     action()
 
-            # time.sleep(2) if chosen_spin != "turbo" else time.sleep(1)
+            # time.sleep(2) if chosen_spin != "turbo_spin" else time.sleep(1)
             time.sleep(1)
 
             if state.dual_slots and slot_position is not None:
