@@ -203,8 +203,8 @@ def compare_data(prev: dict, current: dict):
         print(f"\n\n\t\t⏰ {f"{LBLU}{datetime_now().strftime('%I:%M:%S %p')}{LGRY} {datetime_now().strftime('%a')}{RES}"}")
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {BLRED if current_jackpot < prev_jackpot else BLGRE}{current_jackpot}{percent} {diff}")
-        print(f"\n\t{jackpot_bar} {BLRED}{current_jackpot}{RES}{percent}  ✅\n") if current_jackpot < prev_jackpot else \
-            print(f"\n\t{jackpot_bar} {BLGRE}{current_jackpot}{RES}{percent}  ❌\n")
+        print(f"\n\t{jackpot_bar} {LMAG}Δ{RES}: {BLRED}{sign}{colored_delta}{RES}{percent}  ✅\n") if current_jackpot < prev_jackpot else \
+            print(f"\n\t{jackpot_bar} {LMAG}Δ{RES}: {BLGRE}{sign}{colored_delta}{RES}  ❌\n")
     else:
         print(f"\n\n\t\t⏰ {f"{LBLU}{datetime_now().strftime('%I:%M:%S %p')}{LGRY} {datetime_now().strftime('%a')}{RES}"}")
         print(f"{banner}")
@@ -490,7 +490,7 @@ def compare_data(prev: dict, current: dict):
     print(f"\n\t\t{'💰 ' if current['color'] == 'red' else '⚠️ '}  {LYEL}Bet [{RES} {(BLNK) + (LRED if current['color'] == 'red' else LBLU)}{bet_level.upper()}{RES} {LYEL}]{RES}\n\n") if bet_level is not None else \
         print("\n\t\t🚫  Don't Bet!  🚫\n\n")
         
-    alert_queue.put((None, "caution")) if current['color'] == 'green' else None
+    alert_queue.put((None, "caution")) if current['color'] == 'green' and bet_level is not None else None
     alert_queue.put((bet_level, None))
 
     state.bet_lvl = bet_level
@@ -616,13 +616,17 @@ def play_alert(bet_level: str=None, say: str=None):
     else:
         pass
 
-def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
+def timer_start():
     current_time = time.gmtime(time.time())
-    time_left = (seconds - current_time.tm_sec) if state.prev_pull_delta != 0.0 else seconds
+    timer_start = (60 - current_time.tm_sec)
+    return timer_start
 
-    while not stop_event.is_set() and state.elapsed == 0:
+def countdown_timer(countdown_queue: ThQueue, seconds):
+    time_left = timer_start()
+
+    while not stop_event.is_set():
         if reset_event.is_set():
-            time_left = (seconds - current_time.tm_sec) if state.prev_pull_delta != 0.0 else seconds
+            time_left = timer_start()
             reset_event.clear()
             sys.stdout.write("\r" + " " * 80 + "\r")
             sys.stdout.flush()
@@ -1018,8 +1022,8 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     state.new_jackpot_val = data.get("value")
                     state.new_10m = data.get("min10")
                     state.last_time = round(data.get('last_updated') % 60)
-                    current_time = time.gmtime(time.time())
-                    print("\n\tstate.last_time | time_now >> ", state.last_time, current_time.tm_sec)
+                    # current_time = time.gmtime(time.time())
+                    print("\n\tstate.last_time: ", state.last_time)
                     # spin_queue.put((None, None, None, True)) # test spin on data not working
                     data_queue.put(data)
                 else:
@@ -1511,7 +1515,7 @@ if __name__ == "__main__":
     
     alert_thread = threading.Thread(target=play_alert, daemon=True)
     bet_thread = threading.Thread(target=bet_switch, daemon=True)
-    countdown_thread = threading.Thread(target=countdown_timer, args=(countdown_queue, 60,), daemon=True)
+    countdown_thread = threading.Thread(target=countdown_timer, args=(countdown_queue, timer_start(),), daemon=True)
     monitor_thread = threading.Thread(target=monitor_game_info, args=(game, provider, url, data_queue,), daemon=True)
     spin_thread = threading.Thread(target=spin, daemon=True)
 
@@ -1528,7 +1532,7 @@ if __name__ == "__main__":
             try:
                 reset_event.set() # Reset the countdown because data came in
                 state.elapsed = 0  # Reset elapsed on data
-                data = data_queue.get(timeout=60) # Wait for new data from monitor thread (max 60s)
+                data = data_queue.get(timeout=timer_start()) # Wait for new data from monitor thread (max 60s)
 
                 alert_queue.put((None, game))
                 parsed_data = extract_game_data(data)
@@ -1540,7 +1544,8 @@ if __name__ == "__main__":
             except Empty:
                 state.elapsed += 1
                 state.non_stop = False
-                print(f"\n\t⚠️  No data received in {state.elapsed} {'seconds' if state.elapsed > 1 else 'second'}.")
+                # print(f"\n\t⚠️  No data received in {state.elapsed} {'seconds' if state.elapsed > 1 else 'second'}.")
+                print(f"\n\n\t⚠️  No data received in {timer_start()} seconds.")
                 # if state.elapsed == 2:
                 #     print('Restarting API Service...')
                 #     subprocess.run(["bash", "api_restart.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
