@@ -330,11 +330,13 @@ def compare_data(prev: dict, current: dict):
                     if current['color'] == 'red' and current_jackpot <= prev_jackpot and h10 < ph10:
                         trend.append("Intense Bearish Pull")
                         score += 2
+                        bear_score += 1 if h10 < ph10 and new_delta_10m < 0 else bear_score
 
                     # ✅ 0. Check for bet max
                     if current['color'] == 'red' and current_jackpot < prev_jackpot and (current_jackpot - prev_jackpot) < -0.03 and h10 < ph10:
                         trend.append("Extreme Bearish Pull")
                         score += 3
+                        bear_score += 2 if h10 < ph10 and new_delta_10m < 0 else bear_score
 
                     # ✅ 10. Check for neutralization
                     if not trend:
@@ -1545,7 +1547,7 @@ if __name__ == "__main__":
                 state.elapsed += 1
                 state.non_stop = False
                 # print(f"\n\t⚠️  No data received in {state.elapsed} {'seconds' if state.elapsed > 1 else 'second'}.")
-                print(f"\n\n\t⚠️  No data received in {timer_start()} seconds.")
+                print(f"\n\n\t⚠️  No data received in {timer_start()} seconds.\n")
                 # if state.elapsed == 2:
                 #     print('Restarting API Service...')
                 #     subprocess.run(["bash", "api_restart.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
