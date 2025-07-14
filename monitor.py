@@ -489,8 +489,10 @@ def compare_data(prev: dict, current: dict):
 
     print(f"\n\t\t{'💰 ' if current['color'] == 'red' else '⚠️ '}  {LYEL}Bet [{RES} {(BLNK) + (LRED if current['color'] == 'red' else LBLU)}{bet_level.upper()}{RES} {LYEL}]{RES}\n\n") if bet_level is not None else \
         print("\n\t\t🚫  Don't Bet!  🚫\n\n")
-
+        
+    alert_queue.put((None, "caution")) if current['color'] == 'green' else None
     alert_queue.put((bet_level, None))
+
     state.bet_lvl = bet_level
     state.last_trend = None
 
