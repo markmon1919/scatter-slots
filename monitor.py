@@ -204,7 +204,7 @@ def compare_data(prev: dict, current: dict):
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {BLRED if current_jackpot < prev_jackpot else BLGRE}{current_jackpot}{percent} {diff}")
         print(f"\n\t{jackpot_bar} {LMAG}Δ{RES}: {BLRED}{sign}{colored_delta}{RES}{percent}  ✅\n") if current_jackpot < prev_jackpot else \
-            print(f"\n\t{jackpot_bar} {LMAG}Δ{RES}: {BLGRE}{sign}{colored_delta}{RES}  ❌\n")
+            print(f"\n\t{jackpot_bar} {LMAG}Δ{RES}: {BLGRE}{sign}{colored_delta}{RES}{percent}  ❌\n")
     else:
         print(f"\n\n\t\t⏰ {f"{LBLU}{datetime_now().strftime('%I:%M:%S %p')}{LGRY} {datetime_now().strftime('%a')}{RES}"}")
         print(f"{banner}")
@@ -444,23 +444,23 @@ def compare_data(prev: dict, current: dict):
         pull_score = result.get('pull_score', 0)
 
         if pull_score >= 8 and bet_level == "max":
-            trend_strength = "💥💥💥 Extreme Pull"
+            trend_strength = "💥💥💥  Extreme Pull"
         elif pull_score >= 7 and bet_level in [ "max", "high" ]:
-            trend_strength = "🔥🔥 Intense Pull"
+            trend_strength = "🔥🔥  Intense Pull"
         elif pull_score >= 6 and bet_level in [ "max", "high" ]:
-            trend_strength = "☄️ Very Strong Pull"
+            trend_strength = "☄️  Very Strong Pull"
         elif pull_score >= 5:
-            trend_strength = "🔴 Stronger Pull"
+            trend_strength = "🔴  Stronger Pull"
         elif pull_score >= 4:
-            trend_strength = "🟠 Strong Pull"
+            trend_strength = "🟠  Strong Pull"
         elif pull_score >= 2:
-            trend_strength = "🟡 Moderate Pull"
+            trend_strength = "🟡  Moderate Pull"
         elif pull_score >= 1:
-            trend_strength = "🟤 Weak Pull"
+            trend_strength = "🟤  Weak Pull"
         elif pull_score >= 0:
-            trend_strength = "⚪ Neutral"
+            trend_strength = "⚪  Neutral"
         else:
-            trend_strength = "❓ Invalid"
+            trend_strength = "❓  Invalid"
 
         print(f"\n\t💤 Pull Score: {BLCYN}{trend_strength}{RES} [ {BMAG}{pull_score}{RES} ]")
         state.last_trend = f"{re.sub(r'[^\x00-\x7F]+', '', trend_strength)} Score {pull_score}"
@@ -492,9 +492,12 @@ def compare_data(prev: dict, current: dict):
     print(f"\n\t\t{'💰 ' if current['color'] == 'red' else '⚠️ '}  {LYEL}Bet [{RES} {(BLNK) + (LRED if current['color'] == 'red' else LBLU)}{bet_level.upper()}{RES} {LYEL}]{RES}\n\n") if bet_level is not None else \
         print("\n\t\t🚫  Don't Bet!  🚫\n\n")
         
-    alert_queue.put((None, "caution")) if current['color'] == 'green' and bet_level is not None else None
-    alert_queue.put((bet_level, None))
-
+    if bet_level is not None:
+        alert_queue.put((bet_level, "caution")) if current['color'] == 'green' else \
+        alert_queue.put((bet_level, f"pull score {pull_score}"))
+    else:
+        alert_queue.put((bet_level, None))
+    
     state.bet_lvl = bet_level
     state.last_trend = None
 
