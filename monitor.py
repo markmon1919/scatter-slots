@@ -1027,8 +1027,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     state.new_jackpot_val = data.get("value")
                     state.new_10m = data.get("min10")
                     state.last_time = round(data.get('last_updated') % 60)
-                    # current_time = time.gmtime(time.time())
-                    print("\n\tstate.last_time: ", state.last_time)
+                    # print("\n\tstate.last_time: ", state.last_time)
                     # spin_queue.put((None, None, None, True)) # test spin on data not working
                     data_queue.put(data)
                 else:
