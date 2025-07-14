@@ -615,11 +615,12 @@ def play_alert(bet_level: str=None, say: str=None):
         pass
 
 def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
-    time_left = (seconds - round(time.time() % 60)) if state.prev_pull_delta != 0.0 else seconds
+    current_time = time.gmtime(time.time())
+    time_left = (seconds - current_time.tm_sec) if state.prev_pull_delta != 0.0 else seconds
 
     while not stop_event.is_set() and state.elapsed == 0:
         if reset_event.is_set():
-            time_left = (seconds - round(time.time() % 60)) if state.prev_pull_delta != 0.0 else seconds
+            time_left = (seconds - current_time.tm_sec) if state.prev_pull_delta != 0.0 else seconds
             reset_event.clear()
             sys.stdout.write("\r" + " " * 80 + "\r")
             sys.stdout.flush()
@@ -1015,7 +1016,8 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     state.new_jackpot_val = data.get("value")
                     state.new_10m = data.get("min10")
                     state.last_time = round(data.get('last_updated') % 60)
-                    print("\n\tstate.last_time | time_now >> ", state.last_time, round(time.time() % 60))
+                    current_time = time.gmtime(time.time())
+                    print("\n\tstate.last_time | time_now >> ", state.last_time, current_time.tm_sec)
                     # spin_queue.put((None, None, None, True)) # test spin on data not working
                     data_queue.put(data)
                 else:
@@ -1535,6 +1537,7 @@ if __name__ == "__main__":
                 save_current_data(all_data)
             except Empty:
                 state.elapsed += 1
+                state.non_stop = False
                 print(f"\n\t⚠️  No data received in {state.elapsed} {'seconds' if state.elapsed > 1 else 'second'}.")
                 # if state.elapsed == 2:
                 #     print('Restarting API Service...')
