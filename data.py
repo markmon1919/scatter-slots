@@ -148,7 +148,7 @@ async def poller_loop():
             now = time.time()
             next_t = ((int(now) // POLL_INTERVAL) + 1) * POLL_INTERVAL
             sleep_time = next_t - now
-            print(f"\n🕛  Sleeping {LMAG}{sleep_time:.3f}{RES}s to align with next boundary...\n")
+            print(f"\n⏳  Sleeping {LMAG}{sleep_time:.3f}{RES}s to align with next boundary...\n")
             await asyncio.sleep(sleep_time)
 
 # ──────────────

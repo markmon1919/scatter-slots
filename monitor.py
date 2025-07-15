@@ -173,18 +173,51 @@ def compare_data(prev: dict, current: dict):
     result = None
     bear_score = 0
     percent = f"{LGRY}%{RES}"
-    slot_mode = "dual" if state.dual_slots else "split screen" if state.split_screen else "left" if state.left_slot else "right" if state.right_slot else "single"
-    slot_mode_color = f"{RED if state.dual_slots else LBLU if state.split_screen else BLU if state.left_slot else MAG if state.right_slot else DGRY}{slot_mode}{RES}"
 
-    border = f"{'-' * 32}"
-    margin_left = len(str(border).expandtabs().strip()) - 2
-    padding = margin_left - len(str("Slot: " + slot_mode).expandtabs().strip()) - 1
-    
-    banner = f'''\t♦️  {border}  ♠️
-        \t{LGRY}{re.sub(r"\s*\(.*?\)", "", game).upper()}{RES} ({PROVIDERS.get(provider).color}{PROVIDERS.get(provider).provider}{RES})
-        🃏\t{BLGRE}Slot{RES}: {slot_mode_color}{' ' * padding}🎰
-        \t{BLGRE}Mode{RES}: {CYN}{'auto' if state.auto_mode else 'manual'}{RES}
-        ♣️  {border}  ♥️'''
+    border = "-" * 44
+    content_width = len(border) + 8
+    title_text = f"{LGRY}{re.sub(r'\\s*\\(.*?\\)', '', game).upper()}{RES} ({PROVIDERS.get(provider).color}{PROVIDERS.get(provider).provider}{RES})"
+    slot_mode = "dual" if state.dual_slots else "split screen" if state.split_screen else "left" if state.left_slot else "right" if state.right_slot else "single"
+
+    slot_mode_colored = (
+        f"{RED}dual{RES}" if slot_mode == "dual"
+        else f"{LBLU}split screen{RES}" if slot_mode == "split screen"
+        else f"{BLU}left{RES}" if slot_mode == "left"
+        else f"{MAG}right{RES}" if slot_mode == "right"
+        else f"{DGRY}single{RES}"
+    )
+
+    slot_text = f"{BLGRE}Slot{RES}: {slot_mode_colored}"
+    mode_text = f"{BLGRE}Mode{RES}: {BLCYN if auto_mode else CYN}{'auto' if auto_mode else 'manual'}{RES}"
+
+    def visible_length(s):
+        return len(re.sub(r"\x1b\[[0-9;]*m", "", s))
+
+    def center_text(text, width):
+        pad_total = max(width - visible_length(text), 0)
+        pad_left = pad_total // 2
+        pad_right = pad_total - pad_left
+        return " " * pad_left + text + " " * pad_right
+
+    icons_len = (visible_length("🃏") + visible_length("🎰")) * 2
+    space_for_text = (content_width - 1) - icons_len
+
+    slot_text_centered = center_text(slot_text, space_for_text)
+    slot_line = f"🃏{slot_text_centered}🎰"
+    time_line = f"\n\n\t\t\t⏰  {LBLU}{now_time().strftime('%I')}{RES}:{LBLU}{now_time().strftime('%M')}{RES}:{RED}{now_time().strftime('%S')} {DGRY}{now_time().strftime('%p')} {MAG}{now_time().strftime('%a')}{RES}"
+    time_line_centered = center_text(time_line, content_width)
+
+    banner_lines = [
+        f"♦️  {border}  ♠️",
+        center_text(title_text, content_width),
+        slot_line,
+        center_text(mode_text, content_width - 1),
+        f"♣️  {border}  ♥️",
+    ]
+
+    banner_lines.insert(0, time_line_centered)
+    banner = "\n\t".join(banner_lines)
+    banner = "\t" + banner
     
     current_jackpot = pct(current['jackpot_meter'])
     jackpot_bar = get_jackpot_bar(current_jackpot, current['color'])
@@ -204,12 +237,10 @@ def compare_data(prev: dict, current: dict):
         signal = f"{LRED}⬇{RES}" if current_jackpot < prev_jackpot else f"{LGRE}⬆{RES}" if current_jackpot > prev_jackpot else f"{LCYN}◉{RES}"
         diff = f"({YEL}Prev{DGRY}:{RES} {GRE}{prev_jackpot}{RES}{percent}{DGRY}, {LMAG}Δ{DGRY}: {sign}{colored_delta}{percent})"
 
-        print(f"\n\n\t\t⏰  {f"{LBLU}{now_time().strftime('%I')}{RES}:{LBLU}{now_time().strftime('%M')}{RES}:{RED}{now_time().strftime('%S')} {DGRY}{now_time().strftime('%p')} {MAG}{now_time().strftime('%a')}{RES}"}")
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {RED if current_jackpot < prev_jackpot else GRE}{current_jackpot}{percent} {diff}")
         print(f"\n\t{jackpot_bar} {signal}\n")
     else:
-        print(f"\n\n\t\t⏰  {f"{LBLU}{now_time().strftime('%I')}{RES}:{LBLU}{now_time().strftime('%M')}{RES}:{RED}{now_time().strftime('%S')} {DGRY}{now_time().strftime('%p')} {MAG}{now_time().strftime('%a')}{RES}"}")
         print(f"{banner}")
         print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {RED if current['color'] == 'red' else GRE}{current_jackpot}{RES}{percent}")
         print(f"\n\t{jackpot_bar}  {LCYN}◉{RES}\n")
