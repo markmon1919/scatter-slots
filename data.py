@@ -56,7 +56,7 @@ async def align_to_next_10s():
     now = time.time()
     next_t = ((int(now) // 10) + 1) * 10
     wait_time = next_t - now
-    print(f"⏰ Waiting {wait_time:.3f}s to align to next 10s mark...")
+    print(f"\n⏰  Waiting {LMAG}{wait_time:.3f}{RES}s to align to next 10s mark...\n")
     await asyncio.sleep(wait_time)
 
 # ──────────────
@@ -70,7 +70,7 @@ async def poller_loop():
     async with httpx.AsyncClient(timeout=5.0) as client:
         while True:
             if not registrations:
-                print("\n⚠️ No games registered. Waiting...\n")
+                print(f"\n⚠️  {DGRY}No games registered. Waiting...{RES}\n")
             else:
                 for name, reg in registrations.items():
                     url = reg["url"]
@@ -116,9 +116,9 @@ async def poller_loop():
                                 if min10 != last_min10:
                                     if key in last_change_times:
                                         interval = now_time - last_change_times[key]
-                                        print(f"\n✅ [{PROVIDERS.get(provider).color}{name}{RES} {DGRY}| {WHTE}{requestFrom}{RES}] Changed → {MAG}{min10}{RES} (Δ {BLYEL}{interval}{RES}s)\n")
+                                        print(f"\n✅ [{PROVIDERS.get(provider).color}{name}{RES} {DGRY}| {WHTE}{requestFrom}{RES}] Changed → {LYEL}{min10}{RES} (Δ {BLCYN}{interval}{RES}s)\n")
                                     else:
-                                        print(f"\n✅ [{PROVIDERS.get(provider).color}{name}{RES} {DGRY}| {WHTE}{requestFrom}{RES}] First → {MAG}{min10}{RES}\n")
+                                        print(f"\n✅ [{PROVIDERS.get(provider).color}{name}{RES} {DGRY}| {WHTE}{requestFrom}{RES}] First → {YEL}{min10}{RES}\n")
 
                                     # prepare a new data object
                                     new_data = json.loads(json.dumps(data[0]))
@@ -136,7 +136,7 @@ async def poller_loop():
                                     last_hashes[key] = hash_val
 
                                 else:
-                                    print(f"\n❌ [{PROVIDERS.get(provider).color}{name}{RES} {DGRY}| {WHTE}{requestFrom}{RES}] Still → {CYN}{min10}{RES}\n")
+                                    print(f"\n❌ [{PROVIDERS.get(provider).color}{name}{RES} {DGRY}| {WHTE}{requestFrom}{RES}] Still → {YEL}{min10}{RES}\n")
 
                         else:
                             print(f"⚠️ [{name} | {requestFrom}] No data returned.")
@@ -148,7 +148,7 @@ async def poller_loop():
             now = time.time()
             next_t = ((int(now) // POLL_INTERVAL) + 1) * POLL_INTERVAL
             sleep_time = next_t - now
-            print(f"🕛 Sleeping {sleep_time:.3f}s to align with next boundary...")
+            print(f"\n🕛  Sleeping {LMAG}{sleep_time:.3f}{RES}s to align with next boundary...\n")
             await asyncio.sleep(sleep_time)
 
 # ──────────────
