@@ -181,7 +181,7 @@ def compare_data(prev: dict, current: dict):
     padding = margin_left - len(str("Slot: " + slot_mode).expandtabs().strip()) - 1
     
     banner = f'''\t♦️  {border}  ♠️
-        \t{LGRY}{re.sub(r"\s*\(.*?\)", "", game).upper()}{RES} {PROVIDERS.get(provider).color}{PROVIDERS.get(provider).provider}{RES}
+        \t{LGRY}{re.sub(r"\s*\(.*?\)", "", game).upper()}{RES} ({PROVIDERS.get(provider).color}{PROVIDERS.get(provider).provider}{RES})
         🃏\t{BLGRE}Slot{RES}: {slot_mode_color}{' ' * padding}🎰
         \t{BLGRE}Mode{RES}: {CYN}{'auto' if state.auto_mode else 'manual'}{RES}
         ♣️  {border}  ♥️'''
@@ -607,7 +607,7 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
 
         text = f"Betting Ends In" if state.bet_lvl is not None else f"Waiting For Next Iteration"
         mins, secs = divmod(time_left, seconds)
-        timer = f"\t⏳ {text}: {BLYEL}{mins:02d}{BLNK}{BWHTE}:{RES}{BLYEL}{secs:02d}{RES}  ( {LGRY}{re.sub(r"\s*\(.*?\)", "", game)}{RES} {PROVIDERS.get(provider).color}{provider}{RES} )"
+        timer = f"\t⏳ {text}: {BLYEL}{mins:02d}{BLNK}{BWHTE}:{RES}{BLYEL}{secs:02d}{RES}  ( {LGRY}{re.sub(r"\s*\(.*?\)", "", game)}{RES} {DGRY}| {PROVIDERS.get(provider).color}{provider}{RES} )"
 
         if time_left <= 10:
             timer = f"\t⏳ {text}: {BWHTE}... {BLNK}{BLRED}{secs}{RES}"
