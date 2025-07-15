@@ -204,7 +204,7 @@ def compare_data(prev: dict, current: dict):
 
     slot_text_centered = center_text(slot_text, space_for_text)
     slot_line = f"🃏{slot_text_centered}🎰"
-    time_line = f"\n\n\t\t\t⏰  {LBLU}{now_time().strftime('%I')}{RES}:{LBLU}{now_time().strftime('%M')}{RES}:{RED}{now_time().strftime('%S')} {DGRY}{now_time().strftime('%p')} {MAG}{now_time().strftime('%a')}{RES}"
+    time_line = f"\n\n\n\t\t\t⏰  {LBLU}{now_time().strftime('%I')}{RES}:{LBLU}{now_time().strftime('%M')}{RES}:{RED}{now_time().strftime('%S')} {DGRY}{now_time().strftime('%p')} {MAG}{now_time().strftime('%a')}{RES}"
     time_line_centered = center_text(time_line, content_width)
 
     banner_lines = [
