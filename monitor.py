@@ -650,7 +650,9 @@ def countdown_timer(seconds: int = 60):
         # if current_sec % 10 == 9 and current_sec <= 49:
         num_sec = [ 8, 9, 0 ]
         random.shuffle(num_sec)
-        if current_sec % 10 == num_sec:
+        
+        if current_sec % 10 in num_sec:
+        # if current_sec % 10 == 9:
             alert_queue.put(f"{current_sec} spin!")
             if state.dual_slots and state.auto_mode:
                 slots = ["left", "right"]
