@@ -116,7 +116,7 @@ async def poller_loop():
                                 if min10 != last_min10:
                                     if key in last_change_times:
                                         interval = now_time - last_change_times[key]
-                                        print(f"\n✅ [{PROVIDERS.get(provider).color}{name}{RES} {DGRY}| {WHTE}{requestFrom}{RES}] Changed → {LYEL}{min10}{RES} (Δ {BLCYN}{interval}{RES}s)\n")
+                                        print(f"\n✅ [{PROVIDERS.get(provider).color}{name}{RES} {DGRY}| {WHTE}{requestFrom}{RES}] Changed → {LYEL}{min10} ({LMAG}Δ {BLCYN}{interval}{RES}s)\n")
                                     else:
                                         print(f"\n✅ [{PROVIDERS.get(provider).color}{name}{RES} {DGRY}| {WHTE}{requestFrom}{RES}] First → {YEL}{min10}{RES}\n")
 
@@ -136,7 +136,7 @@ async def poller_loop():
                                     last_hashes[key] = hash_val
 
                                 else:
-                                    print(f"\n❌ [{PROVIDERS.get(provider).color}{name}{RES} {DGRY}| {WHTE}{requestFrom}{RES}] Still → {YEL}{min10}{RES}\n")
+                                    print(f"\n❌ [{PROVIDERS.get(provider).color}{name}{RES} {DGRY}| {WHTE}{requestFrom}{RES}] Still → {DGRY}{min10}{RES}\n")
 
                         else:
                             print(f"⚠️ [{name} | {requestFrom}] No data returned.")
