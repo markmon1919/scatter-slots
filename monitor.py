@@ -617,7 +617,8 @@ def play_alert(say: str=None):
     if platform.system() == "Darwin":
         while not stop_event.is_set():
             try:
-                say = alert_queue.get_nowait()
+                say = alert_queue.get(timeout=10)
+                # say = alert_queue.get_nowait()
                 sound_file = (say)
                 subprocess.run(["say", "-v", DEFAULT_VOICE, "--", sound_file])
 
@@ -628,16 +629,20 @@ def play_alert(say: str=None):
     else:
         pass
 
-def countdown_timer(seconds: int = 60):
+def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
     while not stop_event.is_set():
-        now = datetime.now()
+        now = now_time()
         current_sec = now.second
         time_left = 60 - current_sec
 
         if reset_event.is_set():
-            reset_event.clear()
             time_left = seconds
+            reset_event.clear()
             print("⏳ Countdown reset!")
+
+        # now = now_time()
+        # current_sec = now.second
+        # time_left = 60 - current_sec
 
         blink = BLNK if current_sec % 2 == 0 else ""
         print(
@@ -648,13 +653,19 @@ def countdown_timer(seconds: int = 60):
 
         # Example triggers
         # if current_sec % 10 == 9 and current_sec <= 49:
-        num_sec = [ 9, 0 ]
-        random.shuffle(num_sec)
-        selected = num_sec[0]
+        # num_sec = [ 9, 0 ]
+        # random.shuffle(num_sec)
+        # selected = num_sec[0]
+        # DELAY_TEST = (0.75, 1.2)
 
-        if current_sec % 10 == selected and state.spin_test:
+        if current_sec % 10 == 9 and state.spin_test:
+        # if current_sec == 9 or current_sec == 19 or current_sec == 29 or current_sec == 39 or current_sec == 49:
+            # value = random.uniform(*DELAY_TEST)
+            # print('VALUE >>> ', value)
+            # time.sleep(random.uniform(*DELAY_TEST))
+        # if current_sec % 10 == selected and state.spin_test:
         # if current_sec % 10 == 9:
-            alert_queue.put(f"{current_sec} spin!")
+            # alert_queue.put(f"{current_sec} spin!")
             if state.dual_slots and state.auto_mode:
                 slots = ["left", "right"]
                 random.shuffle(slots)
@@ -664,10 +675,11 @@ def countdown_timer(seconds: int = 60):
             elif not state.dual_slots and state.auto_mode:
                 spin_queue.put((None, None, None, False))
                 # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
-
+                
         start = time.time()
+        
         while True:
-            new_sec = datetime.now().second
+            new_sec = now_time().second
             if new_sec != current_sec:
                 break
             time.sleep(0.01)
@@ -917,7 +929,8 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
 def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, stop_spin: bool=False):
     while not stop_event.is_set():
         try:
-            bet_level, chosen_spin, slot_position, stop_spin = spin_queue.get(timeout=5)
+            bet_level, chosen_spin, slot_position, stop_spin = spin_queue.get(timeout=10)
+            # bet_level, chosen_spin, slot_position, stop_spin = spin_queue.get_nowait()
 
             spin_types = [ "normal", "spin_hold", "spam_spin", "board_spin", "board_spin_delay", "board_spin_turbo", "board_spin_tap", "auto_spin", "turbo_spin" ]
             spin_type = random.choice(spin_types) if chosen_spin is None else chosen_spin
@@ -1016,14 +1029,14 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                 
             if spin_type == "normal_spin":  # optimize later for space or click dynamics
                 if state.spin:
-                    pyautogui.doubleClick(x=cx, y=cy + 315)
+                    pyautogui.doubleClick(x=cx, y=cy + 330)
                 else:
                     pyautogui.press('space')
             elif spin_type == "spin_hold":
                 if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
                     pyautogui.doubleClick(x=cx + 450, y=cy + 325)
                 else:
-                    pyautogui.doubleClick(x=cx, y=cy + 315)
+                    pyautogui.doubleClick(x=cx, y=cy + 330)
                 pyautogui.mouseDown()
                 time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                 pyautogui.mouseUp()
@@ -1035,12 +1048,12 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     pyautogui.click(x=cx + 450, y=cy + 325)
                     pyautogui.click(x=cx + 450, y=cy + 325)
                 else:
-                    pyautogui.click(x=cx, y=cy + 315)
-                    pyautogui.click(x=cx, y=cy + 315)
-                    pyautogui.click(x=cx, y=cy + 315)
-                    pyautogui.click(x=cx, y=cy + 315)
-                    pyautogui.click(x=cx, y=cy + 315)
-                    pyautogui.click(x=cx, y=cy + 315)
+                    pyautogui.click(x=cx, y=cy + 330)
+                    pyautogui.click(x=cx, y=cy + 330)
+                    pyautogui.click(x=cx, y=cy + 330)
+                    pyautogui.click(x=cx, y=cy + 330)
+                    pyautogui.click(x=cx, y=cy + 330)
+                    pyautogui.click(x=cx, y=cy + 330)
                 time.sleep(random.uniform(*SPIN_DELAY_RANGE))
             elif spin_type == "board_spin":  # Click confirm during first board spin    
                 if provider in [ "JILI", "FC", "JFF", "R88" ]:
@@ -1080,7 +1093,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                         lambda: pyautogui.press('space'),
                         lambda: pyautogui.doubleClick(x=cx, y=cy),
                         lambda: pyautogui.click(x=cx, y=cy)
-                    ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 315)
+                    ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 330)
                     action()
             elif spin_type == "auto_spin":
                 if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
@@ -1090,7 +1103,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                         lambda: pyautogui.press('space'),
                         lambda: pyautogui.doubleClick(x=cx, y=cy),
                         lambda: pyautogui.click(x=cx, y=cy)
-                    ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 315)
+                    ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 330)
                     action()
             elif spin_type == "turbo_spin":
                 if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
@@ -1100,7 +1113,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                         lambda: pyautogui.press('space'),
                         lambda: pyautogui.doubleClick(x=cx, y=cy),
                         lambda: pyautogui.click(x=cx, y=cy)
-                    ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 315)
+                    ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 330)
                     action()
 
             # time.sleep(2) if chosen_spin != "turbo_spin" else time.sleep(1)
@@ -1671,8 +1684,8 @@ if __name__ == "__main__":
     
     alert_thread = threading.Thread(target=play_alert, daemon=True)
     bet_thread = threading.Thread(target=bet_switch, daemon=True)
-    # countdown_thread = threading.Thread(target=countdown_timer, args=(countdown_queue, 60,), daemon=True)
-    countdown_thread = threading.Thread(target=countdown_timer, daemon=True)
+    countdown_thread = threading.Thread(target=countdown_timer, args=(countdown_queue, 60,), daemon=True)
+    # countdown_thread = threading.Thread(target=countdown_timer, daemon=True)
     monitor_thread = threading.Thread(target=monitor_game_info, args=(game, provider, url, data_queue,), daemon=True)
     spin_thread = threading.Thread(target=spin, daemon=True)
 
@@ -1691,7 +1704,7 @@ if __name__ == "__main__":
                     print(f"\n✅ {msg}")
                 except Empty:
                     pass
-
+                # reset_event.set() # Reset the countdown because data came in
                 # Wait for data (block until something arrives)
                 data = data_queue.get(timeout=1)
 
