@@ -8,10 +8,10 @@ from fastapi import FastAPI, Query
 from pydantic import BaseModel
 from typing import Dict, Any, List
 from config import (
-    USER_AGENTS,
-    LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, CYN, BLU,
-    WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG,
-    BCYN, BWHTE, DGRY, BLNK, CLEAR, RES
+    USER_AGENTS, PROVIDERS,
+    LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, 
+    GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, 
+    BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES
 )
 
 # Shared state

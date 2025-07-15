@@ -6,8 +6,8 @@ from datetime import datetime
 from queue import Queue as ThQueue, Empty
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 # from pynput.mouse import Listener as MouseListener, Button
-from config import (datetime_now, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, DEFAULT_VOICE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
-                    LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
+from config import (now_time, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, DEFAULT_VOICE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
+                    LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
 @dataclass
@@ -44,6 +44,8 @@ class AutoState:
     last_trend: str = None
     last_pull_delta: float = 0.0
     prev_pull_delta: float = 0.0
+    prev_pull_score: int = 0
+    prev_bear_score: int = 0
     curr_color: str = None
     prev_jackpot_val: float = 0.0
     prev_10m: float = 0.0
@@ -171,16 +173,16 @@ def compare_data(prev: dict, current: dict):
     result = None
     bear_score = 0
     percent = f"{LGRY}%{RES}"
+    slot_mode = "dual" if state.dual_slots else "split screen" if state.split_screen else "left" if state.left_slot else "right" if state.right_slot else "single"
+    slot_mode_color = f"{RED if state.dual_slots else LBLU if state.split_screen else BLU if state.left_slot else MAG if state.right_slot else DGRY}{slot_mode}{RES}"
 
     border = f"{'-' * 32}"
     margin_left = len(str(border).expandtabs().strip()) - 2
-    padding = margin_left - len(str(PROVIDERS.get(provider).provider).expandtabs().strip()) - 1
-    slot_mode = f"{RED}dual{RES}" if state.dual_slots else f"{LBLU}split screen{RES}" if state.split_screen else f"{BLU}left{RES}" if state.left_slot else f"{MAG}right{RES}" if state.right_slot else f"{DGRY}single{RES}"
-
+    padding = margin_left - len(str("Slot: " + slot_mode).expandtabs().strip()) - 1
+    
     banner = f'''\t♦️  {border}  ♠️
-        \t{BCYN}{game.upper()}{RES}
-        🃏\t{LGRY}{PROVIDERS.get(provider).provider}{RES}{' ' * padding}🎰
-        \t{BLGRE}Slot{RES}: {slot_mode}
+        \t{LGRY}{re.sub(r"\s*\(.*?\)", "", game).upper()}{RES} {PROVIDERS.get(provider).color}{PROVIDERS.get(provider).provider}{RES}
+        🃏\t{BLGRE}Slot{RES}: {slot_mode_color}{' ' * padding}🎰
         \t{BLGRE}Mode{RES}: {CYN}{'auto' if state.auto_mode else 'manual'}{RES}
         ♣️  {border}  ♥️'''
     
@@ -193,42 +195,44 @@ def compare_data(prev: dict, current: dict):
     lowest_low = state.breakout["lowest_low"]
     lowest_low_delta = state.breakout["lowest_low_delta"]
 
-    if prev and 'jackpot_meter' in prev: 
+    if prev and 'jackpot_meter' in prev:
         prev_jackpot = pct(prev['jackpot_meter'])
+        state.prev_jackpot_val = prev_jackpot
         delta = round(current_jackpot - prev_jackpot, 2)
-        colored_delta = f"{LRED}{pct(delta)}{RES}" if delta < 0 else f"{LGRE}{delta}{RES}"
-        sign = "+" if delta > 0 else ""
-        diff = f"({YEL}Prev{RES}: {prev_jackpot}{percent} {LMAG}Δ{RES}: {sign}{colored_delta}{percent})"
+        colored_delta = f"{RED if delta < 0 else GRE}{pct(delta)}{RES}"
+        sign = f"{GRE}+{RES}" if delta > 0 else ""
+        signal = f"{LRED}⬇{RES}" if current_jackpot < prev_jackpot else f"{LGRE}⬆{RES}" if current_jackpot > prev_jackpot else f"{LCYN}◉{RES}"
+        diff = f"({YEL}Prev{DGRY}:{RES} {GRE}{prev_jackpot}{RES}{percent}{DGRY}, {LMAG}Δ{DGRY}: {sign}{colored_delta}{percent})"
 
-        print(f"\n\n\t\t⏰ {f"{LBLU}{datetime_now().strftime('%I:%M:%S %p')}{LGRY} {datetime_now().strftime('%a')}{RES}"}")
+        print(f"\n\n\t\t⏰  {f"{LBLU}{now_time().strftime('%I')}{RES}:{LBLU}{now_time().strftime('%M')}{RES}:{RED}{now_time().strftime('%S')} {DGRY}{now_time().strftime('%p')} {MAG}{now_time().strftime('%a')}{RES}"}")
         print(f"{banner}")
-        print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {BLRED if current_jackpot < prev_jackpot else BLGRE}{current_jackpot}{percent} {diff}")
-        print(f"\n\t{jackpot_bar} {LMAG}Δ{RES}: {BLRED}{sign}{colored_delta}{RES}{percent}  ✅\n") if current_jackpot < prev_jackpot else \
-            print(f"\n\t{jackpot_bar} {LMAG}Δ{RES}: {BLGRE}{sign}{colored_delta}{RES}{percent}  ❌\n")
+        print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {RED if current_jackpot < prev_jackpot else GRE}{current_jackpot}{percent} {diff}")
+        print(f"\n\t{jackpot_bar} {signal}\n")
     else:
-        print(f"\n\n\t\t⏰ {f"{LBLU}{datetime_now().strftime('%I:%M:%S %p')}{LGRY} {datetime_now().strftime('%a')}{RES}"}")
+        print(f"\n\n\t\t⏰  {f"{LBLU}{now_time().strftime('%I')}{RES}:{LBLU}{now_time().strftime('%M')}{RES}:{RED}{now_time().strftime('%S')} {DGRY}{now_time().strftime('%p')} {MAG}{now_time().strftime('%a')}{RES}"}")
         print(f"{banner}")
-        print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {current_jackpot}{percent}")
-        print(f"\n\t{jackpot_bar} {current_jackpot}{percent}\n")
+        print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {RED if current['color'] == 'red' else GRE}{current_jackpot}{RES}{percent}")
+        print(f"\n\t{jackpot_bar}  {LCYN}◉{RES}\n")
 
     for index, (period, value) in enumerate(current['history'].items()):
         old_value = prev['history'].get(period) if prev else None
-        state.prev_jackpot_val = pct(prev['jackpot_meter']) if prev else None
         state.prev_10m = pct(prev['history'].get('10m')) if prev else None
         state.prev_1hr = pct(prev['history'].get('1h')) if prev else None
-        colored_value = f"{LRED}{pct(value)}{RES}" if pct(value) < 0 else f"{LGRE}{pct(value)}{RES}"
+        colored_value = f"{RED if pct(value) < 0 else GRE if pct(value) > 0 else CYN}{pct(value)}{RES}"
         diff = ""
+        signal = ""
 
         if old_value is not None:
-            colored_old_value = f"{LRED}{pct(old_value)}{RES}" if pct(old_value) < 0 else f"{LGRE}{pct(old_value)}{RES}"
+            colored_old_value = f"{RED if pct(old_value) < 0 else GRE if pct(old_value) > 0 else CYN}{pct(old_value)}{RES}"
             new_num = pct(value)
             old_num = pct(old_value)
 
             if new_num is not None and old_num is not None:
                 delta = round(new_num - old_num, 2)
-                colored_delta = f"{LRED}{pct(delta)}{RES}" if delta < 0 else f"{LGRE}{delta}{RES}"
-                sign = "+" if delta > 0 else ""
-                diff = f"({YEL}Prev{RES}: {colored_old_value}{percent}, {LMAG}Δ{RES}: {sign}{colored_delta}{percent})"
+                colored_delta = f"{RED if delta < 0 else GRE if delta > 0 else CYN}{pct(delta)}{RES}"
+                sign = f"{GRE}+{RES}" if delta > 0 else ""
+                signal = f"{LRED}▼{RES}" if new_num < old_num else f"{LGRE}▲{RES}" if new_num > old_num else f"{LCYN}◆{RES}"
+                diff = f"({YEL}Prev{DGRY}: {colored_old_value}{percent}{DGRY}, {LMAG}Δ{DGRY}: {sign}{colored_delta}{percent})"
 
                 if new_num < old_num and delta < 0:
                     bear_score += 1
@@ -245,7 +249,7 @@ def compare_data(prev: dict, current: dict):
                         state.breakout["lowest_low"] = lowest_low
                         is_breakout = True
                         state.is_breakout = True
-                        alert_queue.put((None, "break_out"))
+                        alert_queue.put("break_out")
                         updated = True
 
                     if lowest_low_delta <= 0 and delta < lowest_low_delta:
@@ -253,7 +257,7 @@ def compare_data(prev: dict, current: dict):
                         state.breakout["lowest_low_delta"] = lowest_low_delta
                         is_breakout_delta = True
                         state.is_delta_breakout = True
-                        alert_queue.put((None, "delta_break_out"))
+                        alert_queue.put("delta_break_out")
                         updated = True
 
                     if updated:
@@ -307,6 +311,7 @@ def compare_data(prev: dict, current: dict):
                         trend.append("Consistent Bear Pressure")
                         score += 1
                         bear_score += 1 if h10 < ph10 and new_delta_10m < 0 else bear_score
+
                     elif old_delta_10m!= 0 and new_delta_10m >= old_delta_10m:
                         trend.append("Weak Pull 👎")
                         score -= 1
@@ -320,7 +325,7 @@ def compare_data(prev: dict, current: dict):
 
                     # ✅ 7. Reversal
                     if prev['color'] == 'green' and current['color'] == 'red': #and current_jackpot - prev_jackpot
-                        trend.append(f"{BLNK}{BLRED}R {WHTE}E {BLBLU}V {BLYEL}E {BLMAG}R {BLGRE}S {LGRY}A {BLCYN}L  🚀🚀{RES}")
+                        trend.append(f"{BLNK}{BLRED}R {WHTE}E {BLBLU}V {BLYEL}E {BLMAG}R {BLGRE}S {DGRY}A {BLCYN}L  🚀🚀{RES}")
                         reversal = True
                         state.is_reversal = True
                         score += 2
@@ -342,7 +347,7 @@ def compare_data(prev: dict, current: dict):
                     if not trend:
                         trend.append("Neutral")
 
-                    alert_queue.put((None, "Reversal!")) if reversal else None
+                    alert_queue.put("reversal!") if reversal else None
 
                     result = {
                         'new_delta_10m': round(new_delta_10m, 2),
@@ -427,21 +432,25 @@ def compare_data(prev: dict, current: dict):
                         #         bet_queue.put((bet_level, True, slots[1]))
                         
 
-        print(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:  {colored_value}{percent} {diff}") if period == "10m" and pct(value) >= 0 else \
-            print(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}: {colored_value}{percent} {diff}") if period == "10m" and pct(value) < 0 else \
-            print(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:   {colored_value}{percent} {diff}") if pct(value) >= 0 else \
-            print(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:  {colored_value}{percent} {diff}")
-
-    print(f"\n\t🐻 Bear Score: {BWHTE}{bear_score}{RES}")
-    if bear_score >= 2:
-        print("\n\t✅ Bearish Momentum Detected")
-    else:
-        print("\n\t❌ Not Enough Bearish Momentum")
+        print(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:  {colored_value}{percent} {diff} {signal}") if period == "10m" and pct(value) >= 0 else \
+            print(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}: {colored_value}{percent} {diff} {signal}") if period == "10m" and pct(value) < 0 else \
+            print(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:   {colored_value}{percent} {diff} {signal}") if pct(value) >= 0 else \
+            print(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:  {colored_value}{percent} {diff} {signal}")
 
     if result is not None:
-        state.prev_pull_delta = result.get('old_delta_10m')
+        signal = f"{LRED}＋{RES}" if bear_score > state.prev_bear_score else f"{LGRE}－{RES}" if bear_score < state.prev_bear_score else f"{LCYN}＝{RES}"
+        state.prev_bear_score = bear_score
+        print(f"\n\t🐻 Bear Score: {BWHTE}{bear_score}{RES} {signal}")
 
+        if bear_score >= 2:
+            print("\n\t✅ Bearish Momentum Detected")
+        else:
+            print("\n\t❌ Not Enough Bearish Momentum")
+
+        state.prev_pull_delta = result.get('old_delta_10m')
         pull_score = result.get('pull_score', 0)
+        signal = f"{LRED}＋{RES}" if pull_score > state.prev_pull_score else f"{LGRE}－{RES}" if pull_score < state.prev_pull_score else f"{LCYN}＝{RES}"
+        state.prev_pull_score = pull_score
 
         if pull_score >= 8 and bet_level == "max":
             trend_strength = "💥💥💥  Extreme Pull"
@@ -462,42 +471,41 @@ def compare_data(prev: dict, current: dict):
         else:
             trend_strength = "❓  Invalid"
 
-        print(f"\n\t💤 Pull Score: {BLCYN}{trend_strength}{RES} [ {BMAG}{pull_score}{RES} ]")
-        state.last_trend = f"{re.sub(r'[^\x00-\x7F]+', '', trend_strength)} Score {pull_score}"
-        alert_queue.put((None, "pull_trend_score")) if state.last_trend is not None else None
+        print(f"\n\t💤 Pull Score: {BLCYN}{trend_strength}{RES} [ {BMAG}{pull_score}{RES} ]{signal}")
+        state.last_trend = f"{re.sub(r'[^\x00-\x7F]+', '', trend_strength)} score {pull_score}"
 
         for idx, pull_trend in enumerate(result.get('pull_trend')):
             print("\n\t💤 Pull Trend: ") if idx == 0 else None
             print(f"\t\t{BWHTE}{pull_trend}{RES}") if pull_trend else None
-
-        print(f"\n\t🧲 Delta{LMAG}Δ{RES} Pull Power ({LGRY}Current & Prev [10m]{RES}): {BLRED if result.get('new_delta_10m') < 0 else BLGRE}{result.get('new_delta_10m')}{RES} | {BLRED if result.get('old_delta_10m') < 0 else BLGRE}{result.get('old_delta_10m')}{RES}") 
-        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({LGRY}Diff Current - Prev [10m]{RES}): {BLRED if result.get('delta_shift') < 0 else BLGRE}{result.get('delta_shift')}{RES}")
-        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({LGRY}Analysis [10m]{RES}): {MAG}Strong{RES} Pull  ✅") if result.get('delta_shift_analysis') else \
-            print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({LGRY}Analysis [10m]{RES}): {MAG}Weak{RES} Pull  ❌")
-        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({LGRY}Decision [10m]{RES}): {BMAG}{'Very Strong' if result.get('delta_shift') <= -50 else 'Stronger' if result.get('delta_shift') <= -20 else 'Strong'}{RES} Pull  ✅") if result.get('delta_shift_decision') else \
-            print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({LGRY}Decision [10m]{RES}): {BMAG}{'Very Weak' if result.get('delta_shift') >= 50 else 'Weaker' if result.get('delta_shift') >= 20 else 'Weak'}{RES} Pull  ❌")
-            
-        print(f"\n\t📊 Delta{LMAG}Δ{RES} Trend Change Power ({LGRY}Current & Prev [10m_1h]{RES}): {BLRED if result.get('new_delta_10m_1h') < 0 else BLGRE}{result.get('new_delta_10m_1h')}{RES} | {BLRED if result.get('old_delta_10m_1h') < 0 else BLGRE}{result.get('old_delta_10m_1h')}{RES}")
-        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({LGRY}Diff Current - Prev [10m_1h]{RES}): {BLRED if result.get('delta_shift_10m_1h') < 0 else BLGRE}{result.get('delta_shift_10m_1h')}{RES}")
-        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({LGRY}Analysis [10m_1h]{RES}): {LRED}🐻 Bearish{RES} Power  ✅") if result.get('delta_shift_analysis_10m_1h') else \
-            print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({LGRY}Analysis [10m_1h]{RES}): {LGRE}🐂 Bullish{RES} Power  ❌")
-        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({LGRY}Decision [10m_1h]{RES}): {BMAG}{'Very Strong' if result.get('delta_shift_10m_1h') <= 50 else 'Strong' if result.get('delta_shift_10m_1h') <= 20 else 'Weak'}{RES} Bearish Pull Surge  🐻") if result.get('delta_shift_decision_10m_1h') else \
-            print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({LGRY}Decision [10m_1h]{RES}): {BMAG}{'Very Strong' if result.get('delta_shift_10m_1h') >= 50 else 'Strong' if result.get('delta_shift_10m_1h') >= 20 else 'Weak'}{RES} Bullish Pull Surge  🐂")
         
-        print(f"\n\t⚡ Break Out: {BLRED}{lowest_low}{RES}{percent} {'✅' if is_breakout else '❌'}") if lowest_low < 0 else \
-            print(f"\n\t⚡ Break Out: {lowest_low}{percent} {'✅' if is_breakout else '❌'}")
-        print(f"\t⚡ Break Out Delta{LMAG}Δ{RES}: {BLRED}{lowest_low_delta}{RES}{percent} {'✅' if is_breakout_delta else '❌'}") if lowest_low_delta < 0 else \
-            print(f"\t⚡ Break Out Delta{LMAG}Δ{RES}: {lowest_low_delta}{percent} {'✅' if is_breakout_delta else '❌'}")
+        signal = f"{LRED}▼{RES}" if result.get('new_delta_10m') < result.get('old_delta_10m') and result.get('old_delta_10m') != 0 else f"{LGRE}▲{RES}" if result.get('new_delta_10m') > result.get('old_delta_10m') and result.get('old_delta_10m') != 0 else f"{LCYN}◆{RES}"
+        print(f"\n\t🧲 Delta{LMAG}Δ{RES} Pull Power ({DGRY}Current & Prev [10m]{RES}): {RED if result.get('new_delta_10m') < 0 else GRE + '+' if result.get('new_delta_10m') > 0 else CYN}{result.get('new_delta_10m')}{LMAG}Δ{RES} {DGRY}| {RED if result.get('old_delta_10m') < 0 else GRE + '+' if result.get('old_delta_10m') > 0 else CYN}{result.get('old_delta_10m')}{LMAG}Δ{RES}") 
+        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Diff Current - Prev [10m]{RES}): {RED if result.get('delta_shift') < 0 else GRE + '+'}{result.get('delta_shift')}{LMAG}Δ{RES} {signal}")
+        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Analysis [10m]{RES}): {MAG}Strong{RES} Pull  ✅") if result.get('delta_shift_analysis') else \
+            print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Analysis [10m]{RES}): {MAG}Weak{RES} Pull  ❌")
+        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Decision [10m]{RES}): {BMAG}{'Very Strong' if result.get('delta_shift') <= -50 else 'Stronger' if result.get('delta_shift') <= -20 else 'Strong'}{RES} Pull  ✅") if result.get('delta_shift_decision') else \
+            print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Decision [10m]{RES}): {BMAG}{'Very Weak' if result.get('delta_shift') >= 50 else 'Weaker' if result.get('delta_shift') >= 20 else 'Weak'}{RES} Pull  ❌")
+            
+        signal = f"{LRED}▼{RES}" if result.get('new_delta_10m_1h') < result.get('old_delta_10m_1h') else f"{LGRE}▲{RES}" if result.get('new_delta_10m_1h') > result.get('old_delta_10m_1h') else f"{LCYN}◆{RES}"
+        print(f"\n\t📊 Delta{LMAG}Δ{RES} Trend Change Power ({DGRY}Current & Prev [10m_1h]{RES}): {RED if result.get('new_delta_10m_1h') < 0 else GRE + '+' if result.get('new_delta_10m_1h') > 0 else CYN}{result.get('new_delta_10m_1h')}{LMAG}Δ{RES} {DGRY}| {RED if result.get('old_delta_10m_1h') < 0 else GRE + '+' if result.get('old_delta_10m_1h') > 0 else CYN}{result.get('old_delta_10m_1h')}{LMAG}Δ{RES}")
+        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Diff Current - Prev [10m_1h]{RES}): {RED if result.get('delta_shift_10m_1h') < 0 else GRE + '+'}{result.get('delta_shift_10m_1h')}{LMAG}Δ{RES} {signal}")
+        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Analysis [10m_1h]{RES}): {LRED}🐻 Bearish{RES} Power  ✅") if result.get('delta_shift_analysis_10m_1h') else \
+            print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Analysis [10m_1h]{RES}): {GRE}🐂 Bullish{RES} Power  ❌")
+        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Decision [10m_1h]{RES}): {BMAG}{'Very Strong' if result.get('delta_shift_10m_1h') <= 50 else 'Strong' if result.get('delta_shift_10m_1h') <= 20 else 'Weak'}{RES} Bearish Pull Surge  🐻") if result.get('delta_shift_decision_10m_1h') else \
+            print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Decision [10m_1h]{RES}): {BMAG}{'Very Strong' if result.get('delta_shift_10m_1h') >= 50 else 'Strong' if result.get('delta_shift_10m_1h') >= 20 else 'Weak'}{RES} Bullish Pull Surge  🐂")
+        
+        print(f"\n\t⚡ Break Out: {RED if lowest_low < 0 else GRE}{lowest_low}{RES}{percent} {'✅' if is_breakout else '❌'}")
+        print(f"\t⚡ Break Out Delta{LMAG}Δ{RES}: {RED if lowest_low_delta < 0 else GRE}{lowest_low_delta}{RES}{percent} {'✅' if is_breakout_delta else '❌'}")
 
     print(f"\n\t\t{'💰 ' if current['color'] == 'red' else '⚠️ '}  {LYEL}Bet [{RES} {(BLNK) + (LRED if current['color'] == 'red' else LBLU)}{bet_level.upper()}{RES} {LYEL}]{RES}\n\n") if bet_level is not None else \
         print("\n\t\t🚫  Don't Bet!  🚫\n\n")
-        
+
     if bet_level is not None:
-        alert_queue.put((bet_level, "caution")) if current['color'] == 'green' else \
-        alert_queue.put((bet_level, f"pull score {pull_score}"))
+        alert_queue.put(f"caution, bet {bet_level}, {state.last_trend}") if current['color'] == 'green' else \
+        alert_queue.put(f"bet {bet_level}, {state.last_trend}")
     else:
-        alert_queue.put((bet_level, None))
-    
+        alert_queue.put("do not bet")
+
     state.bet_lvl = bet_level
     state.last_trend = None
 
@@ -543,7 +551,7 @@ def pct(p):
         return 0.0
 
 def load_breakout_memory(game: str):
-    today = datetime_now().strftime("%Y-%m-%d")
+    today = now_time().strftime("%Y-%m-%d")
 
     if os.path.exists(BREAKOUT_FILE):
         with open(BREAKOUT_FILE, 'r') as f:
@@ -553,7 +561,7 @@ def load_breakout_memory(game: str):
     return {"lowest_low": 0, "lowest_low_delta": 0}
 
 def save_breakout_memory(game: str, lowest_low: float, lowest_low_delta: float):
-    today = datetime_now().strftime("%Y-%m-%d")
+    today = now_time().strftime("%Y-%m-%d")
     data = {}
 
     if os.path.exists(BREAKOUT_FILE):
@@ -571,48 +579,13 @@ def save_breakout_memory(game: str, lowest_low: float, lowest_low_delta: float):
     with open(BREAKOUT_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
-def play_alert(bet_level: str=None, say: str=None):
+def play_alert(say: str=None):
     if platform.system() == "Darwin":
         while not stop_event.is_set():
             try:
-                # bet_level, say = alert_queue.get(timeout=10)
-                bet_level, say = alert_queue.get_nowait()
-
-                sound_map = {
-                    "max": "bet max",
-                    "high": "bet high",
-                    "mid": "bet mid",
-                    "low": "bet low",
-                    None: "do not bet"
-                }
-
-                sound_file = (
-                    "break_out" if say is not None and say == "break_out" else \
-                    f"{state.last_trend}" if say is not None and say == "pull_trend_score" else \
-                    # f"{state.last_spin}" if say is not None and say == "spin_type" else \
-                    "auto mode disabled" if say is not None and say == "auto mode DISABLED" else \
-                    "auto mode enabled" if say is not None and say == "auto mode ENABLED" else \
-                    "hotkeys disabled" if say is not None and say == "hotkeys DISABLED" else \
-                    "hotkeys enabled" if say is not None and say == "hotkeys ENABLED" else \
-                    "turbo mode on" if say is not None and say == "turbo mode ON" else \
-                    "normal speed on" if say is not None and say == "normal speed ON" else \
-                    f"{say}" if say is not None else \
-                    sound_map.get(bet_level)
-                )
-
-                # voices = [ "Trinoids", "Kanya", "Karen", "Kathy", "Nora" ]
-                # voice = random.choice(voices) if not state.last_trend else DEFAULT_VOICE
-                if casino == "JLJL9":
-                    voice = DEFAULT_VOICE
-                elif casino == "Bingo Plus":
-                    voice = "Trinoids"
-                elif casino == "Casino Plus":
-                    voice = "Kathy"
-                elif casino == "Rollem 88":
-                    voice = "Karen"
-                else:
-                    voice = "Nora"
-                subprocess.run(["say", "-v", voice, "--", sound_file])
+                say = alert_queue.get_nowait()
+                sound_file = (say)
+                subprocess.run(["say", "-v", DEFAULT_VOICE, "--", sound_file])
 
             except Empty:
                 continue
@@ -621,32 +594,28 @@ def play_alert(bet_level: str=None, say: str=None):
     else:
         pass
 
-def timer_start():
-    current_time = time.gmtime(time.time())
-    timer_start = (60 - current_time.tm_sec)
-    return timer_start
-
-def countdown_timer(countdown_queue: ThQueue, seconds):
-    time_left = timer_start()
+def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
+    time_left = now_time(countdown=True) if state.prev_pull_delta != 0.0 else seconds
 
     while not stop_event.is_set():
         if reset_event.is_set():
-            time_left = timer_start()
+            state.elapsed = 0  # Reset elapsed on data
+            time_left = now_time(countdown=True) if state.prev_pull_delta != 0.0 else seconds
             reset_event.clear()
             sys.stdout.write("\r" + " " * 80 + "\r")
             sys.stdout.flush()
 
         text = f"Betting Ends In" if state.bet_lvl is not None else f"Waiting For Next Iteration"
-        mins, secs = divmod(time_left, 60)
-        timer = f"\t⏳ {text}: {BLYEL}{mins:02d}{BLNK}{BWHTE}:{RES}{BLYEL}{secs:02d}{RES}  ( {CYN}{game}{RES} )"
+        mins, secs = divmod(time_left, seconds)
+        timer = f"\t⏳ {text}: {BLYEL}{mins:02d}{BLNK}{BWHTE}:{RES}{BLYEL}{secs:02d}{RES}  ( {LGRY}{re.sub(r"\s*\(.*?\)", "", game)}{RES} {PROVIDERS.get(provider).color}{provider}{RES} )"
 
         if time_left <= 10:
             timer = f"\t⏳ {text}: {BWHTE}... {BLNK}{BLRED}{secs}{RES}"
             if time_left == 10:
-                alert_queue.put((None, f"{time_left} seconds remaining"))
+                alert_queue.put(f"{str(time_left)} seconds remaining")
                 state.non_stop = False
             elif time_left <= 5:
-                alert_queue.put((None, time_left))
+                alert_queue.put(str(time_left))
                 if time_left < 5 and not state.non_stop and state.curr_color == 'red':
                     # print('\n\tLucky Bet: curr_color >> ', state.curr_color)
                     # print('\n\tLucky Bet: prev_pull_delta >> ', state.prev_pull_delta)
@@ -680,7 +649,7 @@ def countdown_timer(countdown_queue: ThQueue, seconds):
                 # print('\n\tDELTA BREAKOUT >> ', state.is_delta_breakout)
                 # print('\n\tBET LVL >> ', state.bet_lvl)
                 if get_delta <= -30 and state.new_10m <= -30 and state.curr_color == 'red':
-                    alert_queue.put((None, "non stop spin"))
+                    alert_queue.put("non stop spin")
                     if state.dual_slots:
                         slots = ["left", "right"]
                         if state.last_slot is None:
@@ -700,7 +669,7 @@ def countdown_timer(countdown_queue: ThQueue, seconds):
                         time.sleep(random.uniform(*TIMEOUT_DELAY_RANGE))
             elif forever_spin: # Forever Spin
                 if state.dual_slots and state.curr_color == 'red':
-                    alert_queue.put((None, "forever spin"))
+                    alert_queue.put("forever spin")
                     slots = ["left", "right"]
                     if state.last_slot is None:
                         random.shuffle(slots)
@@ -758,7 +727,7 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
                 else:
                     pyautogui.moveTo(x=cx-100, y=cy-126)
                     
-            alert_queue.put((None, "extra_bet")) if extra_bet else None
+            alert_queue.put("extra_bet") if extra_bet else None
         except Empty:
             continue
 
@@ -977,7 +946,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             #     pyautogui.click(x=random_x - 50, y=random_y + 250)
             #     time.sleep(1)
 
-            alert_queue.put((None, f"{spin_type}"))
+            alert_queue.put(spin_type)
 
             print(f"\n\t\t*** {state.last_trend} ***") if state.last_trend is not None else None
             print(f"\n\t\tBet: {WHTE}{bet}{RES} ({BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES})\n")
@@ -1031,7 +1000,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     # spin_queue.put((None, None, None, True)) # test spin on data not working
                     data_queue.put(data)
                 else:
-                    alert_queue.put((None, "redundant data"))
+                    alert_queue.put("redundant data")
                     # print(f"\n\t🛰️. Redundant Data From [{BWHTE}{request_from}{RES}] → Current{BLNK}{BLYEL}={RES}{MAG}{min10}{RES} | Prev{BLNK}{BLYEL}={RES}{MAG}{last_min10}{RES}")
             else:
                 print(f"\n\t⚠️  Game '{game}' not found") if state.elapsed != 0 else None
@@ -1447,30 +1416,30 @@ if __name__ == "__main__":
         else:
             print("\n\t✅  IP Match!")
 
-    print(f"\n\n\t{BLNK}{DGRY}🔔 Select Casino{RES}\n")
+    # print(f"\n\n\t{BLNK}{DGRY}🔔 Select Casino{RES}\n")
 
-    casinos = list(CASINOS)
+    # casinos = list(CASINOS)
 
-    for i, casino in enumerate(casinos, start=1):
-        print(f"\t[{WHTE}{i}{RES}]  - {casino}")
+    # for i, casino in enumerate(casinos, start=1):
+    #     print(f"\t[{WHTE}{i}{RES}]  - {casino}")
 
-    while True:
-        user_input = input(f"\n\t🔔 Enter the Casino of your choice ({DGRY}default: 1{RES}): ").strip()
+    # while True:
+    #     user_input = input(f"\n\t🔔 Enter the Casino of your choice ({DGRY}default: 1{RES}): ").strip()
         
-        if not user_input:
-            casino = casinos[0]
-            print(f"\n\tSelected default: {WHTE}{casino}{RES}")
-            break
-        elif user_input.isdigit():
-            choice = int(user_input)
-            if 1 <= choice <= len(casinos):
-                casino = casinos[choice - 1]
-                print(f"\n\tSelected: {WHTE}{casino}{RES}")
-                break
-            else:
-                print(f"\t⚠️  Invalid number. Please select from 1 to {len(casinos)}.")
-        else:
-            print("\t⚠️  Invalid input. Please enter a number.")
+    #     if not user_input:
+    #         casino = casinos[0]
+    #         print(f"\n\tSelected default: {WHTE}{casino}{RES}")
+    #         break
+    #     elif user_input.isdigit():
+    #         choice = int(user_input)
+    #         if 1 <= choice <= len(casinos):
+    #             casino = casinos[choice - 1]
+    #             print(f"\n\tSelected: {WHTE}{casino}{RES}")
+    #             break
+    #         else:
+    #             print(f"\t⚠️  Invalid number. Please select from 1 to {len(casinos)}.")
+    #     else:
+    #         print("\t⚠️  Invalid input. Please enter a number.")
 
     user_input = input(f"\n\n\tDo you want to enable {CYN}Auto Mode{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
     auto_mode = user_input in ("y", "yes")
@@ -1498,7 +1467,7 @@ if __name__ == "__main__":
         user_input = input(f"\n\n\tDo you want to enable {CYN}Forever Spin{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
         forever_spin = user_input in ("y", "yes")
 
-    print(f"\n\n\t... {WHTE}Starting real-time jackpot monitor.\n\t    Press ({BLMAG}Ctrl+C{RES}{WHTE}) to stop.{RES}\n")
+    print(f"\n\n\t... {WHTE}Starting real-time jackpot monitor.\n\t    Press ({BLMAG}Ctrl+C{RES}{WHTE}) to stop.{RES}\n\n")
 
     # Register a game
     requests.post(f"{api_server}/register", json={'url': url, 'name': game, 'provider': provider})
@@ -1519,7 +1488,7 @@ if __name__ == "__main__":
     
     alert_thread = threading.Thread(target=play_alert, daemon=True)
     bet_thread = threading.Thread(target=bet_switch, daemon=True)
-    countdown_thread = threading.Thread(target=countdown_timer, args=(countdown_queue, timer_start(),), daemon=True)
+    countdown_thread = threading.Thread(target=countdown_timer, args=(countdown_queue, 60,), daemon=True)
     monitor_thread = threading.Thread(target=monitor_game_info, args=(game, provider, url, data_queue,), daemon=True)
     spin_thread = threading.Thread(target=spin, daemon=True)
 
@@ -1529,16 +1498,13 @@ if __name__ == "__main__":
     monitor_thread.start()
     spin_thread.start()
 
-    state.elapsed = 0
-
     try:
         while True:
             try:
                 reset_event.set() # Reset the countdown because data came in
-                state.elapsed = 0  # Reset elapsed on data
-                data = data_queue.get(timeout=timer_start()) # Wait for new data from monitor thread (max 60s)
+                data = data_queue.get(timeout=now_time(countdown=True)) # Wait for new data from monitor thread (max 60s)
 
-                alert_queue.put((None, game))
+                alert_queue.put(re.sub(r"\s*\(.*?\)", "", game))
                 parsed_data = extract_game_data(data)
                 all_data = load_previous_data()
                 previous_data = all_data.get(game.lower())
@@ -1548,8 +1514,8 @@ if __name__ == "__main__":
             except Empty:
                 state.elapsed += 1
                 state.non_stop = False
-                # print(f"\n\t⚠️  No data received in {state.elapsed} {'seconds' if state.elapsed > 1 else 'second'}.")
-                print(f"\n\n\t⚠️  No data received in {timer_start()} seconds.\n")
+                print(f"\n\t⚠️  No data received in {state.elapsed} {'seconds' if state.elapsed > 1 else 'second'}.")
+                # print(f"\n\n\t⚠️  No data received in {now_time(countdown=True)} seconds.\n")
                 # if state.elapsed == 2:
                 #     print('Restarting API Service...')
                 #     subprocess.run(["bash", "api_restart.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

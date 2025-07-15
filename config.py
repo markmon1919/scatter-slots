@@ -5,9 +5,10 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from collections import namedtuple
 
-def datetime_now():
-    TIMEZONE = datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Manila"))
-    return TIMEZONE
+def now_time(countdown: bool=False):
+    today = datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Manila"))
+    timer_start = (60 - today.second)
+    return today if not countdown else timer_start
 
 BREAKOUT_FILE = "breakout_data.json"
 DATA_FILE = "previous_data.json"
@@ -37,6 +38,7 @@ RIGHT_SLOT_POS = {
 
 # === Voice and Sound Settings ===
 DEFAULT_VOICE = "Samantha"
+VOICES = [ "Trinoids", "Kanya", "Karen", "Kathy", "Nora" ]
 SOUND_ENABLED = True
 
 # === Default Timeouts ===
@@ -115,6 +117,7 @@ GAME_CONFIGS = {
     "Wild Ape x10000": GameConfig(False, True, True, None, False, False, "PG"),
     "Wild Fireworks": GameConfig(False, True, True, None, False, False, "PG"),
     "Wild Coaster": GameConfig(False, True, True, None, False, False, "PG"),
+    "Yakuza Honor": GameConfig(False, True, True, None, False, False, "PG"),
     "Asgardian Rising": GameConfig(False, True, True, None, False, False, "PG"),
     "Legendary Monkey King": GameConfig(False, True, True, None, False, False, "PG"),
     "Fortune Mouse": GameConfig(False, True, True, None, False, False, "PG"),
@@ -179,7 +182,7 @@ PROVIDERS = {
     "JDB": ProviderProps("JDB", LBLU),
     "YB": ProviderProps("Yellow Bat", LYEL),
     "JFF": ProviderProps("JFF", MAG),
-    "R88": ProviderProps("R88", LGRY),
+    "R88": ProviderProps("R88", DGRY),
     "RSG": ProviderProps("Royal Slot Gaming", CYN),
 }
 
