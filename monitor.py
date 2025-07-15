@@ -440,7 +440,7 @@ def compare_data(prev: dict, current: dict):
     if result is not None:
         signal = f"{LRED}＋{RES}" if bear_score > state.prev_bear_score else f"{LGRE}－{RES}" if bear_score < state.prev_bear_score else f"{LCYN}＝{RES}"
         state.prev_bear_score = bear_score
-        print(f"\n\t🐻 Bear Score: [ {BWHTE}{bear_score}{RES} ]{signal}")
+        print(f"\n\t🐻 Bear Score: {DGRY}[ {BWHTE}{bear_score} {DGRY}]{signal}")
 
         if bear_score >= 2:
             print("\n\t✅ Bearish Momentum Detected")
@@ -471,7 +471,7 @@ def compare_data(prev: dict, current: dict):
         else:
             trend_strength = "❓  Invalid"
 
-        print(f"\n\t💤 Pull Score: {BLCYN}{trend_strength}{RES} [ {BMAG}{pull_score}{RES} ]{signal}")
+        print(f"\n\t💤 Pull Score: {BLCYN}{trend_strength} {DGRY}[ {BMAG}{pull_score} {DGRY}]{signal}")
         state.last_trend = f"{re.sub(r'[^\x00-\x7F]+', '', trend_strength)} score {pull_score}"
 
         for idx, pull_trend in enumerate(result.get('pull_trend')):
@@ -1375,7 +1375,7 @@ if __name__ == "__main__":
     provider = GAME_CONFIGS.get(game).provider
 
     print(f"\n\n\t{BLNK}{DGRY}🔔 Select Server{RES}\n")
-    print("  ".join(f"\n\t[{WHTE}{i}{RES}] - {'Local' if 'localhost' in host else 'VPS'}" for i, host in enumerate(API_URL, start=1)))
+    print("  ".join(f"\n\t[{WHTE}{i}{RES}] - {BLBLU + 'Local' if 'localhost' in host else BLRED + 'VPS'}{RES}" for i, host in enumerate(API_URL, start=1)))
 
     while True:
         user_input = input(f"\n\n\t🔔 Choose your server ({DGRY}default: 1{RES}): ").strip()
