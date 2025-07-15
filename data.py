@@ -8,6 +8,7 @@ import hashlib
 import json
 from contextlib import asynccontextmanager
 from decimal import Decimal
+from datetime import datetime
 # import uvicorn
 from config import (
     USER_AGENTS, PROVIDERS,
@@ -98,7 +99,7 @@ async def poller_loop():
                         "User-Agent": user_agent
                     }
 
-                    print(f"\n🕓 Polling {PROVIDERS.get(provider).color}{name}{RES} with requestFrom={WHTE}{requestFrom}{RES} UA={WHTE}{user_agent[:30]}{RES}\n")
+                    print(f"\n🕓  Polling {PROVIDERS.get(provider).color}{name}{RES} with requestFrom={WHTE}{requestFrom}{RES} UA={WHTE}{user_agent[:30]}{RES}\n")
 
                     try:
                         r = await client.get(poll_url, params=params, headers=headers)
@@ -116,9 +117,9 @@ async def poller_loop():
                                 if min10 != last_min10:
                                     if key in last_change_times:
                                         interval = now_time - last_change_times[key]
-                                        print(f"\n✅ [{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] Changed → {LYEL}{min10} ({LMAG}Δ {BLCYN}{interval}{RES}s)\n")
+                                        print(f"\n✅  <{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%I')}{BWHTE}:{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%M')}{BWHTE}:{BLYEL}{datetime.fromtimestamp(float(now_time)).strftime('%S')}{datetime.fromtimestamp(float(now_time)).strftime('%f')[:3]}{RES}>[{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] Changed → {LYEL}{min10} ({LMAG}Δ {BLCYN}{interval}{RES}s)\n")
                                     else:
-                                        print(f"\n✅ [{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] First → {YEL}{min10}{RES}\n")
+                                        print(f"\n✅  <{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%I')}{BWHTE}:{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%M')}{BWHTE}:{BLYEL}{datetime.fromtimestamp(float(now_time)).strftime('%S')}{datetime.fromtimestamp(float(now_time)).strftime('%f')[:3]}{RES}>[{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] First → {YEL}{min10}{RES}\n")
 
                                     # prepare a new data object
                                     new_data = json.loads(json.dumps(data[0]))
@@ -136,13 +137,13 @@ async def poller_loop():
                                     last_hashes[key] = hash_val
 
                                 else:
-                                    print(f"\n❌ [{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] Still → {DGRY}{min10}{RES}\n")
+                                    print(f"\n❌  <{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%I')}{BWHTE}:{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%M')}{BWHTE}:{BLYEL}{datetime.fromtimestamp(float(now_time)).strftime('%S')}{datetime.fromtimestamp(float(now_time)).strftime('%f')[:3]}{RES}>[{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] Still → {DGRY}{min10}{RES}\n")
 
                         else:
-                            print(f"⚠️ [{name} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] No data returned.")
+                            print(f"⚠️  <{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%I')}{BWHTE}:{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%M')}{BWHTE}:{BLYEL}{datetime.fromtimestamp(float(now_time)).strftime('%S')}{datetime.fromtimestamp(float(now_time)).strftime('%f')[:3]}{RES}>[{name} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] No data returned.")
 
                     except Exception as e:
-                        print(f"⚠️ [{name} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] Request error: {e}")
+                        print(f"⚠️  <{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%I')}{BWHTE}:{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%M')}{BWHTE}:{BLYEL}{datetime.fromtimestamp(float(now_time)).strftime('%S')}{datetime.fromtimestamp(float(now_time)).strftime('%f')[:3]}{RES}>[{name} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] Request error: {e}")
 
             # align to next poll interval
             now = time.time()
