@@ -648,7 +648,7 @@ def countdown_timer(seconds: int = 60):
 
         # Example triggers
         # if current_sec % 10 == 9 and current_sec <= 49:
-        num_sec = [ 8, 9, 0 ]
+        num_sec = [ 9, 0 ]
         random.shuffle(num_sec)
         selected = num_sec[0]
 
