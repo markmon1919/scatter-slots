@@ -652,7 +652,7 @@ def countdown_timer(seconds: int = 60):
         random.shuffle(num_sec)
         selected = num_sec[0]
 
-        if current_sec % 10 == selected:
+        if current_sec % 10 == selected and state.spin_test:
         # if current_sec % 10 == 9:
             alert_queue.put(f"{current_sec} spin!")
             if state.dual_slots and state.auto_mode:
@@ -661,7 +661,7 @@ def countdown_timer(seconds: int = 60):
                 spin_queue.put((None, None, slots[0], False))
                 spin_queue.put((None, None, slots[1], False))
                 # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
-            elif not state.dual_slots and state.auto_mode and state.spin_test:
+            elif not state.dual_slots and state.auto_mode:
                 spin_queue.put((None, None, None, False))
                 # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
 
