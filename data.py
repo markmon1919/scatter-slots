@@ -116,9 +116,9 @@ async def poller_loop():
                                 if min10 != last_min10:
                                     if key in last_change_times:
                                         interval = now_time - last_change_times[key]
-                                        print(f"\n✅ [{PROVIDERS.get(provider).color}{name}{RES} {DGRY}| {WHTE}{requestFrom}{RES}] Changed → {LYEL}{min10} ({LMAG}Δ {BLCYN}{interval}{RES}s)\n")
+                                        print(f"\n✅ [{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] Changed → {LYEL}{min10} ({LMAG}Δ {BLCYN}{interval}{RES}s)\n")
                                     else:
-                                        print(f"\n✅ [{PROVIDERS.get(provider).color}{name}{RES} {DGRY}| {WHTE}{requestFrom}{RES}] First → {YEL}{min10}{RES}\n")
+                                        print(f"\n✅ [{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] First → {YEL}{min10}{RES}\n")
 
                                     # prepare a new data object
                                     new_data = json.loads(json.dumps(data[0]))
@@ -136,13 +136,13 @@ async def poller_loop():
                                     last_hashes[key] = hash_val
 
                                 else:
-                                    print(f"\n❌ [{PROVIDERS.get(provider).color}{name}{RES} {DGRY}| {WHTE}{requestFrom}{RES}] Still → {DGRY}{min10}{RES}\n")
+                                    print(f"\n❌ [{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] Still → {DGRY}{min10}{RES}\n")
 
                         else:
-                            print(f"⚠️ [{name} | {requestFrom}] No data returned.")
+                            print(f"⚠️ [{name} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] No data returned.")
 
                     except Exception as e:
-                        print(f"⚠️ [{name} | {requestFrom}] Request error: {e}")
+                        print(f"⚠️ [{name} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] Request error: {e}")
 
             # align to next poll interval
             now = time.time()
@@ -202,7 +202,7 @@ async def get_latest_game(
 
     if key not in latest_data:
         return {
-            "error": f"Game '{name}' with requestFrom '{requestFrom}' has no data yet. Make sure it's registered and polled at least once."
+            "error": f"Game '{name}' with requestFrom '{WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}' has no data yet. Make sure it's registered and polled at least once."
         }
 
     new_hash = last_hashes.get(key)
@@ -214,7 +214,7 @@ async def get_latest_game(
         return latest_data[key]
     else:
         return {
-            "error": f"Game '{name}' with requestFrom '{requestFrom}' has no data changes yet. Please wait.."
+            "error": f"Game '{name}' with requestFrom '{WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}' has no data changes yet. Please wait.."
         }
 
 # ──────────────

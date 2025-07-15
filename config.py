@@ -182,8 +182,8 @@ PROVIDERS = {
     "JDB": ProviderProps("JDB", LBLU),
     "YB": ProviderProps("Yellow Bat", LYEL),
     "JFF": ProviderProps("JFF", MAG),
-    "R88": ProviderProps("R88", DGRY),
-    "RSG": ProviderProps("Royal Slot Gaming", CYN),
+    "R88": ProviderProps("R88", GRE),
+    "RSG": ProviderProps("Royal Slot Gaming", RED),
 }
 
 DEFAULT_PROVIDER_PROPS = ProviderProps(None, WHTE)
