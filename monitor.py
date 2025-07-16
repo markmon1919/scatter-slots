@@ -1034,8 +1034,6 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             #         pyautogui.click(x=random_x - 50, y=random_y)
                     
             #     time.sleep(1)
-
-            spin_type = "turbo_spin"
                 
             if spin_type == "normal_spin":  # optimize later for space or click dynamics
                 if state.spin:
