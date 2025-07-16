@@ -2,7 +2,7 @@
 
 import json, logging, os, platform, pyautogui, random, re, requests, subprocess, sys, time, threading
 from dataclasses import dataclass, field
-from datetime import datetime
+# from datetime import datetime
 from queue import Queue as ThQueue, Empty
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 # from pynput.mouse import Listener as MouseListener, Button
@@ -25,8 +25,8 @@ class AutoState:
     split_screen: bool = False
     left_slot: bool = False
     right_slot: bool = False
-    forever_spin: bool = False
-    spin_test: bool = False
+    # forever_spin: bool = False
+    
     # hotkeys: bool = True
     # running: bool = True
     # pressing: bool = False
@@ -57,6 +57,7 @@ class AutoState:
     last_time: int = 0
     new_10m: float = 0.0
     new_jackpot_val: float = 0.0
+    jackpot_signal: str = None
 
 
 @dataclass
@@ -77,14 +78,14 @@ def get_sleep_times(auto_play_menu: bool=False):
         'd': 0.001  # 400 cps
     }
 
-def configure_game(game: str, api_server: str, breakout: dict, auto_mode: bool=False, dual_slots: bool=False, split_screen: bool=False, left_slot: bool=False, right_slot: bool=False, forever_spin: bool=False):
+def configure_game(game: str, api_server: str, breakout: dict, auto_mode: bool=False, dual_slots: bool=False, split_screen: bool=False, left_slot: bool=False, right_slot: bool=False):#, forever_spin: bool=False):
     state.breakout = breakout
     state.auto_mode = auto_mode
     state.dual_slots = dual_slots
     state.split_screen = split_screen
     state.left_slot = left_slot
     state.right_slot = right_slot
-    state.forever_spin = forever_spin
+    # state.forever_spin = forever_spin
 
     config = GAME_CONFIGS.get(game, DEFAULT_GAME_CONFIG)
     (
@@ -226,7 +227,6 @@ def compare_data(prev: dict, current: dict):
     is_breakout_delta = False
     state.is_breakout = False
     state.is_delta_breakout = False
-    state.spin_test = False
     lowest_low = state.breakout["lowest_low"]
     lowest_low_delta = state.breakout["lowest_low_delta"]
 
@@ -238,7 +238,6 @@ def compare_data(prev: dict, current: dict):
         sign = f"{GRE}+{RES}" if delta > 0 else ""
         signal = f"{LRED}⬇{RES}" if current_jackpot < prev_jackpot else f"{LGRE}⬆{RES}" if current_jackpot > prev_jackpot else f"{LCYN}◉{RES}"
         diff = f"({YEL}Prev{DGRY}:{RES} {GRE}{prev_jackpot}{RES}{percent}{DGRY}, {LMAG}Δ{DGRY}: {sign}{colored_delta}{percent})"
-        state.spin_test = (current_jackpot < prev_jackpot)
 
         logger.info(f"{banner}")
         logger.info(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {RED if current_jackpot < prev_jackpot else GRE}{current_jackpot}{percent} {diff}")
@@ -617,8 +616,7 @@ def play_alert(say: str=None):
     if platform.system() == "Darwin":
         while not stop_event.is_set():
             try:
-                say = alert_queue.get(timeout=10)
-                # say = alert_queue.get_nowait()
+                say = alert_queue.get_nowait()
                 sound_file = (say)
 
                 if sound_file == "ping":
@@ -648,10 +646,10 @@ def countdown_timer(seconds: int=60):
         blink = BLNK if current_sec % 2 == 0 else ""
 
         text = (
-            f"Betting Ends In"
+            f"{BLU}Betting Ends In{RES}"
             if state.bet_lvl is not None else \
             f"{RED}Loading Game Data{RES}" if state.new_jackpot_val == 0.0 else \
-            f"Waiting For Next Iteration"
+            f"{BLU}Waiting For Next Iteration{RES}"
         )
 
         timer = (
@@ -672,10 +670,10 @@ def countdown_timer(seconds: int=60):
         # selected = num_sec[0]
         # DELAY_TEST = (0.75, 1.2)
 
-        if current_sec % 10 == 8:
-            alert_queue.put("ping") if not state.spin_test else None
+        if current_sec % 10 == 7:
+            alert_queue.put("ping") if state.jackpot_signal != "bullish" else None
             # alert_queue.put(f"{current_sec} spin!")
-            if state.spin_test and state.auto_mode:
+            if state.auto_mode and state.jackpot_signal != "bullish":
                 if state.dual_slots:
                     slots = ["left", "right"]
                     random.shuffle(slots)
@@ -939,8 +937,8 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
 def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, stop_spin: bool=False):
     while not stop_event.is_set():
         try:
-            bet_level, chosen_spin, slot_position, stop_spin = spin_queue.get(timeout=10)
-            # bet_level, chosen_spin, slot_position, stop_spin = spin_queue.get_nowait()
+            # bet_level, chosen_spin, slot_position, stop_spin = spin_queue.get(timeout=10)
+            bet_level, chosen_spin, slot_position, stop_spin = spin_queue.get_nowait()
 
             spin_types = [ "normal", "spin_hold", "spam_spin", "board_spin", "board_spin_delay", "board_spin_turbo", "board_spin_tap", "auto_spin", "turbo_spin" ]
             spin_type = random.choice(spin_types) if chosen_spin is None else chosen_spin
@@ -1052,19 +1050,18 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                 pyautogui.mouseUp()
             elif spin_type == "spam_spin":
                 if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
-                    pyautogui.click(x=cx + 450, y=cy + 325)
+                    pyautogui.doubleClick(x=cx + 450, y=cy + 325)
                     pyautogui.click(x=cx + 450, y=cy + 325)
                     pyautogui.click(x=cx + 450, y=cy + 325)
                     pyautogui.click(x=cx + 450, y=cy + 325)
                     pyautogui.click(x=cx + 450, y=cy + 325)
                 else:
+                    pyautogui.doubleClick(x=cx, y=cy + 330)
                     pyautogui.click(x=cx, y=cy + 330)
                     pyautogui.click(x=cx, y=cy + 330)
                     pyautogui.click(x=cx, y=cy + 330)
                     pyautogui.click(x=cx, y=cy + 330)
                     pyautogui.click(x=cx, y=cy + 330)
-                    pyautogui.click(x=cx, y=cy + 330)
-                time.sleep(random.uniform(*SPIN_DELAY_RANGE))
             elif spin_type == "board_spin":  # Click confirm during first board spin    
                 if provider in [ "JILI", "FC", "JFF", "R88" ]:
                     pyautogui.click(x=cx, y=cy)
@@ -1127,7 +1124,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     action()
 
             # time.sleep(2) if chosen_spin != "turbo_spin" else time.sleep(1)
-            time.sleep(1)
+            # time.sleep(1)
 
             if state.dual_slots and slot_position is not None:
                 if state.split_screen:
@@ -1153,14 +1150,14 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             #     time.sleep(1)
 
             sys.stdout.write(f"\r\t\t*** {state.last_trend} ***") if state.last_trend is not None else None
-            sys.stdout.write(f"\r\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES}>\n")
+            sys.stdout.write(f"\r\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES}>\n")
             sys.stdout.write(f"\t\tSlot: {BLBLU}{slot_position}{RES}\n") if state.dual_slots or state.split_screen or state.left_slot or state.right_slot else None
             sys.stdout.flush()
 
             alert_queue.put(spin_type)
 
-            # if stop_spin and not state.non_stop:
-            #     break
+            if stop_spin and not state.non_stop:
+                break
         except Empty:
             continue
 
@@ -1200,6 +1197,8 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     # state.non_stop = False
                     state.new_jackpot_val = data.get("value")
                     state.new_10m = data.get("min10")
+                    state.jackpot_signal = ("bearish" if data.get("value") < prev_jackpot_val else "bullish" if data.get("value") > prev_jackpot_val else "neutral") if state.prev_jackpot_val != 0.0 else "neutral"
+                    # signal = f"{LRED}⬇{RES}" if current_jackpot < prev_jackpot else f"{LGRE}⬆{RES}" if current_jackpot > prev_jackpot else f"{LCYN}◉{RES}"
                     state.last_time = round(data.get('last_updated') % 60)
                     # logger.info("\n\tstate.last_time: ", state.last_time)
                     # spin_queue.put((None, None, None, True)) # test spin on data not working
@@ -1572,9 +1571,9 @@ if __name__ == "__main__":
                 logger.info(f"\n\tSelected: {WHTE}{game}{RES}")
                 break
             else:
-                logger.info("\t⚠️  Invalid choice. Try again.")
+                logger.warning("\t⚠️  Invalid choice. Try again.")
         except ValueError:
-            logger.info("\t⚠️  Please enter a valid number.")
+            logger.warning("\t⚠️  Please enter a valid number.")
 
     # logger.info(f"\n\t>>> {RED}Select Source URL{RES} <<<\n")
 
@@ -1605,7 +1604,7 @@ if __name__ == "__main__":
         
         if not user_input:
             api_server = API_URL[0]
-            logger.info("\t⚠️  Invalid input. Defaulting to Local network.")
+            logger.warning("\t⚠️  Invalid input. Defaulting to Local network.")
             break
         elif user_input.isdigit():
             choice = int(user_input)
@@ -1615,7 +1614,7 @@ if __name__ == "__main__":
                 break
         else:
             api_server = API_URL[0]
-            logger.info("\t⚠️  Invalid input. Defaulting to Local network.")
+            logger.warning("\t⚠️  Invalid input. Defaulting to Local network.")
             break
 
     if 'localhost' in api_server:
@@ -1669,7 +1668,7 @@ if __name__ == "__main__":
     dual_slots = False
     split_screen = False
     left_slot = right_slot = False
-    forever_spin = False
+    # forever_spin = False
 
     if auto_mode:
         user_input = input(f"\n\n\tDo you want to enable {CYN}Dual Slots{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
@@ -1687,8 +1686,8 @@ if __name__ == "__main__":
                     enable_right = input(f"\n\n\tDo you want to enable {MAG}Right Slot{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
                     right_slot = enable_right in ("y", "yes")
 
-        user_input = input(f"\n\n\tDo you want to enable {CYN}Forever Spin{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
-        forever_spin = user_input in ("y", "yes")
+        # user_input = input(f"\n\n\tDo you want to enable {CYN}Forever Spin{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
+        # forever_spin = user_input in ("y", "yes")
 
     logger.info(f"\n\n\t... {WHTE}Starting real-time jackpot monitor.\n\t    Press ({BLMAG}Ctrl+C{RES}{WHTE}) to stop.{RES}\n\n")
 
@@ -1698,7 +1697,7 @@ if __name__ == "__main__":
     breakout = load_breakout_memory(game)
 
     state = AutoState()
-    settings = configure_game(game, api_server, breakout, auto_mode, dual_slots, split_screen, left_slot, right_slot, forever_spin)
+    settings = configure_game(game, api_server, breakout, auto_mode, dual_slots, split_screen, left_slot, right_slot)#, forever_spin)
 
     stop_event = threading.Event()
     reset_event = threading.Event()
@@ -1748,7 +1747,7 @@ if __name__ == "__main__":
                 pass
 
     except KeyboardInterrupt:
-        logger.info("\n\n\t🤖❌  Main program interrupted.")
+        logger.error(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
         stop_event.set()
 
     # try:
@@ -1803,4 +1802,4 @@ if __name__ == "__main__":
     if os.path.exists(DATA_FILE):
         os.remove(DATA_FILE)
 
-    logger.debug("\n\n\t🤖❌  All threads shut down.")
+    logger.warning(f"\n\n\t🤖❌  {LYEL}All threads shut down...{RES}")
