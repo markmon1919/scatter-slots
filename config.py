@@ -139,6 +139,7 @@ GAME_CONFIGS = {
     "Heist of Stakes": GameConfig(False, True, True, None, False, False, "PG"),
     "Lucky Neko": GameConfig(False, True, True, None, False, False, "PG"),
     "Egypt's Book of Mystery": GameConfig(False, True, True, None, False, False, "PG"),
+    "Rise of Apollo": GameConfig(False, True, True, None, False, False, "PG"),
     "Grand Blue": GameConfig(True, True, True, None, False, False, "FC"),
     "Golden Genie": GameConfig(True, True, True, None, False, False, "FC"),
     "Egypt Bonanza": GameConfig(True, True, True, None, False, False, "FC"),
