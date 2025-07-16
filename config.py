@@ -10,6 +10,7 @@ def now_time(countdown: bool=False):
     timer_start = (60 - today.second)
     return today if not countdown else timer_start
 
+LOG_LEVEL = ""#DEBUG"
 BREAKOUT_FILE = "breakout_data.json"
 DATA_FILE = "previous_data.json"
 
@@ -38,9 +39,14 @@ RIGHT_SLOT_POS = {
 
 # === Voice and Sound Settings ===
 PING = "/System/Library/Sounds/Ping.aiff"
-DEFAULT_VOICE = "Samantha"
-VOICES = [ "Trinoids", "Kanya", "Karen", "Kathy", "Nora" ]
-SOUND_ENABLED = True
+VOICES = {
+    "Samantha": "Samantha",
+    "Trinoids": "Trinoids",
+    "Kanya": "Kanya",
+    "Karen": "Karen",
+    "Kathy": "Kathy",
+    "Nora": "Nora",
+}
 
 # === Default Timeouts ===
 SPIN_DELAY_RANGE = (1, 3)  # Used with random.uniform(*SPIN_DELAY_RANGE)

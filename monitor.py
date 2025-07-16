@@ -6,7 +6,7 @@ from datetime import datetime
 from queue import Queue as ThQueue, Empty
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 # from pynput.mouse import Listener as MouseListener, Button
-from config import (now_time, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, DEFAULT_VOICE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
+from config import (now_time, LOG_LEVEL, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
@@ -624,8 +624,9 @@ def play_alert(say: str=None):
                 if sound_file == "ping":
                     subprocess.run(["afplay", PING])
                 else:
-                    subprocess.run(["say", "-v", DEFAULT_VOICE, "--", sound_file])
-
+                    voice = VOICES["Trinoids"] if "bet max" in sound_file or "bet high" in sound_file else VOICES["Samantha"]
+                    subprocess.run(["say", "-v", voice, "--", sound_file])
+                    
             except Empty:
                 continue
             except Exception as e:
@@ -633,16 +634,16 @@ def play_alert(say: str=None):
     else:
         pass
 
-def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
+def countdown_timer(seconds: int=60):
     while not stop_event.is_set():
         now = now_time()
         current_sec = now.second
         time_left = 60 - current_sec
 
-        if reset_event.is_set():
-            time_left = seconds
-            reset_event.clear()
-            logger.info("⏳ Countdown reset!")
+        # if reset_event.is_set():
+        #     time_left = seconds
+        #     reset_event.clear()
+        #     logger.info("⏳ Countdown reset!")
 
         blink = BLNK if current_sec % 2 == 0 else ""
 
@@ -671,7 +672,7 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
         # selected = num_sec[0]
         # DELAY_TEST = (0.75, 1.2)
 
-        if current_sec % 10 == 9:
+        if current_sec % 10 == 8:
             alert_queue.put("ping") if not state.spin_test else None
             # alert_queue.put(f"{current_sec} spin!")
             if state.spin_test and state.auto_mode:
@@ -1151,14 +1152,15 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             #     pyautogui.click(x=random_x - 50, y=random_y + 250)
             #     time.sleep(1)
 
+            sys.stdout.write(f"\r\t\t*** {state.last_trend} ***") if state.last_trend is not None else None
+            sys.stdout.write(f"\r\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES}>\n")
+            sys.stdout.write(f"\t\tSlot: {BLBLU}{slot_position}{RES}\n") if state.dual_slots or state.split_screen or state.left_slot or state.right_slot else None
+            sys.stdout.flush()
+
             alert_queue.put(spin_type)
 
-            logger.info(f"\n\t\t*** {state.last_trend} ***") if state.last_trend is not None else None
-            logger.info(f"\n\t\tBet: {WHTE}{bet}{RES} ({BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES})\n")
-            logger.info(f"\t\tSlot: {BLBLU}{slot_position}{RES}\n") if state.dual_slots or state.split_screen or state.left_slot or state.right_slot else None
-
-            if stop_spin and not state.non_stop:
-                break
+            # if stop_spin and not state.non_stop:
+            #     break
         except Empty:
             continue
 
@@ -1175,11 +1177,9 @@ def get_game_data_from_local_api(game: str):
         )
 
         json_data = response.json()
+        
+        logger.debug(f"📡 Response >> [{BWHTE}{request_from}{RES}] {json_data}")
 
-        # logger.info(f"📡 Calling with requestFrom={request_from}")
-        # logger.info("RESPONSE >>", json_data)
-
-        # Always return a tuple
         return json_data, request_from
 
     except Exception as e:
@@ -1537,10 +1537,10 @@ def render_games(blink_idx: int=None, blink_on: bool=True):
 if __name__ == "__main__":
     # MAIN
     logger = logging.getLogger("monitor")
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.DEBUG if LOG_LEVEL == "DEBUG" else logging.INFO)
 
     stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setLevel(logging.DEBUG if LOG_LEVEL == "DEBUG" else logging.INFO)
 
     formatter = logging.Formatter("%(message)s")
     stream_handler.setFormatter(formatter)
@@ -1711,8 +1711,8 @@ if __name__ == "__main__":
     
     alert_thread = threading.Thread(target=play_alert, daemon=True)
     bet_thread = threading.Thread(target=bet_switch, daemon=True)
-    countdown_thread = threading.Thread(target=countdown_timer, args=(countdown_queue, 60,), daemon=True)
-    # countdown_thread = threading.Thread(target=countdown_timer, daemon=True)
+    # countdown_thread = threading.Thread(target=countdown_timer, args=(countdown_queue, 60,), daemon=True)
+    countdown_thread = threading.Thread(target=countdown_timer, daemon=True)
     monitor_thread = threading.Thread(target=monitor_game_info, args=(game, provider, url, data_queue,), daemon=True)
     spin_thread = threading.Thread(target=spin, daemon=True)
 
@@ -1731,7 +1731,7 @@ if __name__ == "__main__":
                     logger.info(f"\n✅ {msg}")
                 except Empty:
                     pass
-                # reset_event.set() # Reset the countdown because data came in
+                
                 # Wait for data (block until something arrives)
                 data = data_queue.get(timeout=1)
 
