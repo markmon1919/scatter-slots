@@ -37,6 +37,7 @@ RIGHT_SLOT_POS = {
 }
 
 # === Voice and Sound Settings ===
+PING = "/System/Library/Sounds/Ping.aiff"
 DEFAULT_VOICE = "Samantha"
 VOICES = [ "Trinoids", "Kanya", "Karen", "Kathy", "Nora" ]
 SOUND_ENABLED = True

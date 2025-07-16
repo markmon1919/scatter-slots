@@ -6,7 +6,7 @@ from datetime import datetime
 from queue import Queue as ThQueue, Empty
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 # from pynput.mouse import Listener as MouseListener, Button
-from config import (now_time, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, DEFAULT_VOICE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
+from config import (now_time, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, DEFAULT_VOICE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
@@ -620,7 +620,11 @@ def play_alert(say: str=None):
                 say = alert_queue.get(timeout=10)
                 # say = alert_queue.get_nowait()
                 sound_file = (say)
-                subprocess.run(["say", "-v", DEFAULT_VOICE, "--", sound_file])
+
+                if sound_file == "ping":
+                    subprocess.run(["afplay", PING])
+                else:
+                    subprocess.run(["say", "-v", DEFAULT_VOICE, "--", sound_file])
 
             except Empty:
                 continue
@@ -658,23 +662,19 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
         # selected = num_sec[0]
         # DELAY_TEST = (0.75, 1.2)
 
-        if current_sec % 10 == 9 and state.spin_test:
-        # if current_sec == 9 or current_sec == 19 or current_sec == 29 or current_sec == 39 or current_sec == 49:
-            # value = random.uniform(*DELAY_TEST)
-            # print('VALUE >>> ', value)
-            # time.sleep(random.uniform(*DELAY_TEST))
-        # if current_sec % 10 == selected and state.spin_test:
-        # if current_sec % 10 == 9:
+        if current_sec % 10 == 9:
+            alert_queue.put("ping") if not state.spin_test else None
             # alert_queue.put(f"{current_sec} spin!")
-            if state.dual_slots and state.auto_mode:
-                slots = ["left", "right"]
-                random.shuffle(slots)
-                spin_queue.put((None, None, slots[0], False))
-                spin_queue.put((None, None, slots[1], False))
-                # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
-            elif not state.dual_slots and state.auto_mode:
-                spin_queue.put((None, None, None, False))
-                # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+            if state.spin_test and state.auto_mode:
+                if state.dual_slots:
+                    slots = ["left", "right"]
+                    random.shuffle(slots)
+                    spin_queue.put((None, None, slots[0], False))
+                    spin_queue.put((None, None, slots[1], False))
+                    # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+                else:
+                    spin_queue.put((None, None, None, False))
+                    # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                 
         start = time.time()
         
