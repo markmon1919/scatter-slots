@@ -2,6 +2,7 @@ asyncio
 datetime
 fastapi[standard]
 httpx
+logging
 pydantic
 pyautogui
 pyinstaller

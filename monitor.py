@@ -1,6 +1,6 @@
 #!/usr/bin/env .venv/bin/python
 
-import json, os, platform, pyautogui, random, re, requests, subprocess, sys, time, threading
+import json, logging, os, platform, pyautogui, random, re, requests, subprocess, sys, time, threading
 from dataclasses import dataclass, field
 from datetime import datetime
 from queue import Queue as ThQueue, Empty
@@ -164,7 +164,7 @@ def save_current_data(data):
 #             writer.writeheader()
 #         writer.writerow(row)
 
-#     print(f"✅ Wrote data for {raw_data['name']} to {output_csv}")
+#     logger.info(f"✅ Wrote data for {raw_data['name']} to {output_csv}")
 
 def compare_data(prev: dict, current: dict):
     state.curr_color = current['color']
@@ -240,13 +240,13 @@ def compare_data(prev: dict, current: dict):
         diff = f"({YEL}Prev{DGRY}:{RES} {GRE}{prev_jackpot}{RES}{percent}{DGRY}, {LMAG}Δ{DGRY}: {sign}{colored_delta}{percent})"
         state.spin_test = (current_jackpot < prev_jackpot)
 
-        print(f"{banner}")
-        print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {RED if current_jackpot < prev_jackpot else GRE}{current_jackpot}{percent} {diff}")
-        print(f"\n\t{jackpot_bar} {signal}\n")
+        logger.info(f"{banner}")
+        logger.info(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {RED if current_jackpot < prev_jackpot else GRE}{current_jackpot}{percent} {diff}")
+        logger.info(f"\n\t{jackpot_bar} {signal}\n")
     else:
-        print(f"{banner}")
-        print(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {RED if current['color'] == 'red' else GRE}{current_jackpot}{RES}{percent}")
-        print(f"\n\t{jackpot_bar}  {LCYN}◉{RES}\n")
+        logger.info(f"{banner}")
+        logger.info(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {RED if current['color'] == 'red' else GRE}{current_jackpot}{RES}{percent}")
+        logger.info(f"\n\t{jackpot_bar}  {LCYN}◉{RES}\n")
 
     for index, (period, value) in enumerate(current['history'].items()):
         old_value = prev['history'].get(period) if prev else None
@@ -466,20 +466,20 @@ def compare_data(prev: dict, current: dict):
                         #         bet_queue.put((bet_level, True, slots[1]))
                         
 
-        print(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:  {colored_value}{percent} {diff} {signal}") if period == "10m" and pct(value) >= 0 else \
-            print(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}: {colored_value}{percent} {diff} {signal}") if period == "10m" and pct(value) < 0 else \
-            print(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:   {colored_value}{percent} {diff} {signal}") if pct(value) >= 0 else \
-            print(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:  {colored_value}{percent} {diff} {signal}")
+        logger.info(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:  {colored_value}{percent} {diff} {signal}") if period == "10m" and pct(value) >= 0 else \
+            logger.info(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}: {colored_value}{percent} {diff} {signal}") if period == "10m" and pct(value) < 0 else \
+            logger.info(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:   {colored_value}{percent} {diff} {signal}") if pct(value) >= 0 else \
+            logger.info(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:  {colored_value}{percent} {diff} {signal}")
 
     if result is not None:
         signal = f"{LRED}＋{RES}" if bear_score > state.prev_bear_score else f"{LGRE}－{RES}" if bear_score < state.prev_bear_score else f"{LCYN}＝{RES}"
         state.prev_bear_score = bear_score
-        print(f"\n\t🐻 Bear Score: {DGRY}[ {BWHTE}{bear_score} {DGRY}]{signal}")
+        logger.info(f"\n\t🐻 Bear Score: {DGRY}[ {BWHTE}{bear_score} {DGRY}]{signal}")
 
         if bear_score >= 2:
-            print("\n\t✅ Bearish Momentum Detected")
+            logger.info("\n\t✅ Bearish Momentum Detected")
         else:
-            print("\n\t❌ Not Enough Bearish Momentum")
+            logger.info("\n\t❌ Not Enough Bearish Momentum")
 
         state.prev_pull_delta = result.get('old_delta_10m')
         pull_score = result.get('pull_score', 0)
@@ -505,34 +505,34 @@ def compare_data(prev: dict, current: dict):
         else:
             trend_strength = "❓  Invalid"
 
-        print(f"\n\t💤 Pull Score: {BLCYN}{trend_strength} {DGRY}[ {BMAG}{pull_score} {DGRY}]{signal}")
+        logger.info(f"\n\t💤 Pull Score: {BLCYN}{trend_strength} {DGRY}[ {BMAG}{pull_score} {DGRY}]{signal}")
         state.last_trend = f"{re.sub(r'[^\x00-\x7F]+', '', trend_strength)} score {pull_score}"
 
         for idx, pull_trend in enumerate(result.get('pull_trend')):
-            print("\n\t💤 Pull Trend: ") if idx == 0 else None
-            print(f"\t\t{BWHTE}{pull_trend}{RES}") if pull_trend else None
+            logger.info("\n\t💤 Pull Trend: ") if idx == 0 else None
+            logger.info(f"\t\t{BWHTE}{pull_trend}{RES}") if pull_trend else None
         
         signal = f"{LRED}▼{RES}" if result.get('new_delta_10m') < result.get('old_delta_10m') and result.get('old_delta_10m') != 0 else f"{LGRE}▲{RES}" if result.get('new_delta_10m') > result.get('old_delta_10m') and result.get('old_delta_10m') != 0 else f"{LCYN}◆{RES}"
-        print(f"\n\t🧲 Delta{LMAG}Δ{RES} Pull Power ({DGRY}Current & Prev [10m]{RES}): {RED if result.get('new_delta_10m') < 0 else GRE + '+' if result.get('new_delta_10m') > 0 else CYN}{result.get('new_delta_10m')}{LMAG}Δ{RES} {DGRY}| {RED if result.get('old_delta_10m') < 0 else GRE + '+' if result.get('old_delta_10m') > 0 else CYN + '+'}{result.get('old_delta_10m')}{LMAG}Δ{RES}") 
-        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Diff Current - Prev [10m]{RES}): {RED if result.get('delta_shift') < 0 else GRE + '+'}{result.get('delta_shift')}{LMAG}Δ{RES} {signal}")
-        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Analysis [10m]{RES}): {MAG}Strong{RES} Pull  ✅") if result.get('delta_shift_analysis') else \
-            print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Analysis [10m]{RES}): {MAG}Weak{RES} Pull  ❌")
-        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Decision [10m]{RES}): {BMAG}{'Very Strong' if result.get('delta_shift') <= -50 else 'Stronger' if result.get('delta_shift') <= -20 else 'Strong'}{RES} Pull  ✅") if result.get('delta_shift_decision') else \
-            print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Decision [10m]{RES}): {BMAG}{'Very Weak' if result.get('delta_shift') >= 50 else 'Weaker' if result.get('delta_shift') >= 20 else 'Weak'}{RES} Pull  ❌")
+        logger.info(f"\n\t🧲 Delta{LMAG}Δ{RES} Pull Power ({DGRY}Current & Prev [10m]{RES}): {RED if result.get('new_delta_10m') < 0 else GRE + '+' if result.get('new_delta_10m') > 0 else CYN}{result.get('new_delta_10m')}{LMAG}Δ{RES} {DGRY}| {RED if result.get('old_delta_10m') < 0 else GRE + '+' if result.get('old_delta_10m') > 0 else CYN + '+'}{result.get('old_delta_10m')}{LMAG}Δ{RES}") 
+        logger.info(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Diff Current - Prev [10m]{RES}): {RED if result.get('delta_shift') < 0 else GRE + '+'}{result.get('delta_shift')}{LMAG}Δ{RES} {signal}")
+        logger.info(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Analysis [10m]{RES}): {MAG}Strong{RES} Pull  ✅") if result.get('delta_shift_analysis') else \
+            logger.info(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Analysis [10m]{RES}): {MAG}Weak{RES} Pull  ❌")
+        logger.info(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Decision [10m]{RES}): {BMAG}{'Very Strong' if result.get('delta_shift') <= -50 else 'Stronger' if result.get('delta_shift') <= -20 else 'Strong'}{RES} Pull  ✅") if result.get('delta_shift_decision') else \
+            logger.info(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Decision [10m]{RES}): {BMAG}{'Very Weak' if result.get('delta_shift') >= 50 else 'Weaker' if result.get('delta_shift') >= 20 else 'Weak'}{RES} Pull  ❌")
             
         signal = f"{LRED}▼{RES}" if result.get('new_delta_10m_1h') < result.get('old_delta_10m_1h') else f"{LGRE}▲{RES}" if result.get('new_delta_10m_1h') > result.get('old_delta_10m_1h') else f"{LCYN}◆{RES}"
-        print(f"\n\t📊 Delta{LMAG}Δ{RES} Trend Change Power ({DGRY}Current & Prev [10m_1h]{RES}): {RED if result.get('new_delta_10m_1h') < 0 else GRE + '+' if result.get('new_delta_10m_1h') > 0 else CYN}{result.get('new_delta_10m_1h')}{LMAG}Δ{RES} {DGRY}| {RED if result.get('old_delta_10m_1h') < 0 else GRE + '+' if result.get('old_delta_10m_1h') > 0 else CYN}{result.get('old_delta_10m_1h')}{LMAG}Δ{RES}")
-        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Diff Current - Prev [10m_1h]{RES}): {RED if result.get('delta_shift_10m_1h') < 0 else GRE + '+'}{result.get('delta_shift_10m_1h')}{LMAG}Δ{RES} {signal}")
-        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Analysis [10m_1h]{RES}): {LRED}🐻 Bearish{RES} Power  ✅") if result.get('delta_shift_analysis_10m_1h') else \
-            print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Analysis [10m_1h]{RES}): {GRE}🐂 Bullish{RES} Power  ❌")
-        print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Decision [10m_1h]{RES}): {BMAG}{'Very Strong' if result.get('delta_shift_10m_1h') <= 50 else 'Strong' if result.get('delta_shift_10m_1h') <= 20 else 'Weak'}{RES} Bearish Pull Surge  🐻") if result.get('delta_shift_decision_10m_1h') else \
-            print(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Decision [10m_1h]{RES}): {BMAG}{'Very Strong' if result.get('delta_shift_10m_1h') >= 50 else 'Strong' if result.get('delta_shift_10m_1h') >= 20 else 'Weak'}{RES} Bullish Pull Surge  🐂")
+        logger.info(f"\n\t📊 Delta{LMAG}Δ{RES} Trend Change Power ({DGRY}Current & Prev [10m_1h]{RES}): {RED if result.get('new_delta_10m_1h') < 0 else GRE + '+' if result.get('new_delta_10m_1h') > 0 else CYN}{result.get('new_delta_10m_1h')}{LMAG}Δ{RES} {DGRY}| {RED if result.get('old_delta_10m_1h') < 0 else GRE + '+' if result.get('old_delta_10m_1h') > 0 else CYN}{result.get('old_delta_10m_1h')}{LMAG}Δ{RES}")
+        logger.info(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Diff Current - Prev [10m_1h]{RES}): {RED if result.get('delta_shift_10m_1h') < 0 else GRE + '+'}{result.get('delta_shift_10m_1h')}{LMAG}Δ{RES} {signal}")
+        logger.info(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Analysis [10m_1h]{RES}): {LRED}🐻 Bearish{RES} Power  ✅") if result.get('delta_shift_analysis_10m_1h') else \
+            logger.info(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Analysis [10m_1h]{RES}): {GRE}🐂 Bullish{RES} Power  ❌")
+        logger.info(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Decision [10m_1h]{RES}): {BMAG}{'Very Strong' if result.get('delta_shift_10m_1h') <= 50 else 'Strong' if result.get('delta_shift_10m_1h') <= 20 else 'Weak'}{RES} Bearish Pull Surge  🐻") if result.get('delta_shift_decision_10m_1h') else \
+            logger.info(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Decision [10m_1h]{RES}): {BMAG}{'Very Strong' if result.get('delta_shift_10m_1h') >= 50 else 'Strong' if result.get('delta_shift_10m_1h') >= 20 else 'Weak'}{RES} Bullish Pull Surge  🐂")
         
-        print(f"\n\t⚡ Break Out: {RED if lowest_low < 0 else GRE}{lowest_low}{RES}{percent} {'✅' if is_breakout else '❌'}")
-        print(f"\t⚡ Break Out Delta{LMAG}Δ{RES}: {RED if lowest_low_delta < 0 else GRE}{lowest_low_delta}{RES}{percent} {'✅' if is_breakout_delta else '❌'}")
+        logger.info(f"\n\t⚡ Break Out: {RED if lowest_low < 0 else GRE}{lowest_low}{RES}{percent} {'✅' if is_breakout else '❌'}")
+        logger.info(f"\t⚡ Break Out Delta{LMAG}Δ{RES}: {RED if lowest_low_delta < 0 else GRE}{lowest_low_delta}{RES}{percent} {'✅' if is_breakout_delta else '❌'}")
 
-    print(f"\n\t\t{'💰 ' if current['color'] == 'red' else '⚠️ '}  {LYEL}Bet [{RES} {(BLNK) + (LRED if current['color'] == 'red' else LBLU)}{bet_level.upper()}{RES} {LYEL}]{RES}\n\n") if bet_level is not None else \
-        print("\n\t\t🚫  Don't Bet!  🚫\n\n")
+    logger.info(f"\n\t\t{'💰 ' if current['color'] == 'red' else '⚠️ '}  {LYEL}Bet [{RES} {(BLNK) + (LRED if current['color'] == 'red' else LBLU)}{bet_level.upper()}{RES} {LYEL}]{RES}\n\n") if bet_level is not None else \
+        logger.info("\n\t\t🚫  Don't Bet!  🚫\n\n")
 
     if bet_level is not None:
         alert_queue.put(f"caution, bet {bet_level}, {state.last_trend}") if current['color'] == 'green' else \
@@ -555,12 +555,12 @@ def compare_data(prev: dict, current: dict):
     #     bet_queue.put((bet_level, True, slots[1]))
     
     # if bet_level is not None:
-    #     print(f"\n\t>>> Bet [ {BLYEL}{bet_level.upper()}{RES} ]\n\n")
+    #     logger.info(f"\n\t>>> Bet [ {BLYEL}{bet_level.upper()}{RES} ]\n\n")
     #     countdown_thread = threading.Thread(target=countdown_timer, args=(59,), daemon=True)
     #     countdown_thread.start()
     # else:
-    #     print(f"\n\t❌ Don't Bet! ❌\n")
-    # print('\t[2] - BET_LEVEL << ', bet_level)
+    #     logger.info(f"\n\t❌ Don't Bet! ❌\n")
+    # logger.info('\t[2] - BET_LEVEL << ', bet_level)
     # alert_queue.put((bet_level, None))
     # state.last_spin = None
     # state.last_trend = None
@@ -629,7 +629,7 @@ def play_alert(say: str=None):
             except Empty:
                 continue
             except Exception as e:
-                print(f"\n\t[Alert Thread Error] {e}")
+                logger.info(f"\n\t[Alert Thread Error] {e}")
     else:
         pass
 
@@ -642,18 +642,27 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
         if reset_event.is_set():
             time_left = seconds
             reset_event.clear()
-            print("⏳ Countdown reset!")
-
-        # now = now_time()
-        # current_sec = now.second
-        # time_left = 60 - current_sec
+            logger.info("⏳ Countdown reset!")
 
         blink = BLNK if current_sec % 2 == 0 else ""
-        print(
-            f"\r⏳ Countdown: {blink}{time_left:02d}{RES} seconds remaining.",
-            end="",
-            flush=True
+
+        text = (
+            f"Betting Ends In"
+            if state.bet_lvl is not None else \
+            f"{RED}Loading Game Data{RES}" if state.new_jackpot_val == 0.0 else \
+            f"Waiting For Next Iteration"
         )
+
+        timer = (
+            f"\t⏳ {text}: "
+            f"{BYEL}{time_left // 60:02d}{BWHTE}{blink}:{RES}"
+            f"{BLYEL}{time_left:02d}{RES}  "
+            f"( {LGRY}{re.sub(r'\\s*\\(.*?\\)', '', game)}{RES} "
+            f"{DGRY}| {PROVIDERS.get(provider).color}{provider}{RES} )"
+        )
+
+        sys.stdout.write(f"\r{timer.ljust(80)}")
+        sys.stdout.flush()
 
         # Example triggers
         # if current_sec % 10 == 9 and current_sec <= 49:
@@ -712,7 +721,7 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
 
 #         if current_sec != prev_sec:
 #             if current_sec % 10 == 9 and current_sec <= 49:
-#                 print(f"→ SPIN TRIGGERED at second {current_sec}")
+#                 logger.info(f"→ SPIN TRIGGERED at second {current_sec}")
 #                 if state.dual_slots and state.auto_mode:
 #                     slots = ["left", "right"]
 #                     random.shuffle(slots)
@@ -722,7 +731,7 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
 #                     spin_queue.put((None, None, None, False))
             
 #             elif remaining_secs <= 5:
-#                 print(f"→ COUNTDOWN {remaining_secs} seconds remaining")
+#                 logger.info(f"→ COUNTDOWN {remaining_secs} seconds remaining")
 #                 if remaining_secs == 5:
 #                     alert_queue.put(f"{remaining_secs} seconds remaining")
 #                 elif remaining_secs == 1:
@@ -893,7 +902,7 @@ def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
 
     #     # if time_left >= 55:
     #     #     # countdown_queue.put("Timeout")
-    #     #     print("\n\n\t[⏰ Timer] Countdown finished.")
+    #     #     logger.info("\n\n\t[⏰ Timer] Countdown finished.")
     #     #     break
 
 def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=None):
@@ -960,14 +969,14 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     time.sleep(0.5)
                 else:
                     # if state.last_slot is None: # FIRST SPIN
-                    print('\n\tFirst Spin')
+                    logger.info('\n\tFirst Spin')
                     if slot_position == 'right': # spin right away, during first spin if 'LEFT'
                         pyautogui.keyDown('ctrl')
                         pyautogui.press('right')
                         pyautogui.keyUp('ctrl')
                         time.sleep(0.5)
                     # elif state.last_slot is not None:
-                    #     print('\n\tLast Spin')
+                    #     logger.info('\n\tLast Spin')
                     #     if state.non_stop:
                     #         if state.last_slot != slot_position:
 
@@ -984,11 +993,11 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     #         pyautogui.keyUp('ctrl')
                     #         time.sleep(0.5)
 
-            # print(f"POSITION during switching slots below coordinates: {slot_position}")
-            # print(f"Y-axis (screen_height - 1): {y2}")
+            # logger.info(f"POSITION during switching slots below coordinates: {slot_position}")
+            # logger.info(f"Y-axis (screen_height - 1): {y2}")
 
             # if is_lucky_bet and bet_level is None:
-            #     print('\nDEBUG (SETTING BETS) ...\n')
+            #     logger.info('\nDEBUG (SETTING BETS) ...\n')
             #     bet = lucky_bet_value
             # elif bet_level == "max":
             #     bet_values = [ 1, 2, 3, 5 ]
@@ -1004,14 +1013,14 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             #     # bet = random.choice(bet_values)
             #     bet = 1
 
-            # print('\nDEBUG (is_lucky_bet) ', is_lucky_bet)
-            # print('DEBUG (bet_level) ', bet_level)
-            # print('DEBUG (bet_reset) ', bet_reset)
-            # print('\nDEBUG (bet) ', bet)
+            # logger.info('\nDEBUG (is_lucky_bet) ', is_lucky_bet)
+            # logger.info('DEBUG (bet_level) ', bet_level)
+            # logger.info('DEBUG (bet_reset) ', bet_reset)
+            # logger.info('\nDEBUG (bet) ', bet)
 
             # BETS
             # if not is_lucky_bet and not state.dual_slots:
-            #     print('\nDEBUG (Changing bets)...\n')
+            #     logger.info('\nDEBUG (Changing bets)...\n')
             #     if bet == 1:
             #         pyautogui.click(x=random_x - 190, y=random_y + 325)
             #         pyautogui.click(x=random_x - 50, y=random_y + 250)
@@ -1129,7 +1138,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     time.sleep(0.5)
                 else: # reset back to left only if slot is 'RIGHT' during last spin
                     if slot_position == 'right':
-                        print('\n\tResetting to LEFT: ', slot_position)
+                        logger.info('\n\tResetting to LEFT: ', slot_position)
                         pyautogui.keyDown('ctrl')
                         pyautogui.press('left')
                         pyautogui.keyUp('ctrl')
@@ -1137,16 +1146,16 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
 
             # BET RESET
             # if bet_reset and not is_lucky_bet:
-            #     print('\nDEBUG (BET RESET) ...\n')
+            #     logger.info('\nDEBUG (BET RESET) ...\n')
             #     pyautogui.click(x=random_x - 190, y=random_y + 325)
             #     pyautogui.click(x=random_x - 50, y=random_y + 250)
             #     time.sleep(1)
 
             alert_queue.put(spin_type)
 
-            print(f"\n\t\t*** {state.last_trend} ***") if state.last_trend is not None else None
-            print(f"\n\t\tBet: {WHTE}{bet}{RES} ({BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES})\n")
-            print(f"\t\tSlot: {BLBLU}{slot_position}{RES}\n") if state.dual_slots or state.split_screen or state.left_slot or state.right_slot else None
+            logger.info(f"\n\t\t*** {state.last_trend} ***") if state.last_trend is not None else None
+            logger.info(f"\n\t\tBet: {WHTE}{bet}{RES} ({BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES})\n")
+            logger.info(f"\t\tSlot: {BLBLU}{slot_position}{RES}\n") if state.dual_slots or state.split_screen or state.left_slot or state.right_slot else None
 
             if stop_spin and not state.non_stop:
                 break
@@ -1167,14 +1176,14 @@ def get_game_data_from_local_api(game: str):
 
         json_data = response.json()
 
-        # print(f"📡 Calling with requestFrom={request_from}")
-        # print("RESPONSE >>", json_data)
+        # logger.info(f"📡 Calling with requestFrom={request_from}")
+        # logger.info("RESPONSE >>", json_data)
 
         # Always return a tuple
         return json_data, request_from
 
     except Exception as e:
-        print(f"❌ Error calling API: {e}")
+        logger.info(f"❌ Error calling API: {e}")
         return {"error": str(e)}, request_from
 
 def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
@@ -1188,21 +1197,21 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                 min10 = data.get("min10")
                 if min10 != last_min10:
                     last_min10 = min10
-                    state.non_stop = False
+                    # state.non_stop = False
                     state.new_jackpot_val = data.get("value")
                     state.new_10m = data.get("min10")
                     state.last_time = round(data.get('last_updated') % 60)
-                    # print("\n\tstate.last_time: ", state.last_time)
+                    # logger.info("\n\tstate.last_time: ", state.last_time)
                     # spin_queue.put((None, None, None, True)) # test spin on data not working
                     data_queue.put(data)
                 # else:
                 #     alert_queue.put("redundant data")
-                    # print(f"\n\t🛰️. Redundant Data From [{BWHTE}{request_from}{RES}] → Current{BLNK}{BLYEL}={RES}{MAG}{min10}{RES} | Prev{BLNK}{BLYEL}={RES}{MAG}{last_min10}{RES}")
+                    # logger.info(f"\n\t🛰️. Redundant Data From [{BWHTE}{request_from}{RES}] → Current{BLNK}{BLYEL}={RES}{MAG}{min10}{RES} | Prev{BLNK}{BLYEL}={RES}{MAG}{last_min10}{RES}")
             else:
-                print(f"\n\t⚠️  Game '{game}' not found") if state.elapsed != 0 else None
+                logger.info(f"\n\t⚠️  Game '{game}' not found") if state.elapsed != 0 else None
                 # subprocess.run(["bash", "api_restart.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) if state.elapsed != 0 else None
         except Exception as e:
-            print(f"🤖❌  {e}")
+            logger.info(f"🤖❌  {e}")
 
         time.sleep(0.5)
 
@@ -1215,22 +1224,22 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
 #         state.auto_mode = not state.auto_mode
 #         status = "ENABLED" if state.auto_mode else "DISABLED"
 #         play_alert(say=f"auto mode {status}")
-#         print(f"Auto Mode: {status}")
+#         logger.info(f"Auto Mode: {status}")
 
 #     if key == Key.down:
 #         state.hotkeys = not state.hotkeys
 #         status = "ENABLED" if state.hotkeys else "DISABLED"
 #         play_alert(say=f"hotkeys {status}")
-#         print(f"Hotkeys: {status}")
+#         logger.info(f"Hotkeys: {status}")
 
 #     if key == Key.right:
-#         print("Turbo: ON")
+#         logger.info("Turbo: ON")
 #         play_alert(say="turbo mode ON")
 #         pyautogui.PAUSE = 0
 #         pyautogui.FAILSAFE = False
 
 #     elif key == Key.left:
-#         print("Normal Speed: ON")
+#         logger.info("Normal Speed: ON")
 #         play_alert(say="normal speed ON")
 #         pyautogui.PAUSE = 0.1
 #         pyautogui.FAILSAFE = True
@@ -1281,7 +1290,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
 #     else:
 #         return
 
-#     print(f"\nPressed [{ state.current_key }] ---> { num_clicks } {'click' if num_clicks == 1 else 'clicks'}")
+#     logger.info(f"\nPressed [{ state.current_key }] ---> { num_clicks } {'click' if num_clicks == 1 else 'clicks'}")
 
 # def on_key_release(key):
 #     if key == Key.space:
@@ -1319,7 +1328,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
 #     else:
 #         return
 
-#     print(f"\nReleased ---> [{ state.current_key }]")
+#     logger.info(f"\nReleased ---> [{ state.current_key }]")
 
 # def set_location(key):
 #     x1, x2 = 0, 0
@@ -1413,7 +1422,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
 # def mouse():
 #     while state.running:
 #         if state.clicking and state.auto_play:
-#             print("[ MOUSE ] Mouse clicked")
+#             logger.info("[ MOUSE ] Mouse clicked")
 #             state.auto_play = False
 #         time.sleep(0.02)
 
@@ -1433,7 +1442,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
     #         kb_listener.join()
     #         mouse_listener.join()
     # except KeyboardInterrupt:
-    #     print("\n\n[!] Program interrupted by user. Exiting cleanly...\n")
+    #     logger.info("\n\n[!] Program interrupted by user. Exiting cleanly...\n")
 
 def game_selector():
     state = {
@@ -1458,10 +1467,10 @@ def game_selector():
             except Empty:
                 pass
 
-            print(f"{CLEAR}", end="")
+            logger.info(f"{CLEAR}", end="")
             blink_id = int(state["typed"]) if state["typed"].isdigit() and 1 <= int(state["typed"]) <= len(GAME_CONFIGS) else None
-            print(render_games(blink_idx=blink_id, blink_on=blink_on))
-            print(f"\n\t{DGRY}>>> Select Game: {WHTE}{state['typed']}{RES}", end='', flush=True)
+            logger.info(render_games(blink_idx=blink_id, blink_on=blink_on))
+            logger.info(f"\n\t{DGRY}>>> Select Game: {WHTE}{state['typed']}{RES}", end='', flush=True)
 
             blink_on = not blink_on
             time.sleep(0.5)
@@ -1471,7 +1480,7 @@ def game_selector():
         if key == Key.backspace:
             typed = typed[:-1]
         elif key == Key.esc:
-            print("\nCancelled.")
+            logger.info("\nCancelled.")
             command_queue.put("EXIT")
             return False
         elif key == Key.enter:
@@ -1492,16 +1501,16 @@ def game_selector():
     with KeyboardListener(on_press=on_input) as kb_listener:
         kb_listener.join()
 
-    print(f"{CLEAR}", end="")
-    print(render_games())
+    logger.info(f"{CLEAR}", end="")
+    logger.info(render_games())
     if state['selected_idx']:
         game_name = list(GAME_CONFIGS.keys())[state['selected_idx'] - 1]
-        print(f"\n\tSelected: {WHTE}{game_name.upper()}{RES}")
+        logger.info(f"\n\tSelected: {WHTE}{game_name.upper()}{RES}")
         blink_thread.join()
         return game_name
     
 def render_games(blink_idx: int=None, blink_on: bool=True):
-    print(f"\n\n\t📘 {MAG}SCATTER JACKPOT MONITOR{RES}\n\n")
+    logger.info(f"\n\n\t📘 {MAG}SCATTER JACKPOT MONITOR{RES}\n\n")
 
     games = list(GAME_CONFIGS.items())
     half = (len(games) + 1) // 2
@@ -1526,74 +1535,92 @@ def render_games(blink_idx: int=None, blink_on: bool=True):
 
 
 if __name__ == "__main__":
+    # MAIN
+    logger = logging.getLogger("monitor")
+    logger.setLevel(logging.DEBUG)
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter("%(message)s")
+    stream_handler.setFormatter(formatter)
+
+    logger.addHandler(stream_handler)
+
+    # Uncomment if you want logs saved:
+    # file_handler = logging.FileHandler("monitor.log", encoding="utf-8")
+    # file_handler.setLevel(logging.DEBUG)
+    # file_handler.setFormatter(formatter)
+    # logger.addHandler(file_handler)
+
     if os.path.exists(DATA_FILE):
         os.remove(DATA_FILE)
-
-    print(f"{CLEAR}", end="")
+        
+    logger.info(CLEAR)
     games = list(GAME_CONFIGS.items())
     url = next((url for url in URLS if 'helpslot' in url), None)
 
     # if platform.system() == "Darwin":
     #     game = game_selector()
     # else:
-    print(render_games())
+    logger.info(render_games())
     while True:
         try:
             choice = int(input("\n\t🔔 Enter the Game of your choice: "))
             if 1 <= choice <= len(games):
                 game = games[choice - 1][0]
-                print(f"\n\tSelected: {WHTE}{game}{RES}")
+                logger.info(f"\n\tSelected: {WHTE}{game}{RES}")
                 break
             else:
-                print("\t⚠️  Invalid choice. Try again.")
+                logger.info("\t⚠️  Invalid choice. Try again.")
         except ValueError:
-            print("\t⚠️  Please enter a valid number.")
+            logger.info("\t⚠️  Please enter a valid number.")
 
-    # print(f"\n\t>>> {RED}Select Source URL{RES} <<<\n")
+    # logger.info(f"\n\t>>> {RED}Select Source URL{RES} <<<\n")
 
     # source_urls = list(URLS)
 
     # for i, url in enumerate(source_urls, start=1):
-    #     print(f"\t[{WHITE}{i}{RES}] - {"":>1} {'helpslot' if 'helpslot' in url else 'slimeserveahead'} ({url})")
+    #     logger.info(f"\t[{WHITE}{i}{RES}] - {"":>1} {'helpslot' if 'helpslot' in url else 'slimeserveahead'} ({url})")
 
     # while True:
     #     try:
     #         choice = int(input("\n\tEnter the source URL of your choice: "))
     #         if 1 <= choice <= len(source_urls):
     #             url = source_urls[choice - 1]
-    #             print(f"\n\tSelected: {url}")
+    #             logger.info(f"\n\tSelected: {url}")
     #             break
     #         else:
-    #             print("\tInvalid choice. Try again.")
+    #             logger.info("\tInvalid choice. Try again.")
     #     except ValueError:
-    #         print("\tPlease enter a valid number.")
+    #         logger.info("\tPlease enter a valid number.")
     
     provider = GAME_CONFIGS.get(game).provider
 
-    print(f"\n\n\t{BLNK}{DGRY}🔔 Select Server{RES}\n")
-    print("  ".join(f"\n\t[{WHTE}{i}{RES}] - {BLBLU + 'Local' if 'localhost' in host else BLRED + 'VPS'}{RES}" for i, host in enumerate(API_URL, start=1)))
+    logger.info(f"\n\n\t{BLNK}{DGRY}🔔 Select Server{RES}\n")
+    logger.info("  ".join(f"\n\t[{WHTE}{i}{RES}] - {BLBLU + 'Local' if 'localhost' in host else BLRED + 'VPS'}{RES}" for i, host in enumerate(API_URL, start=1)))
 
     while True:
         user_input = input(f"\n\n\t🔔 Choose your server ({DGRY}default: 1{RES}): ").strip()
         
         if not user_input:
             api_server = API_URL[0]
-            print("\t⚠️  Invalid input. Defaulting to Local network.")
+            logger.info("\t⚠️  Invalid input. Defaulting to Local network.")
             break
         elif user_input.isdigit():
             choice = int(user_input)
             if 1 <= choice <= len(API_URL):
                 api_server = API_URL[choice - 1]
-                print(f"\n\tSelected: {WHTE}{'Local' if 'localhost' in api_server else 'VPS'}{RES}")
+                logger.info(f"\n\tSelected: {WHTE}{'Local' if 'localhost' in api_server else 'VPS'}{RES}")
                 break
         else:
             api_server = API_URL[0]
-            print("\t⚠️  Invalid input. Defaulting to Local network.")
+            logger.info("\t⚠️  Invalid input. Defaulting to Local network.")
             break
 
     if 'localhost' in api_server:
         pass
-        # print(f"{os.getpid()}")
+        # logger.info(f"{os.getpid()}")
         # subprocess.run(["bash", "killall.sh", f"{os.getpid()}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         # subprocess.run(["bash", "api_restart.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     else:
@@ -1603,39 +1630,39 @@ if __name__ == "__main__":
         result = subprocess.run(["dig", "+short", hostname], capture_output=True, text=True)
         resolved_ip = result.stdout.strip().split("\n")[0]
 
-        # print(f"\n\tResolved IP: {resolved_ip}")
-        # print(f"\tExpected VPS IP: {VPS_IP}")
+        # logger.info(f"\n\tResolved IP: {resolved_ip}")
+        # logger.info(f"\tExpected VPS IP: {VPS_IP}")
 
         if resolved_ip != VPS_IP:
-            print("\n\t❌  IP Mismatch! Change your QOS.. Exiting...\n")
+            logger.info("\n\t❌  IP Mismatch! Change your QOS.. Exiting...\n")
             sys.exit(1)
         else:
-            print("\n\t✅  IP Match!")
+            logger.info("\n\t✅  IP Match!")
 
-    # print(f"\n\n\t{BLNK}{DGRY}🔔 Select Casino{RES}\n")
+    # logger.info(f"\n\n\t{BLNK}{DGRY}🔔 Select Casino{RES}\n")
 
     # casinos = list(CASINOS)
 
     # for i, casino in enumerate(casinos, start=1):
-    #     print(f"\t[{WHTE}{i}{RES}]  - {casino}")
+    #     logger.info(f"\t[{WHTE}{i}{RES}]  - {casino}")
 
     # while True:
     #     user_input = input(f"\n\t🔔 Enter the Casino of your choice ({DGRY}default: 1{RES}): ").strip()
         
     #     if not user_input:
     #         casino = casinos[0]
-    #         print(f"\n\tSelected default: {WHTE}{casino}{RES}")
+    #         logger.info(f"\n\tSelected default: {WHTE}{casino}{RES}")
     #         break
     #     elif user_input.isdigit():
     #         choice = int(user_input)
     #         if 1 <= choice <= len(casinos):
     #             casino = casinos[choice - 1]
-    #             print(f"\n\tSelected: {WHTE}{casino}{RES}")
+    #             logger.info(f"\n\tSelected: {WHTE}{casino}{RES}")
     #             break
     #         else:
-    #             print(f"\t⚠️  Invalid number. Please select from 1 to {len(casinos)}.")
+    #             logger.info(f"\t⚠️  Invalid number. Please select from 1 to {len(casinos)}.")
     #     else:
-    #         print("\t⚠️  Invalid input. Please enter a number.")
+    #         logger.info("\t⚠️  Invalid input. Please enter a number.")
 
     user_input = input(f"\n\n\tDo you want to enable {CYN}Auto Mode{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
     auto_mode = user_input in ("y", "yes")
@@ -1663,7 +1690,7 @@ if __name__ == "__main__":
         user_input = input(f"\n\n\tDo you want to enable {CYN}Forever Spin{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
         forever_spin = user_input in ("y", "yes")
 
-    print(f"\n\n\t... {WHTE}Starting real-time jackpot monitor.\n\t    Press ({BLMAG}Ctrl+C{RES}{WHTE}) to stop.{RES}\n\n")
+    logger.info(f"\n\n\t... {WHTE}Starting real-time jackpot monitor.\n\t    Press ({BLMAG}Ctrl+C{RES}{WHTE}) to stop.{RES}\n\n")
 
     # Register a game
     requests.post(f"{api_server}/register", json={'url': url, 'name': game, 'provider': provider})
@@ -1701,7 +1728,7 @@ if __name__ == "__main__":
                 # Always check countdown queue in non-blocking way
                 try:
                     msg = countdown_queue.get_nowait()
-                    print(f"\n✅ {msg}")
+                    logger.info(f"\n✅ {msg}")
                 except Empty:
                     pass
                 # reset_event.set() # Reset the countdown because data came in
@@ -1721,7 +1748,7 @@ if __name__ == "__main__":
                 pass
 
     except KeyboardInterrupt:
-        print("\n\n\t🤖❌  Main program interrupted.")
+        logger.info("\n\n\t🤖❌  Main program interrupted.")
         stop_event.set()
 
     # try:
@@ -1741,13 +1768,13 @@ if __name__ == "__main__":
     #         except Empty:
     #             state.elapsed += 1
     #             state.non_stop = False
-    #             print(f"\n\t⚠️  No data received in {state.elapsed} {'seconds' if state.elapsed > 1 else 'second'}.")
-    #             # print(f"\n\n\t⚠️  No data received in {now_time(countdown=True)} seconds.\n")
+    #             logger.info(f"\n\t⚠️  No data received in {state.elapsed} {'seconds' if state.elapsed > 1 else 'second'}.")
+    #             # logger.info(f"\n\n\t⚠️  No data received in {now_time(countdown=True)} seconds.\n")
     #             # if state.elapsed == 2:
-    #             #     print('Restarting API Service...')
+    #             #     logger.info('Restarting API Service...')
     #             #     subprocess.run(["bash", "api_restart.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     #             # if state.elapsed >= 50:
-    #             #     print("⚠️  No data received in 1 minute.")
+    #             #     logger.info("⚠️  No data received in 1 minute.")
     #             #     state.elapsed = 0  # Optional: reset or exit
     #         # Handle timeout signal from countdown
     #         # try:
@@ -1755,7 +1782,7 @@ if __name__ == "__main__":
     #         #     result = countdown_queue.get_nowait()
     #         #     # result = countdown_queue.get_nowait()
     #         #     if result == "Timeout":
-    #         #         print("⏰ Timer expired.")
+    #         #         logger.info("⏰ Timer expired.")
     #         #         state.elapsed += 1
     #         #         # stop everything if timer expires
     #         #         stop_event.set()
@@ -1763,7 +1790,7 @@ if __name__ == "__main__":
     #         # except Empty:
     #         #     pass  # No timer event
     # except KeyboardInterrupt:
-    #     print("\n\n\t🤖❌  Main program interrupted.")
+    #     logger.info("\n\n\t🤖❌  Main program interrupted.")
     #     stop_event.set()  # Stop all threads
 
     # requests.post(f"http://{API_CONFIG.get('host')}:{API_CONFIG.get('port')}/deregister", json={'url': url, 'name': game, 'provider': provider})
@@ -1776,4 +1803,4 @@ if __name__ == "__main__":
     if os.path.exists(DATA_FILE):
         os.remove(DATA_FILE)
 
-    print("\n\n\t🤖❌  All threads shut down.")
+    logger.debug("\n\n\t🤖❌  All threads shut down.")
