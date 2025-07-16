@@ -640,7 +640,7 @@ def countdown_timer(seconds: int = 60):
         time_left = 60 - current_sec
 
         blink = BLNK if current_sec % 2 == 0 else ""
-
+        
         text = (
             f"{BLU}Betting Ends In{RES}"
             if state.bet_lvl is not None else
@@ -664,7 +664,7 @@ def countdown_timer(seconds: int = 60):
         if current_sec % 10 == 7:
             alert_queue.put("ping")# if state.jackpot_signal != "bullish" else None
             # alert_queue.put(f"{current_sec} spin!")
-            if state.auto_mode and current['color'] == 'red': #and state.jackpot_signal != "bullish":
+            if state.auto_mode and state.curr_color == 'red': #and state.jackpot_signal != "bullish":
                 if state.dual_slots:
                     slots = ["left", "right"]
                     random.shuffle(slots)
