@@ -1034,6 +1034,8 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             #         pyautogui.click(x=random_x - 50, y=random_y)
                     
             #     time.sleep(1)
+
+            spin_type = "turbo_spin"
                 
             if spin_type == "normal_spin":  # optimize later for space or click dynamics
                 if state.spin:
@@ -1042,13 +1044,17 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     pyautogui.press('space')
             elif spin_type == "spin_hold":
                 if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
-                    pyautogui.doubleClick(x=cx + 450, y=cy + 325)
+                    # pyautogui.doubleClick(x=cx + 450, y=cy + 325)
+                    pyautogui.moveTo(x=cx + 450, y=cy + 325)
                 else:
-                    pyautogui.doubleClick(x=cx, y=cy + 330)
+                    # pyautogui.doubleClick(x=cx, y=cy + 330)
+                    pyautogui.moveTo(x=cx, y=cy + 330)
+                # add keyboard lambda soon
                 pyautogui.mouseDown()
                 time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                 pyautogui.mouseUp()
             elif spin_type == "spam_spin":
+                time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                 if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
                     pyautogui.doubleClick(x=cx + 450, y=cy + 325)
                     pyautogui.click(x=cx + 450, y=cy + 325)
@@ -1063,11 +1069,11 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     pyautogui.click(x=cx, y=cy + 330)
                     pyautogui.click(x=cx, y=cy + 330)
             elif spin_type == "board_spin":  # Click confirm during first board spin    
+                time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                 if provider in [ "JILI", "FC", "JFF", "R88" ]:
                     pyautogui.click(x=cx, y=cy)
                 elif provider in [ "PG", "PP" ]:
                     pyautogui.press('space')
-                    time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                     pyautogui.click(x=cx, y=cy)
             elif spin_type == "board_spin_delay":
                 if provider in [ "JILI", "FC", "JFF", "R88" ]:
@@ -1080,32 +1086,36 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                     pyautogui.keyUp('space')
             elif spin_type == "board_spin_turbo":
+                time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                 if provider in [ "JILI", "FC", "JFF", "R88" ]:
                     pyautogui.doubleClick(x=cx, y=cy)
                 elif provider in [ "PG", "PP" ]:
                     pyautogui.press('space')
                     pyautogui.click(x=cx, y=cy)
             elif spin_type == "board_spin_tap":
+                time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                 if provider in [ "FC" ]:
                     pyautogui.moveTo(x=cx, y=cy)
                     pyautogui.mouseDown()
-                    time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+                    # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                     pyautogui.mouseUp()
                     pyautogui.click(x=cx, y=cy)
                 elif provider in [ "JILI", "PG", "PP", "JFF", "R88" ]:
                     pyautogui.keyDown('space')
-                    time.sleep(random.uniform(*SPIN_DELAY_RANGE))
-                    pyautogui.keyUp('space')
+                    # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+                    # pyautogui.keyUp('space')
                     action = random.choice([
                         lambda: pyautogui.press('space'),
                         lambda: pyautogui.doubleClick(x=cx, y=cy),
                         lambda: pyautogui.click(x=cx, y=cy)
                     ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 330)
                     action()
+                    pyautogui.keyUp('space')
             elif spin_type == "auto_spin":
                 if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
                     pyautogui.doubleClick(x=cx + 380, y=cy + 325)
                 else:
+                    time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                     action = random.choice([
                         lambda: pyautogui.press('space'),
                         lambda: pyautogui.doubleClick(x=cx, y=cy),
@@ -1113,18 +1123,34 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 330)
                     action()
             elif spin_type == "turbo_spin":
+                time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                 if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
-                    pyautogui.doubleClick(x=cx + 450, y=cy + 325)
-                else:
                     action = random.choice([
-                        lambda: pyautogui.press('space'),
-                        lambda: pyautogui.doubleClick(x=cx, y=cy),
-                        lambda: pyautogui.click(x=cx, y=cy)
-                    ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 330)
+                        lambda: pyautogui.doubleClick(x=cx + 450, y=cy + 325),
+                        lambda: (pyautogui.press('space'), pyautogui.click(x=cx, y=cy)),
+                        lambda: (pyautogui.click(x=cx + 450, y=cy + 325), pyautogui.press('space')),
+                        lambda: (pyautogui.click(x=cx + 450, y=cy + 325), pyautogui.click(x=cx + 450, y=cy + 325)),
+                        lambda: (pyautogui.press('space'), pyautogui.press('space'))
+                    ])
                     action()
+                else:
+                    action = (
+                        random.choice([
+                            lambda: pyautogui.doubleClick(x=cx, y=cy + 330),
+                            lambda: (pyautogui.press('space'), pyautogui.click(x=cx, y=cy + 330)),
+                            lambda: (pyautogui.click(x=cx, y=cy), pyautogui.press('space')),
+                            lambda: (pyautogui.click(x=cx, y=cy), pyautogui.click(x=cx, y=cy)),
+                            lambda: (pyautogui.press('space'), pyautogui.press('space'))
+                        ])
+                        if not state.spin else
+                        lambda: pyautogui.doubleClick(x=cx, y=cy + 315),
+                        lambda: (pyautogui.press('space'), pyautogui.click(x=cx, y=cy + 315)),
+                        lambda: (pyautogui.click(x=cx, y=cy + 315), pyautogui.press('space')),
+                        lambda: (pyautogui.click(x=cx, y=cy + 315), pyautogui.click(x=cx, y=cy + 315)),
+                        lambda: (pyautogui.press('space'), pyautogui.press('space'))
+                    )
 
-            # time.sleep(2) if chosen_spin != "turbo_spin" else time.sleep(1)
-            # time.sleep(1)
+                    action()
 
             if state.dual_slots and slot_position is not None:
                 if state.split_screen:
@@ -1156,8 +1182,8 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
 
             alert_queue.put(spin_type)
 
-            if stop_spin and not state.non_stop:
-                break
+            # if stop_spin and not state.non_stop:
+            #     break
         except Empty:
             continue
 
@@ -1197,7 +1223,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     # state.non_stop = False
                     state.new_jackpot_val = data.get("value")
                     state.new_10m = data.get("min10")
-                    state.jackpot_signal = ("bearish" if data.get("value") < prev_jackpot_val else "bullish" if data.get("value") > prev_jackpot_val else "neutral") if state.prev_jackpot_val != 0.0 else "neutral"
+                    state.jackpot_signal = ("bearish" if data.get("value") < state.prev_jackpot_val else "bullish" if data.get("value") > state.prev_jackpot_val else "neutral") if state.prev_jackpot_val != 0.0 else "neutral"
                     # signal = f"{LRED}⬇{RES}" if current_jackpot < prev_jackpot else f"{LGRE}⬆{RES}" if current_jackpot > prev_jackpot else f"{LCYN}◉{RES}"
                     state.last_time = round(data.get('last_updated') % 60)
                     # logger.info("\n\tstate.last_time: ", state.last_time)

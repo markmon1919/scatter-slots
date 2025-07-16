@@ -49,7 +49,7 @@ VOICES = {
 }
 
 # === Default Timeouts ===
-SPIN_DELAY_RANGE = (1, 3)  # Used with random.uniform(*SPIN_DELAY_RANGE)
+SPIN_DELAY_RANGE = (2.5, 3)  # Used with random.uniform(*SPIN_DELAY_RANGE)
 TIMEOUT_DELAY_RANGE = (1, 5)  # Used with random.uniform(*TIMEOUT_DELAY_RANGE)
 
 # COLORS
