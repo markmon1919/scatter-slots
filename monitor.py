@@ -671,9 +671,9 @@ def countdown_timer(seconds: int=60):
         # DELAY_TEST = (0.75, 1.2)
 
         if current_sec % 10 == 7:
-            alert_queue.put("ping") if state.jackpot_signal != "bullish" else None
+            alert_queue.put("ping")# if state.jackpot_signal != "bullish" else None
             # alert_queue.put(f"{current_sec} spin!")
-            if state.auto_mode and state.jackpot_signal != "bullish":
+            if state.auto_mode:# and state.jackpot_signal != "bullish":
                 if state.dual_slots:
                     slots = ["left", "right"]
                     random.shuffle(slots)
@@ -1132,21 +1132,22 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     ])
                     action()
                 else:
-                    action = (
-                        random.choice([
+                    if not state.spin:
+                        action = random.choice([
                             lambda: pyautogui.doubleClick(x=cx, y=cy + 330),
                             lambda: (pyautogui.press('space'), pyautogui.click(x=cx, y=cy + 330)),
                             lambda: (pyautogui.click(x=cx, y=cy), pyautogui.press('space')),
                             lambda: (pyautogui.click(x=cx, y=cy), pyautogui.click(x=cx, y=cy)),
                             lambda: (pyautogui.press('space'), pyautogui.press('space'))
                         ])
-                        if not state.spin else
-                        lambda: pyautogui.doubleClick(x=cx, y=cy + 315),
-                        lambda: (pyautogui.press('space'), pyautogui.click(x=cx, y=cy + 315)),
-                        lambda: (pyautogui.click(x=cx, y=cy + 315), pyautogui.press('space')),
-                        lambda: (pyautogui.click(x=cx, y=cy + 315), pyautogui.click(x=cx, y=cy + 315)),
-                        lambda: (pyautogui.press('space'), pyautogui.press('space'))
-                    )
+                    else:
+                        action = random.choice([
+                            lambda: pyautogui.doubleClick(x=cx, y=cy + 315),
+                            lambda: (pyautogui.press('space'), pyautogui.click(x=cx, y=cy + 315)),
+                            lambda: (pyautogui.click(x=cx, y=cy + 315), pyautogui.press('space')),
+                            lambda: (pyautogui.click(x=cx, y=cy + 315), pyautogui.click(x=cx, y=cy + 315)),
+                            lambda: (pyautogui.press('space'), pyautogui.press('space'))
+                        ])
 
                     action()
 
