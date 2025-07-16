@@ -1,12 +1,12 @@
 #!/usr/bin/env .venv/bin/python
 
-import json, logging, os, platform, pyautogui, random, re, requests, subprocess, sys, time, threading
+import json, logging, math, os, platform, pyautogui, random, re, requests, subprocess, sys, time, threading
 from dataclasses import dataclass, field
-# from datetime import datetime
+from datetime import datetime
 from queue import Queue as ThQueue, Empty
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 # from pynput.mouse import Listener as MouseListener, Button
-from config import (now_time, LOG_LEVEL, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, CASINOS, 
+from config import (LOG_LEVEL, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, 
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
@@ -168,8 +168,8 @@ def save_current_data(data):
 #     logger.info(f"✅ Wrote data for {raw_data['name']} to {output_csv}")
 
 def compare_data(prev: dict, current: dict):
+    today = datetime.fromtimestamp(time.time())
     state.curr_color = current['color']
-
     slots = ["left", "right"]
     bet_level = None
     result = None
@@ -206,7 +206,8 @@ def compare_data(prev: dict, current: dict):
 
     slot_text_centered = center_text(slot_text, space_for_text)
     slot_line = f"🃏{slot_text_centered}🎰"
-    time_line = f"\n\n\n\t\t\t⏰  {BYEL}{now_time().strftime('%I')}{BWHTE}:{BYEL}{now_time().strftime('%M')}{BWHTE}:{BLYEL}{now_time().strftime('%S')} {LBLU}{now_time().strftime('%p')} {MAG}{now_time().strftime('%a')}{RES}"
+
+    time_line = f"\n\n\n\t\t\t⏰  {BYEL}{today.strftime('%I')}{BWHTE}:{BYEL}{today.strftime('%M')}{BWHTE}:{BLYEL}{today.strftime('%S')} {LBLU}{today.strftime('%p')} {MAG}{today.strftime('%a')}{RES}"
     time_line_centered = center_text(time_line, content_width)
 
     banner_lines = [
@@ -584,7 +585,7 @@ def pct(p):
         return 0.0
 
 def load_breakout_memory(game: str):
-    today = now_time().strftime("%Y-%m-%d")
+    today = datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d")
 
     if os.path.exists(BREAKOUT_FILE):
         with open(BREAKOUT_FILE, 'r') as f:
@@ -594,7 +595,7 @@ def load_breakout_memory(game: str):
     return {"lowest_low": 0, "lowest_low_delta": 0}
 
 def save_breakout_memory(game: str, lowest_low: float, lowest_low_delta: float):
-    today = now_time().strftime("%Y-%m-%d")
+    today = datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d")
     data = {}
 
     if os.path.exists(BREAKOUT_FILE):
@@ -632,23 +633,18 @@ def play_alert(say: str=None):
     else:
         pass
 
-def countdown_timer(seconds: int=60):
+def countdown_timer(seconds: int = 60):
     while not stop_event.is_set():
-        now = now_time()
-        current_sec = now.second
+        now_time = time.time()
+        current_sec = int(now_time) % 60
         time_left = 60 - current_sec
-
-        # if reset_event.is_set():
-        #     time_left = seconds
-        #     reset_event.clear()
-        #     logger.info("⏳ Countdown reset!")
 
         blink = BLNK if current_sec % 2 == 0 else ""
 
         text = (
             f"{BLU}Betting Ends In{RES}"
-            if state.bet_lvl is not None else \
-            f"{RED}Loading Game Data{RES}" if state.new_jackpot_val == 0.0 else \
+            if state.bet_lvl is not None else
+            f"{RED}Loading Game Data{RES}" if state.new_jackpot_val == 0.0 else
             f"{BLU}Waiting For Next Iteration{RES}"
         )
 
@@ -660,37 +656,27 @@ def countdown_timer(seconds: int=60):
             f"{DGRY}| {PROVIDERS.get(provider).color}{provider}{RES} )"
         )
 
-        sys.stdout.write(f"\r{timer.ljust(80)}")
+        # sys.stdout.write("\r" + " " * 80 + "\r")
+        # sys.stdout.write(f"\r{timer.ljust(80)}")
+        sys.stdout.write(f"\r{timer}")
         sys.stdout.flush()
-
-        # Example triggers
-        # if current_sec % 10 == 9 and current_sec <= 49:
-        # num_sec = [ 9, 0 ]
-        # random.shuffle(num_sec)
-        # selected = num_sec[0]
-        # DELAY_TEST = (0.75, 1.2)
 
         if current_sec % 10 == 7:
             alert_queue.put("ping")# if state.jackpot_signal != "bullish" else None
             # alert_queue.put(f"{current_sec} spin!")
-            if state.auto_mode:# and state.jackpot_signal != "bullish":
+            if state.auto_mode and current['color'] == 'red': #and state.jackpot_signal != "bullish":
                 if state.dual_slots:
                     slots = ["left", "right"]
                     random.shuffle(slots)
                     spin_queue.put((None, None, slots[0], False))
                     spin_queue.put((None, None, slots[1], False))
-                    # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                 else:
                     spin_queue.put((None, None, None, False))
-                    # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
-                
-        start = time.time()
-        
-        while True:
-            new_sec = now_time().second
-            if new_sec != current_sec:
-                break
-            time.sleep(0.01)
+
+        # Calculate precise sleep until the next full second
+        next_sec = math.ceil(now_time)
+        sleep_time = max(0, next_sec - time.time())
+        time.sleep(sleep_time)
 
 # def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
 #     # Always start aligned to wall clock
@@ -698,7 +684,7 @@ def countdown_timer(seconds: int=60):
 #     prev_sec = None
 
 #     while not stop_event.is_set():
-#         now = now_time()
+#         now = now_time
 #         current_sec = now.second
 #         remaining_secs = (60 - current_sec)
 
@@ -752,7 +738,7 @@ def countdown_timer(seconds: int=60):
     #         sys.stdout.flush()
 
     #     # Get current seconds from Manila clock
-    #     now = now_time()
+    #     now = now_time
     #     current_sec = now.second
     #     remaining_secs = (60 - current_sec)
 
@@ -891,7 +877,7 @@ def countdown_timer(seconds: int=60):
     #     # Wait until next second tick
     #     start = time.time()
     #     while True:
-    #         now_sec = now_time().second
+    #         now_sec = now_time.second
     #         if now_sec != current_sec:
     #             break
     #         # micro sleep to avoid busy waiting
@@ -947,7 +933,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             # extra_bet = False
             # bet_reset = False
             # lucky_bet_value = 1
-            
+                        
             center_x, center_y = SCREEN_POS.get("center_x"), SCREEN_POS.get("center_y")
 
             if state.dual_slots and state.split_screen and slot_position is not None:
@@ -968,7 +954,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     time.sleep(0.5)
                 else:
                     # if state.last_slot is None: # FIRST SPIN
-                    logger.info('\n\tFirst Spin')
+                    logger.debug('\n\tFirst Spin')
                     if slot_position == 'right': # spin right away, during first spin if 'LEFT'
                         pyautogui.keyDown('ctrl')
                         pyautogui.press('right')
@@ -1034,18 +1020,25 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             #         pyautogui.click(x=random_x - 50, y=random_y)
                     
             #     time.sleep(1)
-                
-            if spin_type == "normal_spin":  # optimize later for space or click dynamics
-                if state.spin:
-                    pyautogui.doubleClick(x=cx, y=cy + 330)
-                else:
-                    pyautogui.press('space')
+            
+            if spin_type == "normal_spin":
+                action = random.choice([
+                    lambda: pyautogui.press('space'),
+                    lambda: pyautogui.click(x=cx + 450, y=cy + 325) if slot_position is None and state.widescreen else \
+                        pyautogui.click(x=cx, y=cy + 330)
+                ]) if not state.spin else pyautogui.click(x=cx, y=cy + 315)
+                action()
             elif spin_type == "spin_hold":
+                # action = random.choice([
+                #     lambda: pyautogui.press('space'),
+                #     lambda: pyautogui.click(x=cx + 450, y=cy + 325) if slot_position is None and state.widescreen else \
+                #         pyautogui.click(x=cx, y=cy + 330)
+                # ]) if not state.spin else pyautogui.click(x=cx, y=cy + 315)
+                # action()
+
                 if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
-                    # pyautogui.doubleClick(x=cx + 450, y=cy + 325)
                     pyautogui.moveTo(x=cx + 450, y=cy + 325)
                 else:
-                    # pyautogui.doubleClick(x=cx, y=cy + 330)
                     pyautogui.moveTo(x=cx, y=cy + 330)
                 # add keyboard lambda soon
                 pyautogui.mouseDown()
@@ -1066,7 +1059,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     pyautogui.click(x=cx, y=cy + 330)
                     pyautogui.click(x=cx, y=cy + 330)
                     pyautogui.click(x=cx, y=cy + 330)
-            elif spin_type == "board_spin":  # Click confirm during first board spin    
+            elif spin_type == "board_spin":  # Click confirm during first board spin
                 time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                 if provider in [ "JILI", "FC", "JFF", "R88" ]:
                     pyautogui.click(x=cx, y=cy)
@@ -1106,7 +1099,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                         lambda: pyautogui.press('space'),
                         lambda: pyautogui.doubleClick(x=cx, y=cy),
                         lambda: pyautogui.click(x=cx, y=cy)
-                    ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 330)
+                    ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 315)
                     action()
                     pyautogui.keyUp('space')
             elif spin_type == "auto_spin":
@@ -1132,23 +1125,20 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     ])
                     action()
                 else:
-                    if not state.spin:
-                        action = random.choice([
-                            lambda: pyautogui.doubleClick(x=cx, y=cy + 330),
-                            lambda: (pyautogui.press('space'), pyautogui.click(x=cx, y=cy + 330)),
-                            lambda: (pyautogui.click(x=cx, y=cy), pyautogui.press('space')),
-                            lambda: (pyautogui.click(x=cx, y=cy), pyautogui.click(x=cx, y=cy)),
-                            lambda: (pyautogui.press('space'), pyautogui.press('space'))
-                        ])
-                    else:
-                        action = random.choice([
-                            lambda: pyautogui.doubleClick(x=cx, y=cy + 315),
-                            lambda: (pyautogui.press('space'), pyautogui.click(x=cx, y=cy + 315)),
-                            lambda: (pyautogui.click(x=cx, y=cy + 315), pyautogui.press('space')),
-                            lambda: (pyautogui.click(x=cx, y=cy + 315), pyautogui.click(x=cx, y=cy + 315)),
-                            lambda: (pyautogui.press('space'), pyautogui.press('space'))
-                        ])
-
+                    action = random.choice([
+                        lambda: pyautogui.doubleClick(x=cx, y=cy + 330),
+                        lambda: (pyautogui.press('space'), pyautogui.click(x=cx, y=cy + 330)),
+                        lambda: (pyautogui.click(x=cx, y=cy), pyautogui.press('space')),
+                        lambda: (pyautogui.click(x=cx, y=cy), pyautogui.click(x=cx, y=cy)),
+                        lambda: (pyautogui.press('space'), pyautogui.press('space'))
+                    ]) if not state.spin else \
+                    random.choice([
+                        lambda: pyautogui.doubleClick(x=cx, y=cy + 315),
+                        lambda: (pyautogui.press('space'), pyautogui.click(x=cx, y=cy + 315)),
+                        lambda: (pyautogui.click(x=cx, y=cy + 315), pyautogui.press('space')),
+                        lambda: (pyautogui.click(x=cx, y=cy + 315), pyautogui.click(x=cx, y=cy + 315)),
+                        lambda: (pyautogui.press('space'), pyautogui.press('space'))
+                    ])
                     action()
 
             if state.dual_slots and slot_position is not None:
@@ -1176,9 +1166,8 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
 
             sys.stdout.write(f"\r\t\t*** {state.last_trend} ***") if state.last_trend is not None else None
             sys.stdout.write(f"\r\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES}>\n")
-            sys.stdout.write(f"\t\tSlot: {BLBLU}{slot_position}{RES}\n") if state.dual_slots or state.split_screen or state.left_slot or state.right_slot else None
-            sys.stdout.flush()
-
+            sys.stdout.write(f"\r\t\tSlot: {BLBLU}{slot_position}{RES}\n") if state.dual_slots or state.split_screen or state.left_slot or state.right_slot else None
+            
             alert_queue.put(spin_type)
 
             # if stop_spin and not state.non_stop:
@@ -1199,7 +1188,7 @@ def get_game_data_from_local_api(game: str):
         )
 
         json_data = response.json()
-        
+
         logger.debug(f"📡 Response >> [{BWHTE}{request_from}{RES}] {json_data}")
 
         return json_data, request_from
@@ -1556,7 +1545,7 @@ def render_games(blink_idx: int=None, blink_on: bool=True):
 
         lines.append(f"\t{left_str:<50}\t{right_str}")
     return "\n".join(lines)
-
+    
 
 if __name__ == "__main__":
     # MAIN

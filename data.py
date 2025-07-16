@@ -1,21 +1,13 @@
+import asyncio, hashlib, httpx, json, random, time#, uvicorn
 from fastapi import FastAPI, Query
 from pydantic import BaseModel
-import random
-import httpx
-import asyncio
-import time
-import hashlib
-import json
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from datetime import datetime
-# import uvicorn
-from config import (
-    USER_AGENTS, PROVIDERS,
-    LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, 
-    GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, 
-    BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES
-)
+from config import (USER_AGENTS, PROVIDERS,
+                    LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, 
+                    GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, 
+                    BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 # ──────────────
 # FASTAPI APP
@@ -113,7 +105,7 @@ async def poller_loop():
                                 key = (name, requestFrom)
                                 last_min10 = last_min10s.get(key)
                                 now_time = Decimal(str(time.time()))
-
+                                
                                 if min10 != last_min10:
                                     if key in last_change_times:
                                         interval = now_time - last_change_times[key]

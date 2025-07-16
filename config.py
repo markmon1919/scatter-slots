@@ -1,14 +1,14 @@
 #!/usr/bin/env .venv/bin/python
 
 import pyautogui
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
 from collections import namedtuple
+# from datetime import datetime, timezone
+# from zoneinfo import ZoneInfo
 
-def now_time(countdown: bool=False):
-    today = datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Manila"))
-    timer_start = (60 - today.second)
-    return today if not countdown else timer_start
+# def now_time(countdown: bool=False):
+#     today = datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Manila"))
+#     timer_start = (60 - today.second)
+#     return today if not countdown else timer_start
 
 LOG_LEVEL = ""#DEBUG"
 BREAKOUT_FILE = "breakout_data.json"
@@ -49,7 +49,7 @@ VOICES = {
 }
 
 # === Default Timeouts ===
-SPIN_DELAY_RANGE = (2.5, 3)  # Used with random.uniform(*SPIN_DELAY_RANGE)
+SPIN_DELAY_RANGE = (2.6, 3.5)  # Used with random.uniform(*SPIN_DELAY_RANGE)
 TIMEOUT_DELAY_RANGE = (1, 5)  # Used with random.uniform(*TIMEOUT_DELAY_RANGE)
 
 # COLORS
@@ -211,8 +211,6 @@ API_CONFIG = {
 API_URL = [ "http://localhost:8080", "https://api-jackpot.fly.dev" ]
 # API_URL = "https://api-jackpot.fly.dev"
 VPS_IP = "66.241.124.83"
-
-CASINOS = [ "JLJL9", "Bingo Plus", "Win PH", "Casino Plus", "Rollem 88", "2JL" ]
 
 USER_AGENTS = [
     # Windows Chrome
