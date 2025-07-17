@@ -85,6 +85,7 @@ GAME_CONFIGS = {
     "Super Ace Scratch": GameConfig(False, True, True, None, False, False, "JILI"),
     "Wild Ace": GameConfig(False, True, True, None, False, False, "JILI"),
     "Mega Ace": GameConfig(False, True, True, None, False, False, "JILI"),
+    "Jackpot Joker": GameConfig(False, True, True, None, False, True, "JILI"),
     "Golden Joker": GameConfig(False, True, True, None, False, True, "JILI"),
     "Golden Empire": GameConfig(False, True, True, None, False, True, "JILI"),
     "Golden Queen": GameConfig(False, True, True, None, False, True, "JILI"),
