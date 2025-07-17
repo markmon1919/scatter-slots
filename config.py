@@ -91,6 +91,7 @@ GAME_CONFIGS = {
     "Ali Baba": GameConfig(False, True, True, None, False, True, "JILI"),
     "Aztec Priestess": GameConfig(False, True, True, None, False, True, "JILI"),
     "Legacy of Egypt": GameConfig(False, True, True, None, False, True, "JILI"),
+    "Egypt's Glow": GameConfig(False, True, True, None, False, True, "JILI"),
     "Pharaoh Treasure": GameConfig(False, True, True, None, False, True, "JILI"),
     "Shōgun": GameConfig(False, True, True, None, False, True, "JILI"),
     "Pirate Queen": GameConfig(False, True, True, None, False, True, "JILI"),
