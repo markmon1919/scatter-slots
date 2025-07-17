@@ -157,6 +157,7 @@ GAME_CONFIGS = {
     "Lucky Fortunes": GameConfig(True, True, True, None, False, False, "FC"),
     "Queen of Inca": GameConfig(True, True, True, None, False, False, "FC"),
     "Gods Grant Fortune": GameConfig(True, True, True, None, False, False, "FC"),
+    "Luxury The Golden Panther": GameConfig(True, True, True, None, False, False, "FC"),
     "Starlight Princess Pachi": GameConfig(False, True, True, True, True, True, "PP"),
     "Starlight Princess 1000": GameConfig(False, True, True, True, True, True, "PP"),
     "Wisdom of Athena 1000": GameConfig(False, True, True, True, True, True, "PP"),
