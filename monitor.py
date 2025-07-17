@@ -1021,7 +1021,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             #     time.sleep(1)
             
             if spin_type == "normal_spin":
-                time.sleep(1)
+                time.sleep(2)
                 action = random.choice([
                     lambda: pyautogui.press('space'),
                     lambda: pyautogui.click(x=cx + 520, y=cy + 325) if slot_position is None and state.widescreen else \
@@ -1122,7 +1122,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     action()
             elif spin_type == "auto_spin":
                 if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
-                    time.sleep(1)
+                    time.sleep(2)
                     pyautogui.doubleClick(x=cx + 380, y=cy + 325)
                 else:
                     time.sleep(random.uniform(*SPIN_DELAY_RANGE))
