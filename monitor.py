@@ -1520,18 +1520,23 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     ])
                     action()
             elif spin_type == "auto_spin":
-                if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
+                if slot_position is None and state.widescreen:
                     time.sleep(2.5)
-                    pyautogui.doubleClick(x=cx + 380, y=cy + 325)
-                else:
-                    time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                     action = random.choice([
-                        lambda: pyautogui.press('space'),
-                        lambda: pyautogui.doubleClick(x=cx, y=cy),
-                        lambda: pyautogui.click(x=cx, y=cy)
-                    ]) if not state.spin else lambda: pyautogui.doubleClick(x=cx, y=cy + 330)
+                        lambda: pyautogui.doubleClick(x=cx + 380, y=cy + 325),
+                        lambda: (pyautogui.click(x=cx + 380, y=cy + 325), pyautogui.click(x=cx + 380, y=cy + 325))
+                    ])
                     action()
-
+                # else:
+                #     time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+                #     action = random.choice([
+                #         # lambda: pyautogui.doubleClick(x=cx, y=cy + 315)
+                #     ]) if not state.spin else \
+                #     random.choice([
+                #         # lambda: pyautogui.doubleClick(x=cx, y=cy + 315)
+                #     ])
+                #     action()
+                
             now_time = time.time()
             current_sec = int(now_time) % 60
             logger.debug(f"\n\tCurrent Sec After Spin: {BLNK}{BLCYN}{current_sec}🌀{RED}{spin_type.replace('_', ' ').upper()}{RES}")
