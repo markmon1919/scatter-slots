@@ -676,6 +676,17 @@ def countdown_timer(seconds: int = 60):
                         spin_queue.put((None, None, slots[1], False))
                     else:
                         spin_queue.put((None, None, None, False))
+        elif current_sec % 10 == 9 and provider in [ "PG" ]:
+            if state.auto_mode: #and state.jackpot_signal != "bullish":
+                if (current_sec == 59 and state.curr_color == 'green' and state.is_reversal_potential) or state.curr_color == 'red':
+                    alert_queue.put(f"{current_sec} spin!")
+                    if state.dual_slots:
+                        slots = ["left", "right"]
+                        random.shuffle(slots)
+                        spin_queue.put((None, None, slots[0], True))
+                        spin_queue.put((None, None, slots[1], True))
+                    else:
+                        spin_queue.put((None, None, None, True))
 
         # Calculate precise sleep until the next full second
         next_sec = math.ceil(now_time)
@@ -1026,7 +1037,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             #     time.sleep(1)
             
             if spin_type == "normal_spin":
-                time.sleep(2.6)
+                time.sleep(2.6) if not stop_spin else time.sleep(1)
                 action = random.choice([
                     lambda: pyautogui.press('space'),
                     lambda: pyautogui.click(x=cx + 520, y=cy + 325) if slot_position is None and state.widescreen else \
@@ -1042,12 +1053,12 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                 action()
                 # hold type
                 action = random.choice([
-                    lambda: (pyautogui.mouseDown(), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.mouseUp()),
-                    lambda: (pyautogui.keyDown('space'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.keyUp('space'))
+                    lambda: (pyautogui.mouseDown(), time.sleep(random.uniform(*HOLD_DELAY_RANGE)) if not stop_spin else time.sleep(random.uniform(*(1, 2))), pyautogui.mouseUp()),
+                    lambda: (pyautogui.keyDown('space'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)) if not stop_spin else time.sleep(random.uniform(*(1, 2))), pyautogui.keyUp('space'))
                 ])
                 action()
             elif spin_type == "spam_spin":
-                time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+                time.sleep(random.uniform(*SPIN_DELAY_RANGE)) if not stop_spin else time.sleep(1)
                 if slot_position is None and state.widescreen:# and provider in [ "JILI", "JFF", "R88" ]:
                     pyautogui.click(x=cx + 520, y=cy + 325)
                     pyautogui.click(x=cx + 520, y=cy + 325)
@@ -1062,7 +1073,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     pyautogui.click(x=cx, y=cy + 330)
                     pyautogui.click(x=cx, y=cy + 330)
             elif spin_type == "board_spin":  # Click confirm during first board spin
-                time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+                time.sleep(random.uniform(*SPIN_DELAY_RANGE)) if not stop_spin else time.sleep(1)
                 if provider in [ "JILI", "FC", "JFF", "R88" ]:
                     pyautogui.click(x=cx, y=cy)
                 elif provider in [ "PG", "PP" ]:
@@ -1076,7 +1087,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     pyautogui.mouseUp()
                 elif provider in [ "PG", "PP" ]:
                     pyautogui.keyDown('space')
-                    time.sleep(random.uniform(*HOLD_DELAY_RANGE))
+                    time.sleep(random.uniform(*HOLD_DELAY_RANGE)) if not stop_spin else time.sleep(random.uniform(*(1, 2)))
                     pyautogui.keyUp('space')
             elif spin_type == "board_spin_tap":
                 # position ready to spin button
@@ -1087,19 +1098,19 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                 action()
                 # hold type and click
                 action = random.choice([
-                    lambda: (pyautogui.mouseDown(), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.click(x=cx, y=cy)),
-                    lambda: (pyautogui.keyDown('space'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.click(x=cx, y=cy))
+                    lambda: (pyautogui.mouseDown(), time.sleep(random.uniform(*HOLD_DELAY_RANGE)) if not stop_spin else time.sleep(random.uniform(*(1, 2))), pyautogui.click(x=cx, y=cy)),
+                    lambda: (pyautogui.keyDown('space'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)) if not stop_spin else time.sleep(random.uniform(*(1, 2))), pyautogui.click(x=cx, y=cy))
                 ])
                 action()
             elif spin_type == "board_spin_turbo":
-                time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+                time.sleep(random.uniform(*SPIN_DELAY_RANGE)) if not stop_spin else time.sleep(1)
                 action = random.choice([
                     lambda: pyautogui.doubleClick(x=cx + 520, y=cy + 325) if slot_position is None and state.widescreen else \
                         (pyautogui.press('space'), pyautogui.click(x=cx, y=cy))
                 ]) if not state.spin else pyautogui.doubleClick(x=cx, y=cy + 315)
                 action()
             elif spin_type == "turbo_spin":
-                time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+                time.sleep(random.uniform(*SPIN_DELAY_RANGE)) if not stop_spin else time.sleep(1)
                 if slot_position is None and state.widescreen and provider in [ "JILI", "JFF", "R88" ]:
                     action = random.choice([
                         lambda: pyautogui.doubleClick(x=cx + 450, y=cy + 325),
@@ -1130,7 +1141,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     time.sleep(2.6)
                     pyautogui.doubleClick(x=cx + 380, y=cy + 325)
                 else:
-                    time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+                    time.sleep(random.uniform(*SPIN_DELAY_RANGE)) if not stop_spin else time.sleep(1)
                     action = random.choice([
                         lambda: pyautogui.press('space'),
                         lambda: pyautogui.doubleClick(x=cx, y=cy),
