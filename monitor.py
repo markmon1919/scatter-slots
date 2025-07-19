@@ -676,7 +676,7 @@ def countdown_timer(seconds: int = 60):
                         spin_queue.put((None, None, slots[1], False))
                     else:
                         spin_queue.put((None, None, None, False))
-        elif current_sec % 10 == 9 and provider in [ "PG" ]:
+        elif current_sec % 10 == 0 and provider in [ "PG" ]:
             if state.auto_mode: #and state.jackpot_signal != "bullish":
                 if (current_sec == 59 and state.curr_color == 'green' and state.is_reversal_potential) or state.curr_color == 'red':
                     alert_queue.put(f"{current_sec} spin!")
