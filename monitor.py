@@ -39,6 +39,7 @@ class AutoState:
     is_breakout: bool = False
     is_delta_breakout: bool = False
     is_reversal: bool = False
+    is_reversal_potential: bool = False
     bet: int = 0
     bet_lvl: str = None
     last_spin: str = None
@@ -316,11 +317,14 @@ def compare_data(prev: dict, current: dict):
                     trend = list()
                     reversal = False
                     state.is_reversal = False
+                    state.is_reversal_potential = False
 
                     # ✅ 1. Check for directional reversal: Strong signal
                     # if (h10 < 0 < h1) or (h10 > 0 > h1):
                     if h10 < 0 < h1 or h10 > 0 > h1:
                         trend.append("Reversal Potential")
+                        state.is_reversal_potential = True
+                        alert_queue.put("reversal potential") if current['color'] == 'green' else None
                         score += 2
 
                     # ✅ 2. Sharp shift in pull momentum: Medium-strong signal
@@ -663,14 +667,15 @@ def countdown_timer(seconds: int = 60):
         if current_sec % 10 == 7:
             alert_queue.put("ping")# if state.jackpot_signal != "bullish" else None
             # alert_queue.put(f"{current_sec} spin!")
-            if state.auto_mode and state.curr_color == 'red': #and state.jackpot_signal != "bullish":
-                if state.dual_slots:
-                    slots = ["left", "right"]
-                    random.shuffle(slots)
-                    spin_queue.put((None, None, slots[0], False))
-                    spin_queue.put((None, None, slots[1], False))
-                else:
-                    spin_queue.put((None, None, None, False))
+            if state.auto_mode: #and state.jackpot_signal != "bullish":
+                if (current_sec == 57 and state.curr_color == 'green' and state.is_reversal_potential) or state.curr_color == 'red':
+                    if state.dual_slots:
+                        slots = ["left", "right"]
+                        random.shuffle(slots)
+                        spin_queue.put((None, None, slots[0], False))
+                        spin_queue.put((None, None, slots[1], False))
+                    else:
+                        spin_queue.put((None, None, None, False))
 
         # Calculate precise sleep until the next full second
         next_sec = math.ceil(now_time)
@@ -1208,6 +1213,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     state.last_time = round(data.get('last_updated') % 60)
                     # logger.info("\n\tstate.last_time: ", state.last_time)
                     # spin_queue.put((None, None, None, True)) # test spin on data not working
+                    alert_queue.put("new data")
                     data_queue.put(data)
                 # else:
                 #     alert_queue.put("redundant data")
