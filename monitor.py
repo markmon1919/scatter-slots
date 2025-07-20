@@ -683,7 +683,8 @@ def countdown_timer(seconds: int = 60):
                         spin_queue.put((None, None, None, quick_spin))
 
         elif current_sec == 52 and time_left == 8 and provider in [ "JILI" ]:
-            bet_queue.put((state.bet_lvl, True, None))
+            if game.startswith("Fortune Gems"):
+                bet_queue.put((state.bet_lvl, True, None))
                         
         if time_left % 10 == 7 and provider in [ "PG" ]:
             if state.auto_mode: #and state.jackpot_signal != "bullish":
