@@ -49,6 +49,7 @@ class AutoState:
     prev_pull_delta: float = 0.0
     prev_pull_score: int = 0
     prev_bear_score: int = 0
+    bear_score_inc: bool = False
     curr_color: str = None
     prev_jackpot_val: float = 0.0
     prev_10m: float = 0.0
@@ -477,6 +478,7 @@ def compare_data(prev: dict, current: dict):
 
     if result is not None:
         signal = f"{LRED}＋{RES}" if bear_score > state.prev_bear_score else f"{LGRE}－{RES}" if bear_score < state.prev_bear_score else f"{LCYN}＝{RES}"
+        state.bear_score_inc = True if bear_score > state.prev_bear_score else False
         state.prev_bear_score = bear_score
         logger.info(f"\n\t🐻 Bear Score: {DGRY}[ {BWHTE}{bear_score} {DGRY}]{signal}")
 
@@ -671,7 +673,7 @@ def countdown_timer(seconds: int = 60):
             # alert_queue.put(f"{current_sec} spin!")
             if state.auto_mode: #and state.jackpot_signal != "bullish":
                 # if (current_sec == 57 and time_left == 3) or (current_sec != 57 and state.curr_color == 'red') or (current_sec != 57 and state.bet_lvl in [ "max", "high" ]):
-                if (current_sec == 57 and time_left == 3) or (current_sec != 57 and state.bet_lvl is not None):
+                if (current_sec == 57 and time_left == 3) or (current_sec != 57 and state.bet_lvl is not None) or (current_sec != 57 and state.bear_score_inc):
                     if state.dual_slots:
                         slots = ["left", "right"]
                         random.shuffle(slots)
