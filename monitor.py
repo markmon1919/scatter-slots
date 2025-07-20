@@ -42,6 +42,7 @@ class AutoState:
     is_reversal_potential: bool = False
     bet: int = 0
     bet_lvl: str = None
+    extra_bet: bool = False
     last_spin: str = None
     last_trend: str = None
     last_pull_delta: float = 0.0
@@ -669,7 +670,7 @@ def countdown_timer(seconds: int = 60):
             alert_queue.put("ping")# if state.jackpot_signal != "bullish" else None
             # alert_queue.put(f"{current_sec} spin!")
             if state.auto_mode: #and state.jackpot_signal != "bullish":
-                if (current_sec == 57 and time_left == 3) or (current_sec != 57 and state.curr_color == 'red') or (current_sec != 57 and state.bet_lvl in ["max", "high"]):
+                if (current_sec == 57 and time_left == 3) or (current_sec != 57 and state.curr_color == 'red') or (current_sec != 57 and state.bet_lvl in [ "max", "high" ]):
                     if state.dual_slots:
                         slots = ["left", "right"]
                         random.shuffle(slots)
@@ -677,8 +678,8 @@ def countdown_timer(seconds: int = 60):
                         spin_queue.put((None, None, slots[1], False))
                     else:
                         spin_queue.put((None, None, None, current_sec != 57 and time_left <= 30 and state.bet_lvl in ["max", "high"] and state.curr_color == 'red'))
-                        
-        elif current_sec == 51 and provider in [ "JILI" ]:
+
+        elif current_sec == 52 and provider in [ "JILI" ]:
             bet_queue.put((state.bet_lvl, True, None))
                         
         if time_left % 10 == 7 and provider in [ "PG" ]:
@@ -942,7 +943,12 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
                     pyautogui.click(x=cx - 550, y=cy + 215)
                     pyautogui.click(x=cx - 255, y=cy + 215)
 
-            alert_queue.put("extra_bet") if extra_bet else None
+            if extra_bet:
+                state.extra_bet = not state.extra_bet
+                status = "ON" if state.extra_bet else "OFF"
+                alert_queue.put(f"extra_bet {status}")
+                logger.debug(f"\tExtra Bet: {status}")
+                state.extra_bet = True
         except Empty:
             continue
 
