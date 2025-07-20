@@ -936,19 +936,17 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
                     pyautogui.click(x=cx-228, y=cy-126)
                     pyautogui.doubleClick(x=cx-100, y=cy-126)
                     pyautogui.doubleClick(x=cx-100, y=cy-126)
-                    # state.extra_bet = True
                 else:
                     pyautogui.moveTo(x=cx-100, y=cy-126)
             else:
                 if extra_bet and game.startswith("Fortune Gems"):
                     pyautogui.click(x=cx - 550, y=cy + 215)
-                    pyautogui.click(x=cx - 265, y=cy + 215)
-                    # state.extra_bet = True
+                    pyautogui.click(x=cx - 263, y=cy + 215)
 
             if extra_bet:
                 state.extra_bet = not state.extra_bet
-                status = "ON" if state.extra_bet else "OFF"
-                alert_queue.put(f"extra_bet, {status}")
+                status = "on" if state.extra_bet else "disabled"
+                alert_queue.put(f"extra_bet {status}")
                 logger.debug(f"\tExtra Bet: {status}")
         except Empty:
             continue
