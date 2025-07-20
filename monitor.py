@@ -1042,7 +1042,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             board_pos = random.randint(-100, 100)
             
             if spin_type == "normal_spin":
-                time.sleep(2)
+                time.sleep(2.2)
                 if slot_position is None and state.widescreen:
                     action = random.choice([
                         lambda: pyautogui.click(x=cx + 520, y=cy + 325, button='left'),
@@ -1749,7 +1749,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     action()
             elif spin_type == "auto_spin":
                 if slot_position is None and state.widescreen:
-                    time.sleep(2)
+                    time.sleep(2.2)
                     action = random.choice([
                         lambda: pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='left'),
                         lambda: pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='right'),
@@ -1798,7 +1798,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             sys.stdout.write(f"\r\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES}>\n")
             sys.stdout.write(f"\r\t\tSlot: {BLBLU}{slot_position}{RES}\n") if state.dual_slots or state.split_screen or state.left_slot or state.right_slot else None
             
-            alert_queue.put(f"spin_type, {current_sec}")
+            alert_queue.put(f"{spin_type}, {current_sec}")
             
             # if stop_spin and not state.non_stop:
             #     break
