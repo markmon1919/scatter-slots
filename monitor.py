@@ -2038,7 +2038,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     state.last_time = round(data.get('last_updated') % 60)
                     # logger.info("\n\tstate.last_time: ", state.last_time)
                     # spin_queue.put((None, None, None, True)) # test spin on data not working
-                    alert_queue.put("new data")
+                    # alert_queue.put("new data")
                     data_queue.put(data)
                 # else:
                 #     alert_queue.put("redundant data")
