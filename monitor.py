@@ -686,7 +686,8 @@ def countdown_timer(seconds: int = 60):
                         spin_queue.put((None, None, None, quick_spin))
 
         elif current_sec == 52 and time_left == 8 and provider in [ "JILI" ]:
-            if game.startswith("Fortune Gems"):
+            # if game.startswith("Fortune Gems"):
+            if game in [ "Fortune Gems", "Neko Fortune" ]:
                 bet_queue.put((state.bet_lvl, True, None))
                         
         if time_left % 10 == 7 and provider in [ "PG" ]:
@@ -939,14 +940,16 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
             if slot_position is not None and state.split_screen:
                 pyautogui.doubleClick(x=cx, y=y2)
                 time.sleep(1)
-                if extra_bet and game.startswith("Fortune Gems"):
+                # if extra_bet and game.startswith("Fortune Gems"):
+                if extra_bet and game in [ "Fortune Gems", "Neko Fortune" ]:
                     pyautogui.click(x=cx-228, y=cy-126)
                     pyautogui.doubleClick(x=cx-100, y=cy-126)
                     pyautogui.doubleClick(x=cx-100, y=cy-126)
                 else:
                     pyautogui.moveTo(x=cx-100, y=cy-126)
             else:
-                if extra_bet and game.startswith("Fortune Gems"):
+                # if extra_bet and game.startswith("Fortune Gems"):
+                if extra_bet and game in [ "Fortune Gems", "Neko Fortune" ]:
                     pyautogui.click(x=cx - 550, y=cy + 215)
                     pyautogui.click(x=cx - 258, y=cy + 215)
 
