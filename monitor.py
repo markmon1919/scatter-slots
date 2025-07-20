@@ -1042,7 +1042,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             board_pos = random.randint(-100, 100)
             
             if spin_type == "normal_spin":
-                time.sleep(2.2)
+                time.sleep(2.4)
                 if slot_position is None and state.widescreen:
                     action = random.choice([
                         lambda: pyautogui.click(x=cx + 520, y=cy + 325, button='left'),
@@ -1749,7 +1749,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     action()
             elif spin_type == "auto_spin":
                 if slot_position is None and state.widescreen:
-                    time.sleep(2.2)
+                    time.sleep(2.4)
                     action = random.choice([
                         lambda: pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='left'),
                         lambda: pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='right'),
