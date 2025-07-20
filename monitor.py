@@ -677,9 +677,9 @@ def countdown_timer(seconds: int = 60):
                         spin_queue.put((None, None, slots[0], False))
                         spin_queue.put((None, None, slots[1], False))
                     else:
-                        spin_queue.put((None, None, None, current_sec != 57 and time_left <= 30 and state.bet_lvl in ["max", "high"] and state.curr_color == 'red'))
+                        spin_queue.put((None, None, None, current_sec != 57 and time_left <= 30 and state.bet_lvl in [ "max", "high" ] and state.curr_color == 'red'))
 
-        elif current_sec == 52 and provider in [ "JILI" ]:
+        elif current_sec == 52 and time_left == 8 and provider in [ "JILI" ]:
             bet_queue.put((state.bet_lvl, True, None))
                         
         if time_left % 10 == 7 and provider in [ "PG" ]:
@@ -936,19 +936,20 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
                     pyautogui.click(x=cx-228, y=cy-126)
                     pyautogui.doubleClick(x=cx-100, y=cy-126)
                     pyautogui.doubleClick(x=cx-100, y=cy-126)
+                    state.extra_bet = True
                 else:
                     pyautogui.moveTo(x=cx-100, y=cy-126)
             else:
                 if extra_bet and game.startswith("Fortune Gems"):
                     pyautogui.click(x=cx - 550, y=cy + 215)
                     pyautogui.click(x=cx - 255, y=cy + 215)
+                    state.extra_bet = True
 
             if extra_bet:
                 state.extra_bet = not state.extra_bet
                 status = "ON" if state.extra_bet else "OFF"
                 alert_queue.put(f"extra_bet {status}")
                 logger.debug(f"\tExtra Bet: {status}")
-                state.extra_bet = True
         except Empty:
             continue
 
