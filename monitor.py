@@ -670,7 +670,8 @@ def countdown_timer(seconds: int = 60):
             alert_queue.put("ping")# if state.jackpot_signal != "bullish" else None
             # alert_queue.put(f"{current_sec} spin!")
             if state.auto_mode: #and state.jackpot_signal != "bullish":
-                if (current_sec == 57 and time_left == 3) or (current_sec != 57 and state.curr_color == 'red') or (current_sec != 57 and state.bet_lvl in [ "max", "high" ]):
+                # if (current_sec == 57 and time_left == 3) or (current_sec != 57 and state.curr_color == 'red') or (current_sec != 57 and state.bet_lvl in [ "max", "high" ]):
+                if (current_sec == 57 and time_left == 3) or (current_sec != 57 and state.bet_lvl is not None):
                     if state.dual_slots:
                         slots = ["left", "right"]
                         random.shuffle(slots)
