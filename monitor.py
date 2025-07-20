@@ -1042,7 +1042,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             board_pos = random.randint(-100, 100)
             
             if spin_type == "normal_spin":
-                time.sleep(2.2)
+                time.sleep(2)
                 if slot_position is None and state.widescreen:
                     action = random.choice([
                         lambda: pyautogui.click(x=cx + 520, y=cy + 325, button='left'),
@@ -1541,22 +1541,24 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     ])
                     action()
             elif spin_type == "board_spin_slide" and provider not in [ "PG" ]:
-                board_pos_start = random.randint(-100, -90)
-                board_pos_end = random.randint(90, 100)
+                side = max(x2, y2)
+                radius = side // 2
+                rand_x = cx + random.randint(-radius, radius)
+                rand_y = cy + random.randint(-radius, radius)
                 if slot_position is None and state.widescreen:
                     action = random.choice([
-                        lambda: (pyautogui.mouseDown(x=cx + board_pos_start, y=cy + board_pos_start, button='left'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=cx + board_pos_end, y=cy + board_pos_end), pyautogui.mouseUp()),
-                        lambda: (pyautogui.mouseDown(x=cx + board_pos_start, y=cy + board_pos_start, button='right'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=cx + board_pos_end, y=cy + board_pos_end), pyautogui.mouseUp())
+                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='left'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=rand_x, y=rand_y), pyautogui.mouseUp()),
+                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='right'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=rand_x, y=rand_y), pyautogui.mouseUp())
                     ])
                     action()
                 else:
                     action = random.choice([
-                        lambda: (pyautogui.mouseDown(x=cx + board_pos_start, y=cy + board_pos_start, button='left'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=cx + board_pos_end, y=cy + board_pos_end), pyautogui.mouseUp()),
-                        lambda: (pyautogui.mouseDown(x=cx + board_pos_start, y=cy + board_pos_start, button='right'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=cx + board_pos_end, y=cy + board_pos_end), pyautogui.mouseUp())
+                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='left'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=rand_x, y=rand_y), pyautogui.mouseUp()),
+                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='right'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=rand_x, y=rand_y), pyautogui.mouseUp())
                     ]) if not state.spin else \
                     random.choice([
-                        lambda: (pyautogui.mouseDown(x=cx + board_pos_start, y=cy + board_pos_start, button='left'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=cx + board_pos_end, y=cy + board_pos_end), pyautogui.mouseUp()),
-                        lambda: (pyautogui.mouseDown(x=cx + board_pos_start, y=cy + board_pos_start, button='right'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=cx + board_pos_end, y=cy + board_pos_end), pyautogui.mouseUp())
+                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='left'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=rand_x, y=rand_y), pyautogui.mouseUp()),
+                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='right'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=rand_x, y=rand_y), pyautogui.mouseUp())
                     ])
                     action()
             elif spin_type == "board_spin_turbo" and provider not in [ "PG" ]:
@@ -1747,7 +1749,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     action()
             elif spin_type == "auto_spin":
                 if slot_position is None and state.widescreen:
-                    time.sleep(2.2)
+                    time.sleep(2)
                     action = random.choice([
                         lambda: pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='left'),
                         lambda: pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='right'),
@@ -1796,8 +1798,8 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             sys.stdout.write(f"\r\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES}>\n")
             sys.stdout.write(f"\r\t\tSlot: {BLBLU}{slot_position}{RES}\n") if state.dual_slots or state.split_screen or state.left_slot or state.right_slot else None
             
-            alert_queue.put(spin_type)
-
+            alert_queue.put(f"spin_type, {current_sec}")
+            
             # if stop_spin and not state.non_stop:
             #     break
         except Empty:
