@@ -936,19 +936,19 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
                     pyautogui.click(x=cx-228, y=cy-126)
                     pyautogui.doubleClick(x=cx-100, y=cy-126)
                     pyautogui.doubleClick(x=cx-100, y=cy-126)
-                    state.extra_bet = True
+                    # state.extra_bet = True
                 else:
                     pyautogui.moveTo(x=cx-100, y=cy-126)
             else:
                 if extra_bet and game.startswith("Fortune Gems"):
                     pyautogui.click(x=cx - 550, y=cy + 215)
                     pyautogui.click(x=cx - 265, y=cy + 215)
-                    state.extra_bet = True
+                    # state.extra_bet = True
 
             if extra_bet:
                 state.extra_bet = not state.extra_bet
                 status = "ON" if state.extra_bet else "OFF"
-                alert_queue.put(f"extra_bet {status}")
+                alert_queue.put(f"extra_bet, {status}")
                 logger.debug(f"\tExtra Bet: {status}")
         except Empty:
             continue
@@ -1054,7 +1054,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, qu
                     
             #     time.sleep(1)
             
-            shrink_factor = 0.70  # 70% the original size
+            shrink_factor = 0.60  # 60% the original size
             side = int(min(x2, y2) * shrink_factor)
             radius = side // 2
             rand_x = cx + random.randint(-radius, radius)
