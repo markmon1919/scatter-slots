@@ -938,7 +938,8 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
                     pyautogui.moveTo(x=cx-100, y=cy-126)
             else:
                 if extra_bet and game.startswith("Fortune Gems"):
-                    pyautogui.moveTo(x=cx - 550, y=cy + 200)
+                    pyautogui.click(x=cx - 550, y=cy + 210)
+                    pyautogui.moveTo(x=cx - 225, y=cy + 210)
 
             alert_queue.put("extra_bet") if extra_bet else None
         except Empty:
