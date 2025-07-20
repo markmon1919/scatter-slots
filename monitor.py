@@ -677,7 +677,10 @@ def countdown_timer(seconds: int = 60):
                         spin_queue.put((None, None, slots[0], False))
                         spin_queue.put((None, None, slots[1], False))
                     else:
-                        spin_queue.put((None, None, None, current_sec != 57 and time_left <= 30 and state.bet_lvl in [ "max", "high" ] and state.curr_color == 'red'))
+                        quick_spin = current_sec != 57 and time_left <= 30 and state.bet_lvl in [ "max", "high" ] and state.curr_color == 'red'
+                        alert_queue.put(f"quick spin {quick_spin}")
+                        logger.debug(f'\n\tQuick Spin: {quick_spin}')
+                        spin_queue.put((None, None, None, quick_spin))
 
         elif current_sec == 52 and time_left == 8 and provider in [ "JILI" ]:
             bet_queue.put((state.bet_lvl, True, None))
