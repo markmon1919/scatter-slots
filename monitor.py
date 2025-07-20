@@ -1042,7 +1042,8 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
             board_pos = random.randint(-100, 100)
             
             if spin_type == "normal_spin":
-                time.sleep(2.4)
+                # time.sleep(2.4)
+                time.sleep(random.uniform(*HOLD_DELAY_RANGE))
                 if slot_position is None and state.widescreen:
                     action = random.choice([
                         lambda: pyautogui.click(x=cx + 520, y=cy + 325, button='left'),
@@ -1070,7 +1071,8 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     ])
                     action()
             elif spin_type == "spin_hold":
-                time.sleep(2.5)
+                # time.sleep(2.5)
+                time.sleep(random.uniform(*HOLD_DELAY_RANGE))
                 if slot_position is None and state.widescreen:
                     action = random.choice([
                         lambda: (pyautogui.click(x=cx + 520, y=cy + 325, button='left'), pyautogui.mouseDown(button='left')),
@@ -1353,7 +1355,8 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     ])
                     action()
             elif spin_type == "board_spin" and provider not in [ "PG" ]:
-                time.sleep(2.5)
+                # time.sleep(2.5)
+                time.sleep(random.uniform(*HOLD_DELAY_RANGE))
                 if slot_position is None and state.widescreen:
                     action = random.choice([
                         lambda: pyautogui.click(x=cx + board_pos, y=cy + board_pos, button='left'),
@@ -1377,7 +1380,8 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     ])
                     action()
             elif spin_type == "board_spin_hold" and provider not in [ "PG" ]:
-                time.sleep(2.5)
+                # time.sleep(2.5)
+                time.sleep(random.uniform(*HOLD_DELAY_RANGE))
                 if slot_position is None and state.widescreen:
                     action = random.choice([
                         lambda: (pyautogui.click(x=cx + board_pos, y=cy + board_pos, button='left'), pyautogui.mouseDown(button='left')),
@@ -1541,7 +1545,8 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     ])
                     action()
             elif spin_type == "board_spin_slide" and provider not in [ "PG" ]:
-                side = max(x2, y2)
+                shrink_factor = 0.7  # 70% the original size
+                side = int(min(x2, y2) * shrink_factor)
                 radius = side // 2
                 rand_x = cx + random.randint(-radius, radius)
                 rand_y = cy + random.randint(-radius, radius)
@@ -1749,7 +1754,8 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, st
                     action()
             elif spin_type == "auto_spin":
                 if slot_position is None and state.widescreen:
-                    time.sleep(2.4)
+                    # time.sleep(2.4)
+                    time.sleep(random.uniform(*HOLD_DELAY_RANGE))
                     action = random.choice([
                         lambda: pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='left'),
                         lambda: pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='right'),
