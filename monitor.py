@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from queue import Queue as ThQueue, Empty
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
+# from pynput import mouse
 # from pynput.mouse import Listener as MouseListener, Button
 from config import (LOG_LEVEL, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, BREAKOUT_FILE, DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, 
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
@@ -686,8 +687,7 @@ def countdown_timer(seconds: int = 60):
                         spin_queue.put((None, None, None, quick_spin))
 
         elif current_sec == 52 and time_left == 8 and provider in [ "JILI" ]:
-            # if game.startswith("Fortune Gems"):
-            if game in [ "Fortune Gems", "Neko Fortune" ]:
+            if state.auto_mode and game in [ "Fortune Gems", "Neko Fortune" ]:
                 bet_queue.put((state.bet_lvl, True, None))
                         
         if time_left % 10 == 7 and provider in [ "PG" ]:
@@ -949,9 +949,16 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
                     pyautogui.moveTo(x=cx-100, y=cy-126)
             else:
                 # if extra_bet and game.startswith("Fortune Gems"):
-                if extra_bet and game in [ "Fortune Gems", "Neko Fortune" ]:
-                    pyautogui.click(x=cx - 550, y=cy + 215)
-                    pyautogui.click(x=cx - 258, y=cy + 215)
+                if extra_bet:
+                    if game in "Fortune Gems":
+                        x1, y1 = cx - 550, cy + 215
+                        x2, y2 = cx - 258, cy + 215
+                    elif game in "Neko Fortune":
+                        x1, y1 = cx - 585, cy + 237
+                        x2, y2 = cx - 350, cy + 237
+                    # logger.info(f"\t\n{BLRED}cx, cy{RES} >> ", cx, cy) Arguments: (735, 478)
+                    pyautogui.click(x=x1, y=y1)
+                    pyautogui.click(x=x2, y=y2)
 
             if extra_bet:
                 state.extra_bet = not state.extra_bet
@@ -2563,6 +2570,14 @@ if __name__ == "__main__":
     countdown_thread.start()
     monitor_thread.start()
     spin_thread.start()
+
+    # def on_click(x, y, button, pressed):
+    #     if pressed:
+    #         logger.info(f"\n\tMouse clicked at: ({BLYEL}{x}{RES}, {BLMAG}{y}{RES})")
+
+    # # Start listening to mouse events
+    # with mouse.Listener(on_click=on_click) as listener:
+    #     listener.join()
 
     try:
         while True:
