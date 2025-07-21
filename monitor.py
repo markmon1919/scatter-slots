@@ -690,19 +690,19 @@ def countdown_timer(seconds: int = 60):
             if state.auto_mode and game in [ "Fortune Gems", "Neko Fortune" ]:
                 bet_queue.put((state.bet_lvl, True, None))
                         
-        if time_left % 10 == 7 and provider in [ "PG" ]:
-            if state.auto_mode: #and state.jackpot_signal != "bullish":
-                # if (current_sec == 59 and state.curr_color == 'green' and state.is_reversal_potential) or state.curr_color == 'red':
-                alert_queue.put(f"{current_sec} spin!")
-                if state.dual_slots:
-                    slots = ["left", "right"]
-                    random.shuffle(slots)
-                    spin_queue.put((None, None, slots[0], False))
-                    spin_queue.put((None, None, slots[1], False))
-                else:
-                    spin_queue.put((None, None, None, False))
-                    # time.sleep(5)
-                    # spin_queue.put((None, None, None, False))
+        # if time_left % 10 == 7 and provider in [ "PG" ]:
+        #     if state.auto_mode: #and state.jackpot_signal != "bullish":
+        #         # if (current_sec == 59 and state.curr_color == 'green' and state.is_reversal_potential) or state.curr_color == 'red':
+        #         alert_queue.put(f"{current_sec} spin!")
+        #         if state.dual_slots:
+        #             slots = ["left", "right"]
+        #             random.shuffle(slots)
+        #             spin_queue.put((None, None, slots[0], False))
+        #             spin_queue.put((None, None, slots[1], False))
+        #         else:
+        #             spin_queue.put((None, None, None, False))
+        #             # time.sleep(5)
+        #             # spin_queue.put((None, None, None, False))
 
         # Calculate precise sleep until the next full second
         next_sec = math.ceil(now_time)
@@ -1069,8 +1069,8 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, qu
                     
             #     time.sleep(1)
             
-            shrink_factor = 0.60  # 60% the original size
-            side = int(min(x2, y2) * shrink_factor)
+            shrink_percentage = 60 if state.widescreen else 33
+            side = int(min(x2, y2) * (shrink_percentage / 100))
             radius = side // 2
             rand_x = cx + random.randint(-radius, radius)
             rand_y = cy + random.randint(-radius, radius)
