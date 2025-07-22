@@ -688,8 +688,7 @@ def countdown_timer(seconds: int = 60):
                         quick_spin = (current_sec != 57 and (time_left == 43 or time_left == 23) and state.bet_lvl in [ "max", "high" ] and state.curr_color == 'red')
                         alert_queue.put(f"quick spin {quick_spin}") if quick_spin else None
                         logger.debug(f'\n\tQuick Spin: {quick_spin} >> {current_sec} {time_left} {state.bet_lvl} {state.curr_color}')
-                        # spin_queue.put((None, None, None, quick_spin))
-                        spin_queue.put((None, None, "board_spin_slide", quick_spin))
+                        spin_queue.put((None, None, None, quick_spin))
 
         elif current_sec == 52 and time_left == 8 and provider in [ "JILI" ]:
             if state.auto_mode and game in [ "Fortune Gems", "Neko Fortune" ]:
@@ -1077,8 +1076,8 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, qu
             shrink_percentage = 60 if state.widescreen else 32
             width = int(max(right_x, btm_y) * (shrink_percentage / 100))
             height = int(min(right_x, btm_y) * (shrink_percentage / 100))
-            border_space_top = cy // 3
-            radius_x, radius_y = width // 2, height // 2
+            border_space_top = cy // 3 if state.widescreen else 0
+            radius_x, radius_y = width // 2, height // 2 if state.widescreen else width // 2
             rand_x = cx + random.randint(-radius_x, radius_x)
             rand_y = cy + random.randint(-radius_y, radius_y) + (border_space_top if radius_y <= 0 else -border_space_top)
             rand_x2 = cx + random.randint(-radius_x, radius_x)
@@ -1099,6 +1098,8 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, qu
             #     logger.info(f"\n\tBoard Top_y: {cy - radius_y}")
             #     logger.info(f"\n\tBoard Bottom_y: {cy + radius_y}")
             #     logger.info(f"\n\tBorder Space Top: {border_space_top}")
+            #     pyautogui.moveTo(x=cx - radius_x, y=cy - radius_y)
+            #     pyautogui.moveTo(x=cx + radius_x, y=cy + radius_y)
 
             if spin_type == "normal_spin":
                 time.sleep(random.uniform(*HOLD_DELAY_RANGE))
