@@ -153,6 +153,7 @@ GAME_CONFIGS = {
     "Rise of Apollo": GameConfig(False, True, True, None, False, False, "PG"),
     "Wings of Iguazu": GameConfig(False, True, True, None, False, False, "PG"),
     "The Queen's Banquet": GameConfig(False, True, True, None, False, False, "PG"),
+    "Ganesha Fortune": GameConfig(False, True, True, None, False, False, "PG"),
     "Grand Blue": GameConfig(True, True, True, None, False, False, "FC"),
     "Golden Genie": GameConfig(True, True, True, None, False, False, "FC"),
     "Egypt Bonanza": GameConfig(True, True, True, None, False, False, "FC"),
