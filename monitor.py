@@ -688,7 +688,8 @@ def countdown_timer(seconds: int = 60):
                         quick_spin = (current_sec != 57 and (time_left == 43 or time_left == 23) and state.bet_lvl in [ "max", "high" ] and state.curr_color == 'red')
                         alert_queue.put(f"quick spin {quick_spin}") if quick_spin else None
                         logger.debug(f'\n\tQuick Spin: {quick_spin} >> {current_sec} {time_left} {state.bet_lvl} {state.curr_color}')
-                        spin_queue.put((None, None, None, quick_spin))
+                        # spin_queue.put((None, None, None, quick_spin))
+                        spin_queue.put((None, None, "board_spin_slide", quick_spin))
 
         elif current_sec == 52 and time_left == 8 and provider in [ "JILI" ]:
             if state.auto_mode and game in [ "Fortune Gems", "Neko Fortune" ]:
@@ -1610,16 +1611,16 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, qu
                     action()
                 else:
                     action = random.choice([
-                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='left'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=rand_x, y=rand_y), pyautogui.mouseUp()),
-                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='right'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=rand_x, y=rand_y), pyautogui.mouseUp()),
-                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='left'), pyautogui.moveTo(x=rand_x, y=rand_y), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.mouseUp()),
-                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='right'), pyautogui.moveTo(x=rand_x, y=rand_y), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.mouseUp())
+                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='left'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=rand_x2, y=rand_y2), pyautogui.mouseUp()),
+                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='right'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=rand_x2, y=rand_y2), pyautogui.mouseUp()),
+                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='left'), pyautogui.moveTo(x=rand_x2, y=rand_y2), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.mouseUp()),
+                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='right'), pyautogui.moveTo(x=rand_x2, y=rand_y2), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.mouseUp())
                     ]) if not state.spin else \
                     random.choice([
-                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='left'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=rand_x, y=rand_y), pyautogui.mouseUp()),
-                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='right'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=rand_x, y=rand_y), pyautogui.mouseUp()),
-                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='left'), pyautogui.moveTo(x=rand_x, y=rand_y), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.mouseUp()),
-                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='right'), pyautogui.moveTo(x=rand_x, y=rand_y), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.mouseUp())
+                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='left'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=rand_x2, y=rand_y2), pyautogui.mouseUp()),
+                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='right'), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.moveTo(x=rand_x2, y=rand_y2), pyautogui.mouseUp()),
+                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='left'), pyautogui.moveTo(x=rand_x2, y=rand_y2), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.mouseUp()),
+                        lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='right'), pyautogui.moveTo(x=rand_x2, y=rand_y2), time.sleep(random.uniform(*HOLD_DELAY_RANGE)), pyautogui.mouseUp())
                     ])
                     action()
             elif spin_type == "board_spin_turbo" and provider not in [ "PG" ]:
