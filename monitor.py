@@ -931,12 +931,12 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
             bet_level, extra_bet, slot_position = bet_queue.get_nowait()
 
             # if state.left_slot or slot_position == "left":
-            #     center_x, center_y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("center_y")
+            #     center_x, CENTER_Y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("CENTER_Y")
             # elif state.right_slot or slot_position == "right":
-            #     center_x, center_y = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("center_y")
+            #     center_x, CENTER_Y = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("CENTER_Y")
             # else:
-            #     center_x, center_y = SCREEN_POS.get("center_x"), SCREEN_POS.get("center_y")
-                # pyautogui.moveTo(x=center_x, y=center_y) if state.auto_mode else None
+            #     center_x, CENTER_Y = SCREEN_POS.get("center_x"), SCREEN_POS.get("CENTER_Y")
+                # pyautogui.moveTo(x=center_x, y=CENTER_Y) if state.auto_mode else None
 
             cx, cy = CENTER_X, CENTER_Y
             # LEFT_X, RIGHT_X, TOP_Y, BTM_Y = 0, SCREEN_POS.get("right_x"), 0, SCREEN_POS.get("bottom_y")
@@ -986,16 +986,16 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, qu
             # bet_reset = False
             # lucky_bet_value = 1
                         
-            # center_x, center_y = SCREEN_POS.get("center_x"), SCREEN_POS.get("center_y")
+            # center_x, CENTER_Y = SCREEN_POS.get("center_x"), SCREEN_POS.get("CENTER_Y")
 
             # if state.dual_slots and state.split_screen and slot_position is not None:
             #     if slot_position == "left":
-            #         center_x, center_y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("center_y")
+            #         center_x, CENTER_Y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("CENTER_Y")
             #     elif slot_position == "right":
-            #         center_x, center_y = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("center_y")
+            #         center_x, CENTER_Y = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("CENTER_Y")
 
                 # time.sleep(1) if state.auto_mode else None
-                # pyautogui.doubleClick(x=center_x, y=center_y) if state.auto_mode else None
+                # pyautogui.doubleClick(x=center_x, y=CENTER_Y) if state.auto_mode else None
 
             # LEFT_X, RIGHT_X, TOP_Y, BTM_Y = 0, SCREEN_POS.get("right_x"), 0, SCREEN_POS.get("bottom_y")
             cx, cy = CENTER_X, CENTER_Y if game != "Super Rich" else CENTER_Y + 150
@@ -1845,9 +1845,9 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, qu
             if state.dual_slots and slot_position is not None:
                 if state.split_screen:
                     if slot_position == "right":
-                        cx, cy = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("center_y")
+                        cx, cy = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("CENTER_Y")
                     elif slot_position == "left":
-                        cx, cy = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("center_y")
+                        cx, cy = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("CENTER_Y")
                     pyautogui.doubleClick(x=cx, y=BTM_Y)
                     time.sleep(0.5)
                 else: # reset back to left only if slot is 'RIGHT' during last spin
@@ -2222,7 +2222,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
 #     y1, y2 = 0, 0
 
 #     random_x = center_x + random.randint(x1, x2)
-#     random_y = center_y + random.randint(y1, y2)
+#     random_y = CENTER_Y + random.randint(y1, y2)
 
 #     if key in [ 'r', 'u', 'i', 'o', 'p', 'j', 'k', 'l' 'm', ',', '.', '/' ]: # SLOT SCREEN
 #         if state.game == "Fortune Goddess":
@@ -2591,12 +2591,12 @@ if __name__ == "__main__":
     if dual_slots and split_screen:# and slot_position is not None:
         # if slot_position == "left":
         if left_slot:
-            CENTER_X, CENTER_Y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("center_y")
+            CENTER_X, CENTER_Y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("CENTER_Y")
         # elif slot_position == "right":
         elif right_slot:
-            CENTER_X, CENTER_Y = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("center_y")
+            CENTER_X, CENTER_Y = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("CENTER_Y")
     else:
-        CENTER_X, CENTER_y = SCREEN_POS.get("center_x"), SCREEN_POS.get("center_y")
+        CENTER_X, CENTER_Y = SCREEN_POS.get("center_x"), SCREEN_POS.get("CENTER_Y")
     LEFT_X, RIGHT_X, TOP_Y, BTM_Y = 0, SCREEN_POS.get("right_x"), 0, SCREEN_POS.get("bottom_y")
 
     stop_event = threading.Event()
