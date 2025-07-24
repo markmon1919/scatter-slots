@@ -931,11 +931,11 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
             bet_level, extra_bet, slot_position = bet_queue.get_nowait()
 
             # if state.left_slot or slot_position == "left":
-            #     center_x, CENTER_Y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("CENTER_Y")
+            #     center_x, CENTER_Y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("center_y")
             # elif state.right_slot or slot_position == "right":
-            #     center_x, CENTER_Y = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("CENTER_Y")
+            #     center_x, CENTER_Y = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("center_y")
             # else:
-            #     center_x, CENTER_Y = SCREEN_POS.get("center_x"), SCREEN_POS.get("CENTER_Y")
+            #     center_x, CENTER_Y = SCREEN_POS.get("center_x"), SCREEN_POS.get("center_y")
                 # pyautogui.moveTo(x=center_x, y=CENTER_Y) if state.auto_mode else None
 
             cx, cy = CENTER_X, CENTER_Y
@@ -986,13 +986,13 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, qu
             # bet_reset = False
             # lucky_bet_value = 1
                         
-            # center_x, CENTER_Y = SCREEN_POS.get("center_x"), SCREEN_POS.get("CENTER_Y")
+            # center_x, CENTER_Y = SCREEN_POS.get("center_x"), SCREEN_POS.get("center_y")
 
             # if state.dual_slots and state.split_screen and slot_position is not None:
             #     if slot_position == "left":
-            #         center_x, CENTER_Y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("CENTER_Y")
+            #         center_x, CENTER_Y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("center_y")
             #     elif slot_position == "right":
-            #         center_x, CENTER_Y = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("CENTER_Y")
+            #         center_x, CENTER_Y = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("center_y")
 
                 # time.sleep(1) if state.auto_mode else None
                 # pyautogui.doubleClick(x=center_x, y=CENTER_Y) if state.auto_mode else None
@@ -1079,11 +1079,11 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, qu
             border_space_top = cy // 3 if state.widescreen else 0
             radius_x, radius_y = width // 2, height // 2 if state.widescreen else width // 2
             rand_x = cx + random.randint(-radius_x, radius_x)
-            # rand_y = cy + random.randint(-radius_y, radius_y) + (border_space_top if radius_y <= 0 else -border_space_top)
-            rand_y = cy + random.randint(-radius_y, radius_y) - border_space_top
+            rand_y = cy + random.randint(-radius_y, radius_y) + (border_space_top if radius_y <= 0 else -border_space_top)
+            # rand_y = cy + random.randint(-radius_y, radius_y) - border_space_top
             rand_x2 = cx + random.randint(-radius_x, radius_x)
-            # rand_y2 = cy + random.randint(-radius_y, radius_y) + (border_space_top if radius_y <= 0 else -border_space_top)
-            rand_y2 = cy + random.randint(-radius_y, radius_y) - border_space_top
+            rand_y2 = cy + random.randint(-radius_y, radius_y) + (border_space_top if radius_y <= 0 else -border_space_top)
+            # rand_y2 = cy + random.randint(-radius_y, radius_y) - border_space_top
 
             # spin_type = "test_spin" # Test Spin
             # if spin_type == "test_spin":
@@ -1847,9 +1847,9 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, qu
             if state.dual_slots and slot_position is not None:
                 if state.split_screen:
                     if slot_position == "right":
-                        cx, cy = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("CENTER_Y")
+                        cx, cy = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("center_y")
                     elif slot_position == "left":
-                        cx, cy = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("CENTER_Y")
+                        cx, cy = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("center_y")
                     pyautogui.doubleClick(x=cx, y=BTM_Y)
                     time.sleep(0.5)
                 else: # reset back to left only if slot is 'RIGHT' during last spin
@@ -2593,12 +2593,12 @@ if __name__ == "__main__":
     if dual_slots and split_screen:# and slot_position is not None:
         # if slot_position == "left":
         if left_slot:
-            CENTER_X, CENTER_Y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("CENTER_Y")
+            CENTER_X, CENTER_Y = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("center_y")
         # elif slot_position == "right":
         elif right_slot:
-            CENTER_X, CENTER_Y = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("CENTER_Y")
+            CENTER_X, CENTER_Y = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("center_y")
     else:
-        CENTER_X, CENTER_Y = SCREEN_POS.get("center_x"), SCREEN_POS.get("CENTER_Y")
+        CENTER_X, CENTER_Y = SCREEN_POS.get("center_x"), SCREEN_POS.get("center_y")
     LEFT_X, RIGHT_X, TOP_Y, BTM_Y = 0, SCREEN_POS.get("right_x"), 0, SCREEN_POS.get("bottom_y")
 
     stop_event = threading.Event()
