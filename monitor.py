@@ -1,8 +1,8 @@
 #!/usr/bin/env .venv/bin/python
 
-import json, logging, math, os, platform, pyautogui, random, re, requests, subprocess, sys, time, threading
+import csv, json, logging, math, os, platform, pyautogui, random, re, requests, subprocess, sys, time, threading
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from queue import Queue as ThQueue, Empty
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 # from pynput import mouse
@@ -125,52 +125,113 @@ def load_previous_data():
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
-def save_current_data(data):
+def save_current_data(data: dict):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
-    
-    # create_log()
-
-# def create_log():
-#     sanitized = re.sub(r'\W+', '_', state.game.strip().lower())
-#     output_csv = f"{'helpslot' if 'helpslot' in state.url else 'slimeserveahead'}_{sanitized}_log.csv"
-
-#     raw_data = get_game_info()
-
-#     # if not game_data:
-#     #     raise ValueError(f"No data found for game: {game_key}")
-
-#     # # Prepare one row from JSON
-#     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-#     value = float(raw_data["jackpot_meter"].strip('%'))
-
-#     history = raw_data.get("history", {})
-
-#     # # Compose CSV row
-#     row = {
-#         "timestamp": timestamp,
-#         "value": value,
-#         "5s_change": "",  # No real-time tracking
-#         "1m_change": "",  # No real-time tracking
         
-#         "10m_change": history.get("10m", ""),
-#         "1h_change": history.get("1h", ""),
-#         "3h_change": history.get("3h", ""),
-#         "6h_change": history.get("6h", ""),
-#     }
+    create_time_log(data)
 
-#     # # Write to CSV
-#     fieldnames = ["timestamp", "value", "5s_change", "1m_change", "10m_change", "1h_change", "3h_change", "6h_change"]
+def create_time_log(data: dict):
+    raw_data = data[game.lower()]
 
-#     write_header = not os.path.exists(output_csv)
+    if not raw_data:
+        raise ValueError(f"No data found for game: {game}")
 
-#     with open(output_csv, "a", newline="") as csvfile:
-#         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-#         if write_header:
-#             writer.writeheader()
-#         writer.writerow(row)
+    # # Prepare one row from JSON
+    timestamp = datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d %H:%M:%S")
+    history = raw_data.get("history", {})
 
-#     logger.info(f"✅ Wrote data for {raw_data['name']} to {output_csv}")
+    # # Compose CSV row
+    row = {
+        "timestamp": timestamp,
+        "jackpot_meter": raw_data.get("jackpot_meter"),        
+        "color": "green" if raw_data.get("up") else "red",
+        "10m": history.get("10m", ""),
+        "1h": history.get("1h", ""),
+        "3h": history.get("3h", ""),
+        "6h": history.get("6h", "")
+    }
+
+    # # Write to CSV
+    fieldnames = [ "timestamp", "jackpot_meter", "color", "10m", "1h", "3h", "6h" ]
+
+    write_header = not os.path.exists(TIME_DATA)
+
+    with open(TIME_DATA, "a", newline="") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        if write_header:
+            writer.writeheader()
+        writer.writerow(row)
+
+    # logger.info(f"✅ Wrote data for {raw_data['name']} to {TIME_DATA}")
+
+def load_previous_time_data():
+    try:
+        data = []
+
+        # Load and parse all rows
+        with open(TIME_DATA, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                parsed = {
+                    "timestamp": datetime.strptime(row["timestamp"], "%Y-%m-%d %H:%M:%S"),
+                    "jackpot_meter": float(row["jackpot_meter"]),
+                    "color": str(row["color"]),
+                    "10m": float(row["10m"]),
+                    "1h": float(row["1h"]),
+                    "3h": float(row["3h"]),
+                    "6h": float(row["6h"])
+                }
+                data.append(parsed)
+
+        if not data:
+            return {}
+
+        data.sort(key=lambda x: x["timestamp"])
+        latest_row = data[-1]
+        base_time = latest_row["timestamp"]
+
+        targets = {
+            "10m": base_time - timedelta(minutes=10),
+            "1h": base_time - timedelta(hours=1),
+            "3h": base_time - timedelta(hours=3),
+            "6h": base_time - timedelta(hours=6)
+        }
+
+        closest = {key: None for key in targets}
+        smallest_diffs = {key: timedelta.max for key in targets}
+
+        for row in data:
+            for key, target_time in targets.items():
+                if row["timestamp"] < base_time:
+                    diff = abs(row["timestamp"] - target_time)
+                    if diff < smallest_diffs[key]:
+                        smallest_diffs[key] = diff
+                        closest[key] = row
+
+        result = {}
+
+        for key in ["10m", "1h", "3h", "6h"]:
+            if closest[key]:
+                result[key] = {
+                    "timestamp": closest[key]["timestamp"],
+                    "jackpot_meter": closest[key]["jackpot_meter"],
+                    "color": closest[key]["color"],
+                    "change": closest[key][key]
+                }
+            else:
+                result[key] = None
+
+        result["latest"] = {
+            "timestamp": base_time,
+            "jackpot_meter": latest_row["jackpot_meter"],
+            "color": latest_row["color"]
+        }
+
+        return result
+
+    except FileNotFoundError:
+        return {}
 
 def compare_data(prev: dict, current: dict):
     today = datetime.fromtimestamp(time.time())
@@ -227,6 +288,11 @@ def compare_data(prev: dict, current: dict):
     banner = "\n\t".join(banner_lines)
     banner = "\t" + banner
     
+    time_data = load_previous_time_data()
+    colored_time_data_jackpot_10m = f"🎯 {RED if time_data.get('10m').get('color') == 'red' else GRE}{time_data.get('10m').get('jackpot_meter')}{RES}"
+    colored_time_data_jackpot_1h = f"🎯 {RED if time_data.get('1h').get('color') == 'red' else GRE}{time_data.get('1h').get('jackpot_meter')}{RES}"
+    colored_time_data_jackpot_3h = f"🎯 {RED if time_data.get('3h').get('color') == 'red' else GRE}{time_data.get('3h').get('jackpot_meter')}{RES}"
+    colored_time_data_jackpot_6h = f"🎯 {RED if time_data.get('6h').get('color') == 'red' else GRE}{time_data.get('6h').get('jackpot_meter')}{RES}"
     current_jackpot = pct(current['jackpot_meter'])
     jackpot_bar = get_jackpot_bar(current_jackpot, current['color'])
     is_breakout = False
@@ -247,11 +313,11 @@ def compare_data(prev: dict, current: dict):
 
         logger.info(f"{banner}")
         logger.info(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {RED if current_jackpot < prev_jackpot else GRE}{current_jackpot}{percent} {diff}")
-        logger.info(f"\n\t{jackpot_bar} {signal}\n")
+        logger.info(f"\n\t{jackpot_bar} {signal} {colored_time_data_jackpot_10m} {colored_time_data_jackpot_1h} {colored_time_data_jackpot_3h} {colored_time_data_jackpot_6h}\n")
     else:
         logger.info(f"{banner}")
         logger.info(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {RED if current['color'] == 'red' else GRE}{current_jackpot}{RES}{percent}")
-        logger.info(f"\n\t{jackpot_bar}  {LCYN}◉{RES}\n")
+        logger.info(f"\n\t{jackpot_bar}  {LCYN}◉{RES} {colored_time_data_jackpot_10m} {colored_time_data_jackpot_1h} {colored_time_data_jackpot_3h} {colored_time_data_jackpot_6h}\n")
 
     for index, (period, value) in enumerate(current['history'].items()):
         old_value = prev['history'].get(period) if prev else None
@@ -288,7 +354,7 @@ def compare_data(prev: dict, current: dict):
                         state.breakout["lowest_low"] = lowest_low
                         is_breakout = True
                         state.is_breakout = True
-                        alert_queue.put("break_out")
+                        # alert_queue.put("break_out")
                         updated = True
 
                     if lowest_low_delta <= 0 and delta < lowest_low_delta:
@@ -296,7 +362,7 @@ def compare_data(prev: dict, current: dict):
                         state.breakout["lowest_low_delta"] = lowest_low_delta
                         is_breakout_delta = True
                         state.is_delta_breakout = True
-                        alert_queue.put("delta_break_out")
+                        # alert_queue.put("delta_break_out")
                         updated = True
 
                     if updated:
@@ -329,7 +395,7 @@ def compare_data(prev: dict, current: dict):
                         trend.append("Reversal Potential")
                         state.is_reversal_potential = True
                         if current['color'] == 'green':
-                            alert_queue.put("reversal potential")
+                            # alert_queue.put("reversal potential")
                             score += 2
                         else:
                             score -= 2
@@ -393,7 +459,7 @@ def compare_data(prev: dict, current: dict):
                     if not trend:
                         trend.append("Neutral")
 
-                    alert_queue.put("reversal!") if reversal else None
+                    # alert_queue.put("reversal!") if reversal else None
 
                     result = {
                         'new_delta_10m': round(new_delta_10m, 2),
@@ -476,11 +542,13 @@ def compare_data(prev: dict, current: dict):
                         #         bet_queue.put((bet_level, True, slots[0]))
                         #     elif state.right_slot:
                         #         bet_queue.put((bet_level, True, slots[1]))
-                        
-        logger.info(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:  {colored_value}{percent} {diff} {signal}") if period == "10m" and pct(value) >= 0 else \
-            logger.info(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}: {colored_value}{percent} {diff} {signal}") if period == "10m" and pct(value) < 0 else \
-            logger.info(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:   {colored_value}{percent} {diff} {signal}") if pct(value) >= 0 else \
-            logger.info(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:  {colored_value}{percent} {diff} {signal}")
+
+        colored_time_data_change = f"🎯 {RED if time_data.get(period).get('change') < 0 else GRE if time_data.get(period).get('change') > 0 else CYN}{time_data.get(period).get('change')}{percent} ({YEL}{time_data.get(period).get('timestamp')}{RES})"
+        
+        logger.info(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:  {colored_value}{percent} {diff} {signal} {colored_time_data_change}") if period == "10m" and pct(value) >= 0 else \
+            logger.info(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}: {colored_value}{percent} {diff} {signal} {colored_time_data_change}") if period == "10m" and pct(value) < 0 else \
+            logger.info(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:   {colored_value}{percent} {diff} {signal} {colored_time_data_change}") if pct(value) >= 0 else \
+            logger.info(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:  {colored_value}{percent} {diff} {signal} {colored_time_data_change}")
 
     if result is not None:
         signal = f"{LRED}＋{RES}" if bear_score > state.prev_bear_score else f"{LGRE}－{RES}" if bear_score < state.prev_bear_score else f"{LCYN}＝{RES}"
@@ -546,14 +614,14 @@ def compare_data(prev: dict, current: dict):
     logger.info(f"\n\t\t{'💰 ' if current['color'] == 'red' else '⚠️ '}  {LYEL}Bet [{RES} {(BLNK) + (LRED if current['color'] == 'red' else LBLU)}{bet_level.upper()}{RES} {LYEL}]{RES}\n\n") if bet_level is not None else \
         logger.info("\n\t\t🚫  Don't Bet!  🚫\n\n")
 
-    if bet_level is not None:
-        alert_queue.put(f"caution, bet {bet_level}, {state.last_trend}") if current['color'] == 'green' else \
-        alert_queue.put(f"bet {bet_level}, {state.last_trend}")
-    else:
-        alert_queue.put("do not bet")
+    # if bet_level is not None:
+    #     alert_queue.put(f"caution, bet {bet_level}, {state.last_trend}") if current['color'] == 'green' else \
+    #     alert_queue.put(f"bet {bet_level}, {state.last_trend}")
+    # else:
+    #     alert_queue.put("do not bet")
 
     state.bet_lvl = bet_level
-    state.last_trend = None
+    # state.last_trend = None
 
     # if state.auto_mode and state.dual_slots:
     #     slots = ["left", "right"]
@@ -674,13 +742,14 @@ def countdown_timer(seconds: int = 60):
         sys.stdout.write(f"\r{timer}")
         sys.stdout.flush()
 
-        # print(f'\n\tNew Data: {LBLU if not state.new_data else LRED}{state.new_data}{RES}')
+        # print(f'\n\tNew Data {current_sec}: {LBLU if not state.new_data else LRED}{state.new_data}{RES}')
 
-        if state.new_data:
+        if state.new_data and state.auto_mode:
             state.new_data = False
-            chose_spin = [ "turbo_spin", "board_spin_turbo" ]
-            spin_type = random.choice(chose_spin)
-            spin_queue.put((None, chose_spin[0], None, False))
+            # chose_spin = [ "turbo_spin", "board_spin_turbo" ]
+            # spin_type = random.choice(chose_spin)
+            # spin_queue.put((None, chose_spin[0], None, False))
+            spin_queue.put((None, "quick_spin", None, False))
 
         if current_sec % 10 == 7 and not state.new_data:
             alert_queue.put("ping")# if state.jackpot_signal != "bullish" else None
@@ -699,6 +768,7 @@ def countdown_timer(seconds: int = 60):
                         # logger.debug(f'\n\tQuick Spin: {quick_spin} >> {current_sec} {time_left} {state.bet_lvl} {state.curr_color}')
                         # spin_queue.put((None, None, None, quick_spin))
                         spin_queue.put((None, None, None, False))
+                        alert_queue.put("sakpan") if state.new_data else None
 
         # elif current_sec == 52 and time_left == 8 and provider in [ "JILI" ]:
         #     if state.auto_mode and game in [ "Fortune Gems", "Neko Fortune" ]:
@@ -1849,42 +1919,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, qu
                         # pyautogui.doubleClick(x=random_x, y=random_y + 315)
                     ])
                     action()
-
-            now_time = time.time()
-            current_sec = int(now_time) % 60
-            logger.debug(f"\n\tCurrent Sec After Spin: {BLNK}{BLCYN}{current_sec}🌀{RED}{spin_type.replace('_', ' ').upper()}{RES}")
-
-            if state.dual_slots and slot_position is not None:
-                if state.split_screen:
-                    if slot_position == "right":
-                        cx, cy = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("center_y")
-                    elif slot_position == "left":
-                        cx, cy = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("center_y")
-                    pyautogui.doubleClick(x=cx, y=BTM_Y)
-                    time.sleep(0.5)
-                else: # reset back to left only if slot is 'RIGHT' during last spin
-                    if slot_position == 'right':
-                        logger.info('\n\tResetting to LEFT: ', slot_position)
-                        pyautogui.keyDown('ctrl')
-                        pyautogui.press('left')
-                        pyautogui.keyUp('ctrl')
-                        time.sleep(0.5)
-
-            # BET RESET
-            # if bet_reset and not is_lucky_bet:
-            #     logger.info('\nDEBUG (BET RESET) ...\n')
-            #     pyautogui.click(x=random_x - 190, y=random_y + 325)
-            #     pyautogui.click(x=random_x - 50, y=random_y + 250)
-            #     time.sleep(1)
-
-            sys.stdout.write(f"\r\t\t*** {state.last_trend} ***") if state.last_trend is not None else None
-            sys.stdout.write(f"\r\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES}>\n")
-            sys.stdout.write(f"\r\t\tSlot: {BLBLU}{slot_position}{RES}\n") if state.dual_slots or state.split_screen or state.left_slot or state.right_slot else None
-            
-            alert_queue.put(f"{spin_type}, {current_sec}") if chosen_spin is None else \
-                alert_queue.put(f"quick spin, {current_sec}")
-            
-            if quick_spin:
+            elif spin_type == "quick_spin":
                 if slot_position is None and state.widescreen:
                     action = random.choice([
                         lambda: pyautogui.doubleClick(x=cx + 520, y=cy + 325, button='left'),
@@ -2057,7 +2092,39 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, qu
                         lambda: (pyautogui.click(x=rand_x, y=rand_y, button='right'), pyautogui.click(x=cx, y=cy + 340, button='right'))
                     ])
                     action()
-                    alert_queue.put('quick spin')
+
+            now_time = time.time()
+            current_sec = int(now_time) % 60
+            logger.debug(f"\n\tCurrent Sec After Spin: {BLNK}{BLCYN}{current_sec}🌀{RED}{spin_type.replace('_', ' ').upper()}{RES}")
+
+            if state.dual_slots and slot_position is not None:
+                if state.split_screen:
+                    if slot_position == "right":
+                        cx, cy = LEFT_SLOT_POS.get("center_x"), LEFT_SLOT_POS.get("center_y")
+                    elif slot_position == "left":
+                        cx, cy = RIGHT_SLOT_POS.get("center_x"), RIGHT_SLOT_POS.get("center_y")
+                    pyautogui.doubleClick(x=cx, y=BTM_Y)
+                    time.sleep(0.5)
+                else: # reset back to left only if slot is 'RIGHT' during last spin
+                    if slot_position == 'right':
+                        logger.info('\n\tResetting to LEFT: ', slot_position)
+                        pyautogui.keyDown('ctrl')
+                        pyautogui.press('left')
+                        pyautogui.keyUp('ctrl')
+                        time.sleep(0.5)
+
+            # BET RESET
+            # if bet_reset and not is_lucky_bet:
+            #     logger.info('\nDEBUG (BET RESET) ...\n')
+            #     pyautogui.click(x=random_x - 190, y=random_y + 325)
+            #     pyautogui.click(x=random_x - 50, y=random_y + 250)
+            #     time.sleep(1)
+
+            sys.stdout.write(f"\r\t\t*** {state.last_trend} ***") if state.last_trend is not None else None
+            sys.stdout.write(f"\r\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES}>\n")
+            sys.stdout.write(f"\r\t\tSlot: {BLBLU}{slot_position}{RES}\n") if state.dual_slots or state.split_screen or state.left_slot or state.right_slot else None
+            
+            alert_queue.put(f"{spin_type}, {current_sec}")
         except Empty:
             continue
 
@@ -2614,6 +2681,8 @@ if __name__ == "__main__":
         CENTER_X, CENTER_Y = SCREEN_POS.get("center_x"), SCREEN_POS.get("center_y")
     LEFT_X, RIGHT_X, TOP_Y, BTM_Y = 0, SCREEN_POS.get("right_x"), 0, SCREEN_POS.get("bottom_y")
 
+    TIME_DATA = f"{game.strip().replace(' ', '_').lower()}_log.csv"
+
     stop_event = threading.Event()
     reset_event = threading.Event()
 
@@ -2657,11 +2726,23 @@ if __name__ == "__main__":
                 # Wait for data (block until something arrives)
                 data = data_queue.get(timeout=1)
 
-                alert_queue.put(re.sub(r"\s*\(.*?\)", "", game))
                 parsed_data = extract_game_data(data)
                 all_data = load_previous_data()
                 previous_data = all_data.get(game.lower())
                 compare_data(previous_data, parsed_data)
+
+                alert_queue.put(re.sub(r"\s*\(.*?\)", "", game))
+                alert_queue.put("break_out") if state.is_breakout else None
+                alert_queue.put("delta_break_out") if state.is_delta_breakout else None
+                alert_queue.put("reversal potential") if state.is_reversal_potential and state.curr_color == 'green' else None
+                alert_queue.put("reversal!") if state.is_reversal else None
+                if state.bet_lvl is not None:
+                    alert_queue.put(f"caution, bet {state.bet_lvl}, {state.last_trend}") if state.curr_color == 'green' else \
+                    alert_queue.put(f"bet {state.bet_lvl}, {state.last_trend}")
+                else:
+                    alert_queue.put("do not bet")
+                # state.last_trend = 
+
                 all_data[game.lower()] = parsed_data
                 save_current_data(all_data)
 

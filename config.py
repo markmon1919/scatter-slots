@@ -79,7 +79,7 @@ GAME_CONFIGS = {
     "Fortune Gems Scratch": GameConfig(False, True, True, None, False, True, "JILI"),
     "Fortune Monkey": GameConfig(False, True, True, None, False, True, "JILI"),
     "Super Rich": GameConfig(False, True, True, None, False, True, "JILI"),
-    "Lucky Gaming": GameConfig(False, True, True, None, False, True, "JILI"),
+    "Lucky Coming": GameConfig(False, True, True, None, False, True, "JILI"),
     "Super Ace": GameConfig(False, True, True, None, False, False, "JILI"),
     "Super Ace II": GameConfig(False, True, True, None, False, False, "JILI"),
     "Super Ace Deluxe": GameConfig(False, True, True, None, False, False, "JILI"),
