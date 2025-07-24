@@ -1079,9 +1079,11 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, qu
             border_space_top = cy // 3 if state.widescreen else 0
             radius_x, radius_y = width // 2, height // 2 if state.widescreen else width // 2
             rand_x = cx + random.randint(-radius_x, radius_x)
-            rand_y = cy + random.randint(-radius_y, radius_y) + (border_space_top if radius_y <= 0 else -border_space_top)
+            # rand_y = cy + random.randint(-radius_y, radius_y) + (border_space_top if radius_y <= 0 else -border_space_top)
+            rand_y = cy + random.randint(-radius_y, radius_y) - border_space_top
             rand_x2 = cx + random.randint(-radius_x, radius_x)
-            rand_y2 = cy + random.randint(-radius_y, radius_y) + (border_space_top if radius_y <= 0 else -border_space_top)
+            # rand_y2 = cy + random.randint(-radius_y, radius_y) + (border_space_top if radius_y <= 0 else -border_space_top)
+            rand_y2 = cy + random.randint(-radius_y, radius_y) - border_space_top
 
             # spin_type = "test_spin" # Test Spin
             # if spin_type == "test_spin":
