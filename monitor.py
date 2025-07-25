@@ -286,30 +286,30 @@ def compare_data(prev: dict, current: dict):
     if time_data and time_data.get('10m'):
         color_10m = LRED if time_data['10m'].get('color') == 'red' else LGRE
         jackpot_10m = time_data['10m'].get('jackpot_meter', 'None')
-        colored_time_data_jackpot_10m = f"{LYEL}10m {color_10m}{jackpot_10m}{RES}"
+        colored_time_data_jackpot_10m = f"{YEL}10m {color_10m}{jackpot_10m}{RES}"
     else:
-        colored_time_data_jackpot_10m = f"{LYEL}10m {DGRY}No History{RES}"
+        colored_time_data_jackpot_10m = f"{YEL}10m {DGRY}No History{RES}"
 
     if time_data and time_data.get('1h'):
         color_1h = LRED if time_data['1h'].get('color') == 'red' else LGRE
         jackpot_1h = time_data['1h'].get('jackpot_meter', 'None')
-        colored_time_data_jackpot_1h = f"{LYEL}1h {color_1h}{jackpot_1h}{RES}"
+        colored_time_data_jackpot_1h = f"{YEL}1h {color_1h}{jackpot_1h}{RES}"
     else:
-        colored_time_data_jackpot_1h = f"{LYEL}1h {DGRY}No History{RES}"
+        colored_time_data_jackpot_1h = f"{YEL}1h {DGRY}No History{RES}"
 
     if time_data and time_data.get('3h'):
         color_3h = LRED if time_data['3h'].get('color') == 'red' else LGRE
         jackpot_3h = time_data['3h'].get('jackpot_meter', 'None')
-        colored_time_data_jackpot_3h = f"{LYEL}3h {color_3h}{jackpot_3h}{RES}"
+        colored_time_data_jackpot_3h = f"{YEL}3h {color_3h}{jackpot_3h}{RES}"
     else:
-        colored_time_data_jackpot_3h = f"{LYEL}3h {DGRY}No History{RES}"
+        colored_time_data_jackpot_3h = f"{YEL}3h {DGRY}No History{RES}"
 
     if time_data and time_data.get('6h'):
         color_6h = LRED if time_data['6h'].get('color') == 'red' else LGRE
         jackpot_6h = time_data['6h'].get('jackpot_meter', 'None')
-        colored_time_data_jackpot_6h = f"{LYEL}6h {color_6h}{jackpot_6h}{RES}"
+        colored_time_data_jackpot_6h = f"{YEL}6h {color_6h}{jackpot_6h}{RES}"
     else:
-        colored_time_data_jackpot_6h = f"{LYEL}6h {DGRY}No History{RES}"
+        colored_time_data_jackpot_6h = f"{YEL}6h {DGRY}No History{RES}"
         
     current_jackpot = pct(current['jackpot_meter'])
     jackpot_bar = get_jackpot_bar(current_jackpot, current['color'])
