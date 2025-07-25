@@ -137,11 +137,9 @@ def create_time_log(data: dict):
     if not raw_data:
         raise ValueError(f"No data found for game: {game}")
 
-    # # Prepare one row from JSON
-    timestamp = datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d %I:%M:%S %p")
     history = raw_data.get("history", {})
 
-    # # Compose CSV row
     row = {
         "timestamp": timestamp,
         "jackpot_meter": raw_data.get("jackpot_meter"),        
@@ -152,9 +150,7 @@ def create_time_log(data: dict):
         "6h": history.get("6h", "")
     }
 
-    # # Write to CSV
     fieldnames = [ "timestamp", "jackpot_meter", "color", "10m", "1h", "3h", "6h" ]
-
     write_header = not os.path.exists(TIME_DATA)
 
     with open(TIME_DATA, "a", newline="") as csvfile:
@@ -163,18 +159,15 @@ def create_time_log(data: dict):
             writer.writeheader()
         writer.writerow(row)
 
-    # logger.info(f"✅ Wrote data for {raw_data['name']} to {TIME_DATA}")
-
 def load_previous_time_data():
     try:
         data = []
 
-        # Load and parse all rows
         with open(TIME_DATA, "r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 parsed = {
-                    "timestamp": datetime.strptime(row["timestamp"], "%Y-%m-%d %H:%M:%S"),
+                    "timestamp": datetime.strptime(row["timestamp"], "%Y-%m-%d %I:%M:%S %p"),
                     "jackpot_meter": float(row["jackpot_meter"]),
                     "color": str(row["color"]),
                     "10m": float(row["10m"]),
@@ -287,12 +280,37 @@ def compare_data(prev: dict, current: dict):
     banner_lines.insert(0, time_line_centered)
     banner = "\n\t".join(banner_lines)
     banner = "\t" + banner
-    
+
     time_data = load_previous_time_data()
-    colored_time_data_jackpot_10m = f"🎯 {RED if time_data.get('10m').get('color') == 'red' else GRE}{time_data.get('10m').get('jackpot_meter')}{RES}"
-    colored_time_data_jackpot_1h = f"🎯 {RED if time_data.get('1h').get('color') == 'red' else GRE}{time_data.get('1h').get('jackpot_meter')}{RES}"
-    colored_time_data_jackpot_3h = f"🎯 {RED if time_data.get('3h').get('color') == 'red' else GRE}{time_data.get('3h').get('jackpot_meter')}{RES}"
-    colored_time_data_jackpot_6h = f"🎯 {RED if time_data.get('6h').get('color') == 'red' else GRE}{time_data.get('6h').get('jackpot_meter')}{RES}"
+
+    if time_data and time_data.get('10m'):
+        color_10m = RED if time_data['10m'].get('color') == 'red' else GRE
+        jackpot_10m = time_data['10m'].get('jackpot_meter', 'None')
+        colored_time_data_jackpot_10m = f"{LYEL}10m {color_10m}{jackpot_10m}{RES}"
+    else:
+        colored_time_data_jackpot_10m = f"{LYEL}10m {DGRY}No History{RES}"
+
+    if time_data and time_data.get('1h'):
+        color_1h = RED if time_data['1h'].get('color') == 'red' else GRE
+        jackpot_1h = time_data['1h'].get('jackpot_meter', 'None')
+        colored_time_data_jackpot_1h = f"{LYEL}1h {color_1h}{jackpot_1h}{RES}"
+    else:
+        colored_time_data_jackpot_1h = f"{LYEL}1h {DGRY}No History{RES}"
+
+    if time_data and time_data.get('3h'):
+        color_3h = RED if time_data['3h'].get('color') == 'red' else GRE
+        jackpot_3h = time_data['3h'].get('jackpot_meter', 'None')
+        colored_time_data_jackpot_3h = f"{LYEL}3h {color_3h}{jackpot_3h}{RES}"
+    else:
+        colored_time_data_jackpot_3h = f"{LYEL}3h {DGRY}No History{RES}"
+
+    if time_data and time_data.get('6h'):
+        color_6h = RED if time_data['6h'].get('color') == 'red' else GRE
+        jackpot_6h = time_data['6h'].get('jackpot_meter', 'None')
+        colored_time_data_jackpot_6h = f"{LYEL}6h {color_6h}{jackpot_6h}{RES}"
+    else:
+        colored_time_data_jackpot_6h = f"{LYEL}6h {DGRY}No History{RES}"
+        
     current_jackpot = pct(current['jackpot_meter'])
     jackpot_bar = get_jackpot_bar(current_jackpot, current['color'])
     is_breakout = False
@@ -543,7 +561,14 @@ def compare_data(prev: dict, current: dict):
                         #     elif state.right_slot:
                         #         bet_queue.put((bet_level, True, slots[1]))
 
-        colored_time_data_change = f"🎯 {RED if time_data.get(period).get('change') < 0 else GRE if time_data.get(period).get('change') > 0 else CYN}{time_data.get(period).get('change')}{percent} ({YEL}{time_data.get(period).get('timestamp')}{RES})"
+        if time_data and time_data.get(period):
+            change = time_data[period].get('change')
+            timestamp = time_data[period].get('timestamp')
+            time_str = f"{BYEL}{timestamp.strftime('%I')}{BWHTE}:{BYEL}{timestamp.strftime('%M')}{BWHTE}:{BLYEL}{timestamp.strftime('%S')} {LBLU}{timestamp.strftime('%p')}{RES}"
+            color = RED if change < 0 else GRE if change > 0 else CYN
+            colored_time_data_change = f"{DGRY}History {color}{change}{percent} ({YEL}{time_str}{RES})"
+        else:
+            colored_time_data_change = f"{DGRY}No History{RES}"
         
         logger.info(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}:  {colored_value}{percent} {diff} {signal} {colored_time_data_change}") if period == "10m" and pct(value) >= 0 else \
             logger.info(f"\t{CYN}⏱{RES} {LYEL}{period}{RES}: {colored_value}{percent} {diff} {signal} {colored_time_data_change}") if period == "10m" and pct(value) < 0 else \
@@ -768,7 +793,6 @@ def countdown_timer(seconds: int = 60):
                         # logger.debug(f'\n\tQuick Spin: {quick_spin} >> {current_sec} {time_left} {state.bet_lvl} {state.curr_color}')
                         # spin_queue.put((None, None, None, quick_spin))
                         spin_queue.put((None, None, None, False))
-                        alert_queue.put("sakpan") if state.new_data else None
 
         # elif current_sec == 52 and time_left == 8 and provider in [ "JILI" ]:
         #     if state.auto_mode and game in [ "Fortune Gems", "Neko Fortune" ]:
@@ -2730,6 +2754,8 @@ if __name__ == "__main__":
                 all_data = load_previous_data()
                 previous_data = all_data.get(game.lower())
                 compare_data(previous_data, parsed_data)
+                all_data[game.lower()] = parsed_data
+                save_current_data(all_data)
 
                 alert_queue.put(re.sub(r"\s*\(.*?\)", "", game))
                 alert_queue.put("break_out") if state.is_breakout else None
@@ -2742,9 +2768,6 @@ if __name__ == "__main__":
                 else:
                     alert_queue.put("do not bet")
                 # state.last_trend = 
-
-                all_data[game.lower()] = parsed_data
-                save_current_data(all_data)
 
             except Empty:
                 # No data in the last 1 second — not an error
