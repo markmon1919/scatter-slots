@@ -564,7 +564,7 @@ def compare_data(prev: dict, current: dict):
         if time_data and time_data.get(period):
             change = time_data[period].get('change')
             timestamp = time_data[period].get('timestamp')
-            time_str = f"{BYEL}{timestamp.strftime('%I')}{BWHTE}:{YEL}{timestamp.strftime('%M')}{BWHTE}:{LYEL}{timestamp.strftime('%S')} {LBLU}{timestamp.strftime('%p')}{RES}"
+            time_str = f"{YEL}{timestamp.strftime('%I')}{WHTE}:{YEL}{timestamp.strftime('%M')}{WHTE}:{LYEL}{timestamp.strftime('%S')} {LBLU}{timestamp.strftime('%p')}{RES}"
             color = LRED if change < 0 else LGRE if change > 0 else LCYN
             colored_time_data_change = f"{DGRY}History {color}{change}{percent} ({YEL}{time_str}{RES})"
         else:
