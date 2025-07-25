@@ -191,6 +191,14 @@ def load_previous_time_data():
             "6h": base_time - timedelta(hours=6)
         }
 
+        # test sync
+        # targets = {
+        #     "10m": base_time - timedelta(minutes=9),
+        #     "1h": base_time - timedelta(minutes=59),
+        #     "3h": base_time - timedelta(minutes=179),
+        #     "6h": base_time - timedelta(minutes=359)
+        # }
+
         closest = {key: None for key in targets}
         smallest_diffs = {key: timedelta.max for key in targets}
 

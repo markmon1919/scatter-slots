@@ -154,6 +154,7 @@ GAME_CONFIGS = {
     "Wings of Iguazu": GameConfig(False, True, True, None, False, False, "PG"),
     "The Queen's Banquet": GameConfig(False, True, True, None, False, False, "PG"),
     "Ganesha Fortune": GameConfig(False, True, True, None, False, False, "PG"),
+    "Mines": GameConfig(True, True, True, None, False, False, "FC"),
     "Grand Blue": GameConfig(True, True, True, None, False, False, "FC"),
     "Golden Genie": GameConfig(True, True, True, None, False, False, "FC"),
     "Egypt Bonanza": GameConfig(True, True, True, None, False, False, "FC"),
