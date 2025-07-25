@@ -284,28 +284,28 @@ def compare_data(prev: dict, current: dict):
     time_data = load_previous_time_data()
 
     if time_data and time_data.get('10m'):
-        color_10m = RED if time_data['10m'].get('color') == 'red' else GRE
+        color_10m = LRED if time_data['10m'].get('color') == 'red' else LGRE
         jackpot_10m = time_data['10m'].get('jackpot_meter', 'None')
         colored_time_data_jackpot_10m = f"{LYEL}10m {color_10m}{jackpot_10m}{RES}"
     else:
         colored_time_data_jackpot_10m = f"{LYEL}10m {DGRY}No History{RES}"
 
     if time_data and time_data.get('1h'):
-        color_1h = RED if time_data['1h'].get('color') == 'red' else GRE
+        color_1h = LRED if time_data['1h'].get('color') == 'red' else LGRE
         jackpot_1h = time_data['1h'].get('jackpot_meter', 'None')
         colored_time_data_jackpot_1h = f"{LYEL}1h {color_1h}{jackpot_1h}{RES}"
     else:
         colored_time_data_jackpot_1h = f"{LYEL}1h {DGRY}No History{RES}"
 
     if time_data and time_data.get('3h'):
-        color_3h = RED if time_data['3h'].get('color') == 'red' else GRE
+        color_3h = LRED if time_data['3h'].get('color') == 'red' else LGRE
         jackpot_3h = time_data['3h'].get('jackpot_meter', 'None')
         colored_time_data_jackpot_3h = f"{LYEL}3h {color_3h}{jackpot_3h}{RES}"
     else:
         colored_time_data_jackpot_3h = f"{LYEL}3h {DGRY}No History{RES}"
 
     if time_data and time_data.get('6h'):
-        color_6h = RED if time_data['6h'].get('color') == 'red' else GRE
+        color_6h = LRED if time_data['6h'].get('color') == 'red' else LGRE
         jackpot_6h = time_data['6h'].get('jackpot_meter', 'None')
         colored_time_data_jackpot_6h = f"{LYEL}6h {color_6h}{jackpot_6h}{RES}"
     else:
@@ -564,8 +564,8 @@ def compare_data(prev: dict, current: dict):
         if time_data and time_data.get(period):
             change = time_data[period].get('change')
             timestamp = time_data[period].get('timestamp')
-            time_str = f"{BYEL}{timestamp.strftime('%I')}{BWHTE}:{BYEL}{timestamp.strftime('%M')}{BWHTE}:{BLYEL}{timestamp.strftime('%S')} {LBLU}{timestamp.strftime('%p')}{RES}"
-            color = BLRED if change < 0 else BLGRE if change > 0 else BLCYN
+            time_str = f"{BYEL}{timestamp.strftime('%I')}{BWHTE}:{YEL}{timestamp.strftime('%M')}{BWHTE}:{LYEL}{timestamp.strftime('%S')} {LBLU}{timestamp.strftime('%p')}{RES}"
+            color = LRED if change < 0 else LGRE if change > 0 else LCYN
             colored_time_data_change = f"{DGRY}History {color}{change}{percent} ({YEL}{time_str}{RES})"
         else:
             colored_time_data_change = f"{DGRY}No History{RES}"
