@@ -121,6 +121,7 @@ GAME_CONFIGS = {
     "Boxing King": GameConfig(False, True, True, None, False, True, "JILI"),
     "Boxing Extravaganza": GameConfig(False, True, True, None, False, True, "JILI"),
     "Mayan Empire": GameConfig(False, True, True, None, False, True, "JILI"),
+    "Party Star": GameConfig(False, True, True, None, False, False, "JILI"),
     # "Mines": GameConfig(False, True, True, None, False, True, "JILI"),
     "Mega Fishing": GameConfig(False, True, True, None, False, True, "JILI"),
     "Jackpot Fishing": GameConfig(False, True, True, None, False, True, "JILI"),
@@ -205,6 +206,7 @@ PROVIDERS = {
     "JFF": ProviderProps("JFF", MAG),
     "R88": ProviderProps("R88", GRE),
     "RSG": ProviderProps("Royal Slot Gaming", RED),
+    "CQ9": ProviderProps("CQ9", CYN),
 }
 
 DEFAULT_PROVIDER_PROPS = ProviderProps(None, WHTE)

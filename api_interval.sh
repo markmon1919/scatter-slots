@@ -13,7 +13,7 @@ requestFroms=("H5" "H6")
 rf_index=0
 
 api_url="https://www.helpslot.win/api/games"
-name="Fortune Gems 2"
+name="Super Ace"
 manuf="JILI"
 
 # ──────────────────────────────
@@ -28,8 +28,8 @@ align_to_next_10s() {
 }
 
 poll_interval=10
-min_poll=10
-max_poll=60
+# min_poll=10
+# max_poll=60
 
 echo "🔄 Starting aligned polling every ~10s..."
 

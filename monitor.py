@@ -51,6 +51,7 @@ class AutoState:
     prev_pull_score: int = 0
     prev_bear_score: int = 0
     bear_score_inc: bool = False
+    pull_score_inc: bool = False
     curr_color: str = None
     prev_jackpot_val: float = 0.0
     prev_10m: float = 0.0
@@ -128,16 +129,15 @@ def load_previous_data():
 def save_current_data(data: dict):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
-        
-    create_time_log(data)
 
 def create_time_log(data: dict):
     raw_data = data[game.lower()]
 
     if not raw_data:
         raise ValueError(f"No data found for game: {game}")
-
-    timestamp = datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d %I:%M:%S %p")
+        
+    # timestamp = datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d %I:%M:%S %p")
+    timestamp = datetime.fromtimestamp(state.last_time).strftime("%Y-%m-%d %I:%M:%S %p")
     history = raw_data.get("history", {})
 
     row = {
@@ -235,7 +235,8 @@ def load_previous_time_data():
         return {}
 
 def compare_data(prev: dict, current: dict):
-    today = datetime.fromtimestamp(time.time())
+    # today = datetime.fromtimestamp(time.time())
+    today = datetime.fromtimestamp(state.last_time)
     state.curr_color = current['color']
     slots = ["left", "right"]
     bet_level = None
@@ -597,6 +598,7 @@ def compare_data(prev: dict, current: dict):
         state.prev_pull_delta = result.get('old_delta_10m')
         pull_score = result.get('pull_score', 0)
         signal = f"{LRED}＋{RES}" if pull_score > state.prev_pull_score else f"{LGRE}－{RES}" if pull_score < state.prev_pull_score else f"{LCYN}＝{RES}"
+        state.pull_score_inc = True if pull_score > state.prev_pull_score else False
         state.prev_pull_score = pull_score
 
         if pull_score >= 8 and bet_level == "max":
@@ -776,31 +778,86 @@ def countdown_timer(seconds: int = 60):
         sys.stdout.flush()
 
         # print(f'\n\tNew Data {current_sec}: {LBLU if not state.new_data else LRED}{state.new_data}{RES}')
+        last_time_sec = round(state.last_time % seconds)
+        # logger.debug(f"\n\tlast_time_sec: {last_time_sec}")
 
         if state.new_data and state.auto_mode:
             state.new_data = False
             # chose_spin = [ "turbo_spin", "board_spin_turbo" ]
             # spin_type = random.choice(chose_spin)
             # spin_queue.put((None, chose_spin[0], None, False))
-            spin_queue.put((None, "quick_spin", None, False))
+            if current_sec % 10 >= 8:
+                spin_queue.put((None, "quick_spin", None, False))
 
+         
         if current_sec % 10 == 7 and not state.new_data:
             alert_queue.put("ping")# if state.jackpot_signal != "bullish" else None
-            # alert_queue.put(f"{current_sec} spin!")
-            if state.auto_mode: #and state.jackpot_signal != "bullish":
-                # if (current_sec == 57 and time_left == 3) or (current_sec != 57 and state.curr_color == 'red') or (current_sec != 57 and state.bet_lvl in [ "max", "high" ]):
-                if (current_sec == 57 and time_left == 3) or (current_sec != 57 and state.bet_lvl is not None) or (current_sec != 57 and state.bear_score_inc):
+            # alert_queue.put( f"{current_sec} spin!")
+            if state.auto_mode and last_time_sec % 10 == 0 or last_time_sec % 10 == 1: #and state.jackpot_signal != "bullish":
+                alert_queue.put(f"{current_sec} spin!")
+                if (
+                    (current_sec == 57 and time_left == 3) or
+                    (current_sec == 17 and time_left == 43) or
+                    (current_sec == 7 and time_left == 53) or
+                    (
+                        current_sec not in (57, 17, 7) and
+                        state.curr_color == 'red' and state.bet_lvl is not None and
+                        state.bear_score_inc and state.pull_score_inc
+                    )
+                ):
                     if state.dual_slots:
                         slots = ["left", "right"]
                         random.shuffle(slots)
                         spin_queue.put((None, None, slots[0], False))
                         spin_queue.put((None, None, slots[1], False))
                     else:
-                        # quick_spin = (current_sec != 57 and (time_left == 43 or time_left == 23) and state.bet_lvl in [ "max", "high" ] and state.curr_color == 'red')
-                        # alert_queue.put(f"quick spin {quick_spin}") if quick_spin else None
-                        # logger.debug(f'\n\tQuick Spin: {quick_spin} >> {current_sec} {time_left} {state.bet_lvl} {state.curr_color}')
-                        # spin_queue.put((None, None, None, quick_spin))
                         spin_queue.put((None, None, None, False))
+        elif last_time_sec % 10 == 9:
+            if current_sec % 10 == 6 and not state.new_data:
+                if state.auto_mode: #and state.jackpot_signal != "bullish":
+                    alert_queue.put(f"{current_sec} spin!")
+                    # if (current_sec == 56 and time_left == 4) or (current_sec != 56 and state.bet_lvl is not None and state.curr_color == 'red') or (current_sec != 56 and state.bear_score_inc and state.curr_color == 'red'):
+                    if (
+                        (current_sec == 56 and time_left == 4) or
+                        (current_sec == 16 and time_left == 44) or
+                        (current_sec == 6 and time_left == 54) or
+                        (
+                            current_sec not in (56, 16, 6) and
+                            state.curr_color == 'red' and state.bet_lvl is not None and
+                            state.bear_score_inc and state.pull_score_inc
+                        )
+                    ):
+                        if state.dual_slots:
+                            slots = ["left", "right"]
+                            random.shuffle(slots)
+                            spin_queue.put((None, None, slots[0], False))
+                            spin_queue.put((None, None, slots[1], False))
+                        else:
+                            time.sleep(random.uniform(*(0, 1.5)))
+                            spin_queue.put((None, None, None, False))
+        elif last_time_sec % 10 == 8:
+            if current_sec % 10 == 5 and not state.new_data:
+                if state.auto_mode: #and state.jackpot_signal != "bullish":
+                    alert_queue.put(f"{current_sec} spin!")
+                    # if (current_sec == 55 and time_left == 5) or (current_sec != 55 and state.bet_lvl is not None and state.curr_color == 'red') or (current_sec != 55 and state.bear_score_inc and state.curr_color == 'red'):
+                    if (
+                        (current_sec == 55 and time_left == 5) or
+                        (current_sec == 15 and time_left == 45) or
+                        (current_sec == 5 and time_left == 55) or
+                        (
+                            current_sec not in (55, 15, 5) and
+                            state.curr_color == 'red' and state.bet_lvl is not None and
+                            state.bear_score_inc and state.pull_score_inc
+                        )
+                    ):
+                        if state.dual_slots:
+                            slots = ["left", "right"]
+                            random.shuffle(slots)
+                            spin_queue.put((None, None, slots[0], False))
+                            spin_queue.put((None, None, slots[1], False))
+                        else:
+                            time.sleep(random.uniform(*(0, 2)))
+                            spin_queue.put((None, None, None, False))
 
         # elif current_sec == 52 and time_left == 8 and provider in [ "JILI" ]:
         #     if state.auto_mode and game in [ "Fortune Gems", "Neko Fortune" ]:
@@ -1111,7 +1168,7 @@ def spin(bet_level: str=None, chosen_spin: str=None, slot_position: str=None, qu
 
             # LEFT_X, RIGHT_X, TOP_Y, BTM_Y = 0, SCREEN_POS.get("right_x"), 0, SCREEN_POS.get("bottom_y")
             cx, cy = CENTER_X, CENTER_Y if game != "Super Rich" else CENTER_Y + 150
-
+            
             if state.dual_slots and slot_position is not None:
                 if state.split_screen:
                     pyautogui.doubleClick(x=cx, y=BTM_Y)
@@ -2200,8 +2257,9 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     state.new_10m = data.get("min10")
                     state.jackpot_signal = ("bearish" if data.get("value") < state.prev_jackpot_val else "bullish" if data.get("value") > state.prev_jackpot_val else "neutral") if state.prev_jackpot_val != 0.0 else "neutral"
                     # signal = f"{LRED}⬇{RES}" if current_jackpot < prev_jackpot else f"{LGRE}⬆{RES}" if current_jackpot > prev_jackpot else f"{LCYN}◉{RES}"
-                    state.last_time = round(data.get('last_updated') % 60)
-                    # logger.info("\n\tstate.last_time: ", state.last_time)
+                    # state.last_time = round(data.get('last_updated'))
+                    state.last_time = int(data.get('last_updated'))
+                    logger.info(f"\n\tstate.last_time: {datetime.fromtimestamp(state.last_time)}")
                     # spin_queue.put((None, None, None, True)) # test spin on data not working
                     # alert_queue.put("new data")
                     data_queue.put(data)
@@ -2757,13 +2815,14 @@ if __name__ == "__main__":
                 
                 # Wait for data (block until something arrives)
                 data = data_queue.get(timeout=1)
-
+                
                 parsed_data = extract_game_data(data)
                 all_data = load_previous_data()
                 previous_data = all_data.get(game.lower())
                 compare_data(previous_data, parsed_data)
                 all_data[game.lower()] = parsed_data
                 save_current_data(all_data)
+                create_time_log(all_data)
 
                 alert_queue.put(re.sub(r"\s*\(.*?\)", "", game))
                 alert_queue.put("break_out") if state.is_breakout else None

@@ -20,7 +20,7 @@ app = FastAPI()
 # ──────────────
 
 REQUEST_FROMS = ["H5", "H6"]
-POLL_INTERVAL = 10
+# POLL_INTERVAL = 3
 
 # ──────────────
 # DATA MODELS
@@ -62,87 +62,102 @@ async def poller_loop():
 
     async with httpx.AsyncClient(timeout=5.0) as client:
         while True:
-            if not registrations:
-                print(f"\n⚠️  {DGRY}No games registered. Waiting...{RES}\n")
-            else:
-                for name, reg in registrations.items():
-                    url = reg["url"]
-                    provider = reg["manuf"]
-
-                    requestFrom = REQUEST_FROMS[rf_index]
-                    rf_index = (rf_index + 1) % len(REQUEST_FROMS)
-
-                    user_agent = random.choice(USER_AGENTS)
-                    poll_url = f"{url}/api/games"
-
-                    if "Wild Ape" in name and "PG" in provider:
-                        name = f"{name.replace('x10000', '#3258')}" if "x10000" in name else f"{name}#3258"
-                    elif "Fortune Gems" in name or "Super Ace" in name:
-                        name = name.split("(", 1)[0].strip()
-
-                    params = {
-                        "name": name,
-                        "manuf": provider,
-                        "requestFrom": requestFrom
-                    }
-
-                    headers = {
-                        "Accept": "application/json",
-                        "User-Agent": user_agent
-                    }
-
-                    print(f"\n🕓  Polling {PROVIDERS.get(provider).color}{name}{RES} with requestFrom={WHTE}{requestFrom}{RES} UA={WHTE}{user_agent[:30]}{RES}\n")
-
-                    try:
-                        r = await client.get(poll_url, params=params, headers=headers)
-                        r.raise_for_status()
-                        json_data = r.json()
-                        data = json_data.get("data")
-
-                        if data and isinstance(data, list) and len(data) > 0:
-                            min10 = data[0].get("min10")
-                            if min10 is not None:
-                                key = (name, requestFrom)
-                                last_min10 = last_min10s.get(key)
-                                now_time = Decimal(str(time.time()))
-                                
-                                if min10 != last_min10:
-                                    if key in last_change_times:
-                                        interval = now_time - last_change_times[key]
-                                        print(f"\n✅  <{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%I')}{BWHTE}:{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%M')}{BWHTE}:{BLYEL}{datetime.fromtimestamp(float(now_time)).strftime('%S')}{datetime.fromtimestamp(float(now_time)).strftime('%f')[:3]}{RES}>[{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] Changed → {LYEL}{min10} ({LMAG}Δ {BLCYN}{interval}{RES}s)\n")
-                                    else:
-                                        print(f"\n✅  <{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%I')}{BWHTE}:{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%M')}{BWHTE}:{BLYEL}{datetime.fromtimestamp(float(now_time)).strftime('%S')}{datetime.fromtimestamp(float(now_time)).strftime('%f')[:3]}{RES}>[{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] First → {YEL}{min10}{RES}\n")
-
-                                    # prepare a new data object
-                                    new_data = json.loads(json.dumps(data[0]))
-                                    new_data["last_updated"] = float(now_time)
-
-                                    # calculate hash
-                                    hash_val = hashlib.md5(
-                                        json.dumps(new_data, sort_keys=True).encode()
-                                    ).hexdigest()
-
-                                    # save
-                                    latest_data[key] = new_data
-                                    last_min10s[key] = min10
-                                    last_change_times[key] = now_time
-                                    last_hashes[key] = hash_val
-
-                                else:
-                                    print(f"\n❌  <{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%I')}{BWHTE}:{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%M')}{BWHTE}:{BLYEL}{datetime.fromtimestamp(float(now_time)).strftime('%S')}{datetime.fromtimestamp(float(now_time)).strftime('%f')[:3]}{RES}>[{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] Still → {DGRY}{min10}{RES}\n")
-
-                        else:
-                            print(f"⚠️  <{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%I')}{BWHTE}:{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%M')}{BWHTE}:{BLYEL}{datetime.fromtimestamp(float(now_time)).strftime('%S')}{datetime.fromtimestamp(float(now_time)).strftime('%f')[:3]}{RES}>[{name} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] No data returned.")
-
-                    except Exception as e:
-                        print(f"⚠️  <{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%I')}{BWHTE}:{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%M')}{BWHTE}:{BLYEL}{datetime.fromtimestamp(float(now_time)).strftime('%S')}{datetime.fromtimestamp(float(now_time)).strftime('%f')[:3]}{RES}>[{name} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] Request error: {e}")
-
-            # align to next poll interval
             now = time.time()
-            next_t = ((int(now) // POLL_INTERVAL) + 1) * POLL_INTERVAL
-            sleep_time = next_t - now
-            print(f"\n⏳  Sleeping {LMAG}{sleep_time:.3f}{RES}s to align with next boundary...\n")
-            await asyncio.sleep(sleep_time)
+            current_sec = int(now) % 60
+            changed = False
+
+            # Only poll when current second ends in 8 or 9 or 0
+            if current_sec % 10 in (8, 9, 0, 1):
+                if not registrations:
+                    print(f"\n⚠️  {DGRY}No games registered. Waiting...{RES}\n")
+                else:
+                    for name, reg in registrations.items():
+                        url = reg["url"]
+                        provider = reg["manuf"]
+
+                        requestFrom = REQUEST_FROMS[rf_index]
+                        rf_index = (rf_index + 1) % len(REQUEST_FROMS)
+
+                        user_agent = random.choice(USER_AGENTS)
+                        poll_url = f"{url}/api/games"
+
+                        if "Wild Ape" in name and "PG" in provider:
+                            name = f"{name.replace('x10000', '#3258')}" if "x10000" in name else f"{name}#3258"
+                        elif "Fortune Gems" in name or "Super Ace" in name:
+                            name = name.split("(", 1)[0].strip()
+
+                        params = {
+                            "name": name,
+                            "manuf": provider,
+                            "requestFrom": requestFrom
+                        }
+
+                        headers = {
+                            "Accept": "application/json",
+                            "User-Agent": user_agent
+                        }
+
+                        print(f"\n🕓  Polling {PROVIDERS.get(provider).color}{name}{RES} with requestFrom={WHTE}{requestFrom}{RES} UA={WHTE}{user_agent[:30]}{RES}\n")
+
+                        try:
+                            r = await client.get(poll_url, params=params, headers=headers)
+                            r.raise_for_status()
+                            json_data = r.json()
+                            data = json_data.get("data")
+
+                            now_time = Decimal(str(time.time()))
+                            if data and isinstance(data, list) and len(data) > 0:
+                                min10 = data[0].get("min10")
+                                if min10 is not None:
+                                    key = (name, requestFrom)
+                                    last_min10 = last_min10s.get(key)
+
+                                    if min10 != last_min10:
+                                        last_min10 = min10
+                                        if key in last_change_times:
+                                            interval = now_time - last_change_times[key]
+                                            print(f"\n✅  <{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%I')}{BWHTE}:{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%M')}{BWHTE}:{BLYEL}{datetime.fromtimestamp(float(now_time)).strftime('%S')}{datetime.fromtimestamp(float(now_time)).strftime('%f')[:3]}{RES}>[{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] Changed → {LYEL}{min10} ({LMAG}Δ {BLCYN}{interval}{RES}s)\n")
+                                            changed = True
+                                        else:
+                                            print(f"\n✅  <{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%I')}{BWHTE}:{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%M')}{BWHTE}:{BLYEL}{datetime.fromtimestamp(float(now_time)).strftime('%S')}{datetime.fromtimestamp(float(now_time)).strftime('%f')[:3]}{RES}>[{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] First → {YEL}{min10}{RES}\n")
+
+                                        new_data = json.loads(json.dumps(data[0]))
+                                        new_data["last_updated"] = float(now_time)
+                                        hash_val = hashlib.md5(json.dumps(new_data, sort_keys=True).encode()).hexdigest()
+
+                                        latest_data[key] = new_data
+                                        last_min10s[key] = min10
+                                        last_change_times[key] = now_time
+                                        last_hashes[key] = hash_val
+
+                                    else:
+                                        print(f"\n❌  <{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%I')}{BWHTE}:{BYEL}{datetime.fromtimestamp(float(now_time)).strftime('%M')}{BWHTE}:{BLYEL}{datetime.fromtimestamp(float(now_time)).strftime('%S')}{datetime.fromtimestamp(float(now_time)).strftime('%f')[:3]}{RES}>[{PROVIDERS.get(provider).color}{name}{RES} | {WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] Still → {DGRY}{min10}{RES}\n")
+                                        changed = False
+                            else:
+                                print(f"⚠️  No data returned for [{name}]")
+                        except Exception as e:
+                            print(f"⚠️  Request error for [{name}]: {e}")
+
+                if not changed:
+                    print(f"\nChanged: {LBLU}{changed}{RES}")
+                    if current_sec % 10 == 1:
+                        print(f"\n⏳  Sleeping {LMAG}1s{RES} to re-check polling condition...\n")
+                        await asyncio.sleep(6)
+                else:
+                    print(f"\nChanged: {BLRED}{changed}{RES}")
+                    next_t = ((int(now) // 10) + 1) * 10
+                    sleep_time = next_t - now
+                    print(f"\n⏳  Sleeping {LMAG}{sleep_time:.3f}{RES}s to align with next boundary...\n")
+                    await asyncio.sleep(sleep_time)
+            else:
+                # next_t = ((int(now) // POLL_INTERVAL) + 1) * POLL_INTERVAL
+                # sleep_time = next_t - now
+                # print(f"\n⏳  Sleeping {LMAG}{sleep_time:.3f}{RES}s to align with next boundary...\n")
+                # await asyncio.sleep(sleep_time)
+                print(f"\n⏳  {DGRY}Waiting... current_sec={current_sec} not 0, 9, 8{RES}\n")
+                await asyncio.sleep(1)
+                # await asyncio.sleep(sleep_time)
+
 
 # ──────────────
 # LIFESPAN
