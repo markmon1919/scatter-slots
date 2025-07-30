@@ -745,7 +745,7 @@ def load_breakout_memory(game: str):
             return day_data.get(game.lower(), {"lowest_low": 0, "lowest_low_delta": 0, "highest_high": 0, "highest_high_delta": 0})
     return {"lowest_low": 0, "lowest_low_delta": 0, "highest_high": 0, "highest_high_delta": 0}
 
-def save_breakout_memory(game: str, lowest_low: float, lowest_low_delta: float):
+def save_breakout_memory(game: str, lowest_low: float, lowest_low_delta: float, highest_high: float, highest_high_delta: float):
     today = datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d")
     data = {}
 
