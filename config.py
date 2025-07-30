@@ -11,8 +11,7 @@ from collections import namedtuple
 #     return today if not countdown else timer_start
 
 LOG_LEVEL = ""#DEBUG"
-# BREAKOUT_FILE = "breakout_data.json"
-BREAKOUT_FILE = "breakout_data_test.json"
+BREAKOUT_FILE = "breakout_data.json"
 DATA_FILE = "previous_data.json"
 
 # === Screen Dimensions ===
