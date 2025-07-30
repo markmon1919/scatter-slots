@@ -37,8 +37,10 @@ class AutoState:
     # auto_play: bool = False
 
     breakout: dict = field(default_factory=dict)
-    is_breakout: bool = False
-    is_delta_breakout: bool = False
+    is_low_breakout: bool = False
+    is_low_delta_breakout: bool = False
+    is_high_breakout: bool = False
+    is_high_delta_breakout: bool = False
     is_reversal: bool = False
     is_reversal_potential: bool = False
     bet: int = 0
@@ -322,12 +324,18 @@ def compare_data(prev: dict, current: dict):
         
     current_jackpot = pct(current['jackpot_meter'])
     jackpot_bar = get_jackpot_bar(current_jackpot, current['color'])
-    is_breakout = False
-    is_breakout_delta = False
-    state.is_breakout = False
-    state.is_delta_breakout = False
+    is_low_breakout = False
+    is_low_breakout_delta = False
+    is_high_breakout = False
+    is_high_breakout_delta = False
+    state.is_low_breakout = False
+    state.is_low_delta_breakout = False
+    state.is_high_breakout = False
+    state.is_high_delta_breakout = False
     lowest_low = state.breakout["lowest_low"]
     lowest_low_delta = state.breakout["lowest_low_delta"]
+    highest_high = state.breakout["highest_high"]
+    highest_high_delta = state.breakout["highest_high_delta"]
 
     if prev and 'jackpot_meter' in prev:
         prev_jackpot = pct(prev['jackpot_meter'])
@@ -379,21 +387,39 @@ def compare_data(prev: dict, current: dict):
                     if lowest_low <= 0 and new_num < lowest_low:
                         lowest_low = round(new_num, 2)
                         state.breakout["lowest_low"] = lowest_low
-                        is_breakout = True
-                        state.is_breakout = True
-                        # alert_queue.put("break_out")
+                        is_low_breakout = True
+                        state.is_low_breakout = True
+                        # alert_queue.put("low_break_out")
                         updated = True
 
                     if lowest_low_delta <= 0 and delta < lowest_low_delta:
                         lowest_low_delta = round(delta, 2)
                         state.breakout["lowest_low_delta"] = lowest_low_delta
-                        is_breakout_delta = True
-                        state.is_delta_breakout = True
-                        # alert_queue.put("delta_break_out")
+                        is_low_breakout_delta = True
+                        state.is_low_delta_breakout = True
+                        # alert_queue.put("low_delta_break_out")
+                        updated = True
+
+                    if highest_high >= 0 and new_num > highest_high:
+                        highest_high = round(new_num, 2)
+                        state.breakout["highest_high"] = highest_high
+                        is_high_breakout = True
+                        state.is_high_breakout = True
+                        state.is_reversal_potential = True
+                        # alert_queue.put("high_break_out")
+                        updated = True
+
+                    if highest_high_delta >= 0 and delta > highest_high_delta:
+                        lowest_low_delta = round(delta, 2)
+                        state.breakout["highest_high_delta"] = highest_high_delta
+                        is_high_breakout_delta = True
+                        state.is_high_delta_breakout = True
+                        state.is_reversal_potential = True
+                        # alert_queue.put("high_delta_break_out")
                         updated = True
 
                     if updated:
-                        save_breakout_memory(game, lowest_low, lowest_low_delta)
+                        save_breakout_memory(game, lowest_low, lowest_low_delta, highest_high, highest_high_delta)
                 elif index == 1 and new_num_10m is not None and old_num_10m is not None and new_delta_10m is not None:
                     h10, h1 = pct(new_num_10m), pct(new_num)
                     ph10, ph1 = pct(old_num_10m), pct(old_num)
@@ -417,15 +443,23 @@ def compare_data(prev: dict, current: dict):
                     state.is_reversal_potential = False
 
                     # ✅ 1. Check for directional reversal: Strong signal
-                    # if (h10 < 0 < h1) or (h10 > 0 > h1):
-                    if h10 < 0 < h1 or h10 > 0 > h1:
+                    # optimize to add prev value h1 > 0 and h1 < ph1
+                    if ph10 > 0 and h10 < 0 and h1 > 0 and current['color'] == 'green':
                         trend.append("Reversal Potential")
+                        state.is_reversal_potential = True 
+                        score += 2
                         state.is_reversal_potential = True
-                        if current['color'] == 'green':
-                            # alert_queue.put("reversal potential")
-                            score += 2
-                        else:
-                            score -= 2
+                    elif ph10 < 0 and h10 > 0 and h1 < 0 and current['color'] == 'red':
+                        trend.append("Reversal Potential")
+                        score -= 2
+                    # if h10 < 0 < h1 or h10 > 0 > h1:
+                    #     trend.append("Reversal Potential")
+                    #     state.is_reversal_potential = True 
+                    #     if current['color'] == 'green':
+                    #         # alert_queue.put("reversal potential")
+                    #         score += 2
+                    #     else:
+                    #         score -= 3
 
                     # ✅ 2. Sharp shift in pull momentum: Medium-strong signal
                     # if abs(delta_shift_10m_1h) > 20:
@@ -643,8 +677,10 @@ def compare_data(prev: dict, current: dict):
         logger.info(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Decision [10m_1h]{RES}): {BMAG}{'Very Strong' if result.get('delta_shift_10m_1h') <= 50 else 'Strong' if result.get('delta_shift_10m_1h') <= 20 else 'Weak'}{RES} Bearish Pull Surge  🐻") if result.get('delta_shift_decision_10m_1h') else \
             logger.info(f"\t🧪 Delta{LMAG}Δ{RES} Shift ({DGRY}Decision [10m_1h]{RES}): {BMAG}{'Very Strong' if result.get('delta_shift_10m_1h') >= 50 else 'Strong' if result.get('delta_shift_10m_1h') >= 20 else 'Weak'}{RES} Bullish Pull Surge  🐂")
         
-        logger.info(f"\n\t⚡ Break Out: {RED if lowest_low < 0 else GRE}{lowest_low}{RES}{percent} {'✅' if is_breakout else '❌'}")
-        logger.info(f"\t⚡ Break Out Delta{LMAG}Δ{RES}: {RED if lowest_low_delta < 0 else GRE}{lowest_low_delta}{RES}{percent} {'✅' if is_breakout_delta else '❌'}")
+        logger.info(f"\n\t⚡ Lowest Low Break Out: {RED if lowest_low < 0 else GRE}{lowest_low}{RES}{percent} {'✅' if is_breakout else '❌'}")
+        logger.info(f"\t⚡ Lowest Low Break Out Delta{LMAG}Δ{RES}: {RED if lowest_low_delta < 0 else GRE}{lowest_low_delta}{RES}{percent} {'✅' if is_breakout_delta else '❌'}")
+        logger.info(f"\n\t⚡ Highest High Break Out: {RED if highest_high < 0 else GRE}{highest_high}{RES}{percent} {'✅' if is_breakout else '❌'}")
+        logger.info(f"\t⚡ Highest High Break Out Delta{LMAG}Δ{RES}: {RED if highest_high_delta < 0 else GRE}{highest_high_delta}{RES}{percent} {'✅' if is_breakout_delta else '❌'}")
 
     logger.info(f"\n\t\t{'💰 ' if current['color'] == 'red' else '⚠️ '}  {LYEL}Bet [{RES} {(BLNK) + (LRED if current['color'] == 'red' else LBLU)}{bet_level.upper()}{RES} {LYEL}]{RES}\n\n") if bet_level is not None else \
         logger.info("\n\t\t🚫  Don't Bet!  🚫\n\n")
@@ -706,8 +742,8 @@ def load_breakout_memory(game: str):
         with open(BREAKOUT_FILE, 'r') as f:
             data = json.load(f)
             day_data = data.get(today, {})
-            return day_data.get(game.lower(), {"lowest_low": 0, "lowest_low_delta": 0})
-    return {"lowest_low": 0, "lowest_low_delta": 0}
+            return day_data.get(game.lower(), {"lowest_low": 0, "lowest_low_delta": 0, "highest_high": 0, "highest_high_delta": 0})
+    return {"lowest_low": 0, "lowest_low_delta": 0, "highest_high": 0, "highest_high_delta": 0}
 
 def save_breakout_memory(game: str, lowest_low: float, lowest_low_delta: float):
     today = datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d")
@@ -722,7 +758,9 @@ def save_breakout_memory(game: str, lowest_low: float, lowest_low_delta: float):
 
     data[today][game.lower()] = {
         "lowest_low": lowest_low,
-        "lowest_low_delta": lowest_low_delta
+        "lowest_low_delta": lowest_low_delta,
+        "highest_high": highest_high,
+        "highest_high_delta": highest_high_delta
     }
 
     with open(BREAKOUT_FILE, 'w') as f:
@@ -1007,7 +1045,7 @@ def countdown_timer(seconds: int = 60):
     #     #             state.new_jackpot_val < state.prev_jackpot_val
     #     #             and state.new_10m < state.prev_10m
     #     #             and get_delta < state.prev_pull_delta
-    #     #         ) or state.is_breakout or state.is_delta_breakout or state.is_reversal or state.bet_lvl in ["max", "high"]
+    #     #         ) or state.is_low_breakout or state.is_low_delta_breakout or state.is_reversal or state.bet_lvl in ["max", "high"]
 
     #     #         if (
     #     #             get_delta <= -30
@@ -2825,8 +2863,10 @@ if __name__ == "__main__":
                 create_time_log(all_data)
 
                 alert_queue.put(re.sub(r"\s*\(.*?\)", "", game))
-                alert_queue.put("break_out") if state.is_breakout else None
-                alert_queue.put("delta_break_out") if state.is_delta_breakout else None
+                alert_queue.put("low_break_out") if state.is_low_breakout else None
+                alert_queue.put("low_delta_break_out") if state.is_low_delta_breakout else None
+                alert_queue.put("high_break_out") if state.is_high_breakout else None
+                alert_queue.put("high_delta_break_out") if state.is_high_delta_breakout else None
                 alert_queue.put("reversal potential") if state.is_reversal_potential and state.curr_color == 'green' else None
                 alert_queue.put("reversal!") if state.is_reversal else None
                 if state.bet_lvl is not None:

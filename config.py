@@ -92,6 +92,7 @@ GAME_CONFIGS = {
     "Golden Empire": GameConfig(False, True, True, None, False, True, "JILI"),
     "Golden Queen": GameConfig(False, True, True, None, False, True, "JILI"),
     "Ali Baba": GameConfig(False, True, True, None, False, True, "JILI"),
+    "Magic Lamp": GameConfig(False, True, True, None, False, True, "JILI"),
     "Aztec Priestess": GameConfig(False, True, True, None, False, True, "JILI"),
     "Legacy of Egypt": GameConfig(False, True, True, None, False, True, "JILI"),
     "Egypt's Glow": GameConfig(False, True, True, None, False, True, "JILI"),
@@ -184,6 +185,7 @@ GAME_CONFIGS = {
     "Power Fortune": GameConfig(False, True, True, None, False, True, "YB"),
     "Dragon Gems": GameConfig(False, True, True, None, False, True, "YB"),
     "Golden Aztec Mega": GameConfig(False, True, True, None, False, True, "YB"),
+    "Sugar Crush": GameConfig(False, True, True, None, False, True, "YB"),
     "Fortune Gems (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
     "Fortune Gems 2 (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
     "Fortune Gems 3 (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
@@ -207,6 +209,7 @@ PROVIDERS = {
     "R88": ProviderProps("R88", GRE),
     "RSG": ProviderProps("Royal Slot Gaming", RED),
     "CQ9": ProviderProps("CQ9", CYN),
+    "BNG": ProviderProps("BNG", BLCYN),
 }
 
 DEFAULT_PROVIDER_PROPS = ProviderProps(None, WHTE)
