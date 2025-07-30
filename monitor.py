@@ -384,7 +384,7 @@ def compare_data(prev: dict, current: dict):
 
                     updated = False
 
-                    if lowest_low < 0 and new_num < lowest_low:
+                    if lowest_low <= 0 and new_num < lowest_low:
                         lowest_low = round(new_num, 2)
                         state.breakout["lowest_low"] = lowest_low
                         is_low_breakout = True
@@ -392,7 +392,7 @@ def compare_data(prev: dict, current: dict):
                         # alert_queue.put("low_break_out")
                         updated = True
 
-                    if lowest_low_delta < 0 and delta < lowest_low_delta:
+                    if lowest_low_delta <= 0 and delta < lowest_low_delta:
                         lowest_low_delta = round(delta, 2)
                         state.breakout["lowest_low_delta"] = lowest_low_delta
                         is_low_breakout_delta = True
