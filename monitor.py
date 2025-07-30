@@ -2297,7 +2297,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     # signal = f"{LRED}⬇{RES}" if current_jackpot < prev_jackpot else f"{LGRE}⬆{RES}" if current_jackpot > prev_jackpot else f"{LCYN}◉{RES}"
                     # state.last_time = round(data.get('last_updated'))
                     state.last_time = int(data.get('last_updated'))
-                    logger.info(f"\n\tstate.last_time: {datetime.fromtimestamp(state.last_time)}")
+                    logger.debug(f"\n\tstate.last_time: {datetime.fromtimestamp(state.last_time)}")
                     # spin_queue.put((None, None, None, True)) # test spin on data not working
                     # alert_queue.put("new data")
                     data_queue.put(data)
