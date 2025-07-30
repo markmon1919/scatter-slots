@@ -410,7 +410,7 @@ def compare_data(prev: dict, current: dict):
                         updated = True
 
                     if highest_high_delta >= 0 and delta > highest_high_delta:
-                        lowest_low_delta = round(delta, 2)
+                        highest_high_delta_delta = round(delta, 2)
                         state.breakout["highest_high_delta"] = highest_high_delta
                         is_high_breakout_delta = True
                         state.is_high_delta_breakout = True
@@ -681,7 +681,7 @@ def compare_data(prev: dict, current: dict):
         logger.info(f"\t⚡ Lowest Low Break Out Delta{LMAG}Δ{RES}: {RED if lowest_low_delta < 0 else GRE}{lowest_low_delta}{RES}{percent} {'✅' if is_low_breakout_delta else '❌'}")
         logger.info(f"\n\t⚡ Highest High Break Out: {RED if highest_high < 0 else GRE}{highest_high}{RES}{percent} {'✅' if is_high_breakout else '❌'}")
         logger.info(f"\t⚡ Highest High Break Out Delta{LMAG}Δ{RES}: {RED if highest_high_delta < 0 else GRE}{highest_high_delta}{RES}{percent} {'✅' if is_high_breakout_delta else '❌'}")
-
+ 
     logger.info(f"\n\t\t{'💰 ' if current['color'] == 'red' else '⚠️ '}  {LYEL}Bet [{RES} {(BLNK) + (LRED if current['color'] == 'red' else LBLU)}{bet_level.upper()}{RES} {LYEL}]{RES}\n\n") if bet_level is not None else \
         logger.info("\n\t\t🚫  Don't Bet!  🚫\n\n")
 
