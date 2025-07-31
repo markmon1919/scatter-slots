@@ -189,7 +189,7 @@ GAME_CONFIGS = {
     "Fortune Gems (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
     "Fortune Gems 2 (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
     "Fortune Gems 3 (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
-    "Fortune Gems 4": GameConfig(False, True, True, None, False, True, "RSG"),
+    "Fortune Gems 4": GameConfig(False, True, True, None, False, False, "RSG"),
     "Super Ace 2": GameConfig(False, True, True, None, False, True, "RSG"),
     "Maya Gems": GameConfig(False, True, True, None, False, True, "R88"),
 }

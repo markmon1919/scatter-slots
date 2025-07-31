@@ -409,8 +409,8 @@ def compare_data(prev: dict, current: dict):
                         # alert_queue.put("high_break_out")
                         updated = True
 
-                    if highest_high_delta >= 0 and delta > highest_high_delta:
-                        highest_high_delta_delta = round(delta, 2)
+                    if highest_high_delta >= 0 and state.last_pull_delta > highest_high_delta:
+                        highest_high_delta_delta = round(state.last_pull_delta, 2)
                         state.breakout["highest_high_delta"] = highest_high_delta
                         is_high_breakout_delta = True
                         state.is_high_delta_breakout = True
@@ -835,6 +835,7 @@ def countdown_timer(seconds: int = 60):
                 alert_queue.put(f"{current_sec} spin!")
                 if (
                     (current_sec == 57 and time_left == 3) or
+                    (current_sec == 47 and time_left == 13) or
                     (current_sec == 17 and time_left == 43) or
                     (current_sec == 7 and time_left == 53) or
                     (
@@ -857,6 +858,7 @@ def countdown_timer(seconds: int = 60):
                     # if (current_sec == 56 and time_left == 4) or (current_sec != 56 and state.bet_lvl is not None and state.curr_color == 'red') or (current_sec != 56 and state.bear_score_inc and state.curr_color == 'red'):
                     if (
                         (current_sec == 56 and time_left == 4) or
+                        (current_sec == 46 and time_left == 14) or
                         (current_sec == 16 and time_left == 44) or
                         (current_sec == 6 and time_left == 54) or
                         (
@@ -880,6 +882,7 @@ def countdown_timer(seconds: int = 60):
                     # if (current_sec == 55 and time_left == 5) or (current_sec != 55 and state.bet_lvl is not None and state.curr_color == 'red') or (current_sec != 55 and state.bear_score_inc and state.curr_color == 'red'):
                     if (
                         (current_sec == 55 and time_left == 5) or
+                        (current_sec == 45 and time_left == 15) or
                         (current_sec == 15 and time_left == 45) or
                         (current_sec == 5 and time_left == 55) or
                         (
