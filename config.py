@@ -91,6 +91,8 @@ GAME_CONFIGS = {
     "Golden Joker": GameConfig(False, True, True, None, False, True, "JILI"),
     "Golden Empire": GameConfig(False, True, True, None, False, True, "JILI"),
     "Golden Queen": GameConfig(False, True, True, None, False, True, "JILI"),
+    "3 Lucky Piggy": GameConfig(False, True, True, None, False, True, "JILI"),
+    "Candy Baby": GameConfig(False, True, True, None, False, False, "JILI"),
     "Ali Baba": GameConfig(False, True, True, None, False, True, "JILI"),
     "Magic Lamp": GameConfig(False, True, True, None, False, True, "JILI"),
     "Aztec Priestess": GameConfig(False, True, True, None, False, True, "JILI"),

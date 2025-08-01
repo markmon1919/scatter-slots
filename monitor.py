@@ -37,6 +37,7 @@ class AutoState:
     # auto_play: bool = False
 
     breakout: dict = field(default_factory=dict)
+    neutralize: bool = False
     is_low_breakout: bool = False
     is_low_delta_breakout: bool = False
     is_high_breakout: bool = False
@@ -291,7 +292,7 @@ def compare_data(prev: dict, current: dict):
     banner_lines.insert(0, time_line_centered)
     banner = "\n\t".join(banner_lines)
     banner = "\t" + banner
-
+ 
     time_data = load_previous_time_data()
 
     if time_data and time_data.get('10m'):
@@ -324,6 +325,7 @@ def compare_data(prev: dict, current: dict):
         
     current_jackpot = pct(current['jackpot_meter'])
     jackpot_bar = get_jackpot_bar(current_jackpot, current['color'])
+    state.neutralize = False
     is_low_breakout = False
     is_low_breakout_delta = False
     is_high_breakout = False
@@ -336,7 +338,7 @@ def compare_data(prev: dict, current: dict):
     lowest_low_delta = state.breakout["lowest_low_delta"]
     highest_high = state.breakout["highest_high"]
     highest_high_delta = state.breakout["highest_high_delta"]
-
+ 
     if prev and 'jackpot_meter' in prev:
         prev_jackpot = pct(prev['jackpot_meter'])
         state.prev_jackpot_val = prev_jackpot
@@ -409,8 +411,8 @@ def compare_data(prev: dict, current: dict):
                         # alert_queue.put("high_break_out")
                         updated = True
 
-                    if highest_high_delta >= 0 and state.last_pull_delta > highest_high_delta:
-                        highest_high_delta_delta = round(state.last_pull_delta, 2)
+                    if highest_high_delta >= 0 and delta > highest_high_delta:
+                        highest_high_delta = round(delta, 2)
                         state.breakout["highest_high_delta"] = highest_high_delta
                         is_high_breakout_delta = True
                         state.is_high_delta_breakout = True
@@ -633,7 +635,7 @@ def compare_data(prev: dict, current: dict):
         pull_score = result.get('pull_score', 0)
         signal = f"{LRED}＋{RES}" if pull_score > state.prev_pull_score else f"{LGRE}－{RES}" if pull_score < state.prev_pull_score else f"{LCYN}＝{RES}"
         state.pull_score_inc = True if pull_score > state.prev_pull_score else False
-        state.prev_pull_score = pull_score
+        state.prev_pull_score  = pull_score
 
         if pull_score >= 8 and bet_level == "max":
             trend_strength = "💥💥💥  Extreme Pull"
@@ -656,6 +658,11 @@ def compare_data(prev: dict, current: dict):
 
         logger.info(f"\n\t💤 Pull Score: {BLCYN}{trend_strength} {DGRY}[ {BMAG}{pull_score} {DGRY}]{signal}")
         state.last_trend = f"{re.sub(r'[^\x00-\x7F]+', '', trend_strength)} score {pull_score}"
+
+        if pull_score == 0 and bear_score == 0:
+            alert_queue.put("Neutralize")
+            state.neutralize = True
+            logger.info(f"\t\t{LBLU}NEUTRALIZE{RES}")
 
         for idx, pull_trend in enumerate(result.get('pull_trend')):
             logger.info("\n\t💤 Pull Trend: ") if idx == 0 else None
