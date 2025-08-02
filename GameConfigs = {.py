@@ -1,5 +1,5 @@
 GameConfigs = {
-    # JILI
+    # Jili
     "3 Lucky Piggy": GameConfig(False, True, True, None, False, True, "JILI"),
     "Ali Baba": GameConfig(False, True, True, None, False, True, "JILI"),
     "Aztec Priestess": GameConfig(False, True, True, None, False, True, "JILI"),
@@ -45,8 +45,9 @@ GameConfigs = {
     "Super Ace Deluxe": GameConfig(False, True, True, None, False, False, "JILI"),
     "Super Ace II": GameConfig(False, True, True, None, False, False, "JILI"),
     "Super Ace Joker": GameConfig(False, True, True, None, False, False, "JILI"),
+    "Super Rich": GameConfig(False, True, True, None, False, True, "JILI"),
     "Wild Ace": GameConfig(False, True, True, None, False, False, "JILI"),
-    # PG
+    # PG Slots
     "Asgardian Rising": GameConfig(False, True, True, None, False, False, "PG"),
     "Captain's Bounty": GameConfig(False, True, True, None, False, False, "PG"),
     "Cocktail Nights": GameConfig(False, True, True, None, False, False, "PG"),
@@ -74,7 +75,7 @@ GameConfigs = {
     "Wild Fireworks": GameConfig(False, True, True, None, False, False, "PG"),
     "Wild Bounty Showdown": GameConfig(False, True, True, None, False, False, "PG"),
     "Yakuza Honor": GameConfig(False, True, True, None, False, False, "PG"),
-    # FC
+    # Fa Chai
     "Egypt Bonanza": GameConfig(True, True, True, None, False, False, "FC"),
     "Fortune Goddess": GameConfig(True, True, True, None, False, False, "FC"),
     "Gods Grant Fortune": GameConfig(True, True, True, None, False, False, "FC"),
@@ -89,7 +90,7 @@ GameConfigs = {
     "Lucky Diamond": GameConfig(False, True, True, True, True, True, "JDB"),
     "Magic Ace Wild Lock": GameConfig(False, True, True, True, True, True, "JDB"),
     "Wonder Elephant": GameConfig(False, True, True, True, True, True, "JDB"),
-    # PP
+    # Pragmatic Play
     "Buffalo King Untamed Megaways™": GameConfig(False, True, True, True, True, True, "PP"),
     "Gates of Gatot Kaca 1000": GameConfig(False, True, True, True, True, True, "PP"),
     "Gates of Olympus 1000": GameConfig(False, True, True, True, True, True, "PP"),
@@ -108,10 +109,10 @@ GameConfigs = {
     "Fortune Gems 3 (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
     # R88
     "Maya Gems": GameConfig(False, True, True, None, False, True, "R88"),
-    # RSG
+    # Royal Slot Gaming
     "Fortune Gems 4": GameConfig(False, True, True, None, False, False, "RSG"),
     "Super Ace 2": GameConfig(False, True, True, None, False, True, "RSG"),
-    # YB
+    # Yellow Bat
     "Dragon Gems": GameConfig(False, True, True, None, False, True, "YB"),
     "Golden Aztec Mega": GameConfig(False, True, True, None, False, True, "YB"),
     "Power Fortune": GameConfig(False, True, True, None, False, True, "YB"),

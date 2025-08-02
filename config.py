@@ -72,7 +72,7 @@ GameConfig = namedtuple("GameConfig", [
     "auto_play_menu", "widescreen", "provider"
 ])
 
-GameConfigs = {
+GAME_CONFIGS = {
     # Jili
     "3 Lucky Piggy": GameConfig(False, True, True, None, False, True, "JILI"),
     "Ali Baba": GameConfig(False, True, True, None, False, True, "JILI"),
@@ -99,6 +99,7 @@ GameConfigs = {
     "Golden Queen": GameConfig(False, True, True, None, False, True, "JILI"),
     "Jackpot Joker": GameConfig(False, True, True, None, False, True, "JILI"),
     "Jungle King": GameConfig(False, True, True, None, False, True, "JILI"),
+    "King Arthur": GameConfig(False, True, True, None, False, True, "JILI"),
     "Legacy of Egypt": GameConfig(False, True, True, None, False, True, "JILI"),
     "Lucky Coming": GameConfig(False, True, True, None, False, True, "JILI"),
     "Lucky Goldbricks": GameConfig(False, True, True, None, False, True, "JILI"),
