@@ -846,7 +846,7 @@ def countdown_timer(seconds: int = 60):
                     (current_sec == 17 and time_left == 43) or
                     (current_sec == 7 and time_left == 53) or
                     (
-                        current_sec not in (57, 17, 7) and
+                        current_sec not in (57, 47, 17, 7) and
                         state.curr_color == 'red' and state.bet_lvl is not None and
                         state.bear_score_inc and state.pull_score_inc
                     )
@@ -869,7 +869,7 @@ def countdown_timer(seconds: int = 60):
                         (current_sec == 16 and time_left == 44) or
                         (current_sec == 6 and time_left == 54) or
                         (
-                            current_sec not in (56, 16, 6) and
+                            current_sec not in (56, 46, 16, 6) and
                             state.curr_color == 'red' and state.bet_lvl is not None and
                             state.bear_score_inc and state.pull_score_inc
                         )
@@ -893,7 +893,7 @@ def countdown_timer(seconds: int = 60):
                         (current_sec == 15 and time_left == 45) or
                         (current_sec == 5 and time_left == 55) or
                         (
-                            current_sec not in (55, 15, 5) and
+                            current_sec not in (55, 45, 15, 5) and
                             state.curr_color == 'red' and state.bet_lvl is not None and
                             state.bear_score_inc and state.pull_score_inc
                         )
