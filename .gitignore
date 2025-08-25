@@ -80,3 +80,6 @@ dist/*
 **/*.log*
 **/.pnp/**
 **/.pnp.js/**
+
+# Others
+chrome_profile*
