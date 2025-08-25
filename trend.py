@@ -81,12 +81,8 @@ def play_alert(say: str=None):
             try:
                 say = alert_queue.get_nowait()
                 sound_file = (say)
-
-                if sound_file == "ping":
-                    subprocess.run(["afplay", PING])
-                else:
-                    voice = VOICES["Trinoids"] if "bet max" in sound_file or "bet high" in sound_file else VOICES["Samantha"]
-                    subprocess.run(["say", "-v", voice, "--", sound_file])
+                voice = VOICES["Trinoids"] if "bet max" in sound_file or "bet high" in sound_file else VOICES["Samantha"]
+                subprocess.run(["say", "-v", voice, "--", sound_file])
                     
             except Empty:
                 continue

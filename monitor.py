@@ -393,7 +393,7 @@ def compare_data(prev: dict, current: dict):
         logger.info(f"\n\t{jackpot_bar} {signal} {colored_time_data_jackpot_10m} {colored_time_data_jackpot_1h} {colored_time_data_jackpot_3h} {colored_time_data_jackpot_6h} {DGRY}History{RES}\n")
     else:
         logger.info(f"{banner}")
-        logger.info(f"\n\t🎰 {BWHTE}Helpslot Meter{RES}: {RED if fetch_data.get('meter') == "red" else GRE}{fetch_jackpot_value}{percent} ({bet_value})")
+        logger.info(f"\n\t🎰 {BWHTE}Helpslot Meter{RES}: {RED if fetch_data.get('meter') == "red" else GRE}{fetch_jackpot_value}{percent} ({bet_value}{RES})")
         logger.info(f"\n\t{jackpot_bar_helpslot} {helpslot_signal} {colored_fetch_data_history_10m} {colored_fetch_data_history_1h} {colored_fetch_data_history_3h} {colored_fetch_data_history_6h}")
         logger.info(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {RED if current['color'] == 'red' else GRE}{current_jackpot}{RES}{percent}")
         logger.info(f"\n\t{jackpot_bar} {LCYN}◉{RES} {colored_time_data_jackpot_10m} {colored_time_data_jackpot_1h} {colored_time_data_jackpot_3h} {colored_time_data_jackpot_6h} {DGRY}History{RES}\n")
@@ -821,12 +821,17 @@ def play_alert(say: str=None):
             try:
                 say = alert_queue.get_nowait()
                 sound_file = (say)
-                voice = VOICES["Trinoids"] if "bet max" in sound_file or "bet high" in sound_file else VOICES["Samantha"]
-                subprocess.run(["say", "-v", voice, "--", sound_file])
+
+                if sound_file == "ping":
+                    subprocess.run(["afplay", PING])
+                else:
+                    voice = VOICES["Trinoids"] if "bet max" in sound_file or "bet high" in sound_file else VOICES["Samantha"]
+                    subprocess.run(["say", "-v", voice, "--", sound_file])
+                    
             except Empty:
                 continue
             except Exception as e:
-                print(f"\n\t[Alert Thread Error] {e}")
+                logger.info(f"\n\t[Alert Thread Error] {e}")
     else:
         pass
 
@@ -2965,13 +2970,14 @@ if __name__ == "__main__":
     #     stop_event.set()  # Stop all threads
 
     # requests.post(f"http://{API_CONFIG.get('host')}:{API_CONFIG.get('port')}/deregister", json={'url': url, 'name': game, 'provider': provider})
-    requests.post(f"{api_server}/deregister", json={
-        'url': url,
-        'name': game,
-        'provider': provider
-    })
-    
-    if os.path.exists(DATA_FILE):
-        os.remove(DATA_FILE)
+    finally:
+        requests.post(f"{api_server}/deregister", json={
+            'url': url,
+            'name': game,
+            'provider': provider
+        })
+        
+        if os.path.exists(DATA_FILE):
+            os.remove(DATA_FILE)
 
-    logger.warning(f"\n\n\t🤖❌  {LYEL}All threads shut down...{RES}")
+        logger.warning(f"\n\n\t🤖❌  {LYEL}All threads shut down...{RES}")
