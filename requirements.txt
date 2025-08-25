@@ -1,4 +1,6 @@
 asyncio
+atexit
+bs4
 datetime
 fastapi[standard]
 httpx
@@ -6,4 +8,8 @@ logging
 pydantic
 pyautogui
 pyinstaller
+pynput
+requests
+selenium
 uvicorn[standard]
+webdriver-manager

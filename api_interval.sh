@@ -19,13 +19,13 @@ manuf="JILI"
 # ──────────────────────────────
 # ALIGN TO NEXT 10-SECOND MARK
 # ──────────────────────────────
-align_to_next_10s() {
-    now=$(date +%s)
-    next=$(( (now / 10 + 1) * 10 ))
-    wait_time=$(( next - now ))
-    echo "⏰ Waiting $wait_time seconds to align to next 10s mark..."
-    sleep "$wait_time"
-}
+# align_to_next_10s() {
+#     now=$(date +%s)
+#     next=$(( (now / 10 + 1) * 10 ))
+#     wait_time=$(( next - now ))
+#     echo "⏰ Waiting $wait_time seconds to align to next 10s mark..."
+#     sleep "$wait_time"
+# }
 
 poll_interval=10
 # min_poll=10
@@ -34,7 +34,7 @@ poll_interval=10
 echo "🔄 Starting aligned polling every ~10s..."
 
 # Initial alignment
-align_to_next_10s
+# align_to_next_10s
 
 last_min10=""
 last_change_time=""

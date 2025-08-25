@@ -1,91 +1,143 @@
-__author__ = 'MMM'
+#!/usr/bin/env .venv/bin/python
 
+import atexit, os, re, time, platform, shutil
+from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
-from pathlib import Path
-from datetime import datetime
-import sys, time
-
-class Jackpot():
-
-	def __init__(self):
-		self.website = 'https://www.helpslot.win/home'
-		self.homedir = Path.home()
-
-		if (sys.platform == 'linux'):
-			self.exec_path = Path('/usr').joinpath('bin').joinpath('google-chrome')
-			self.profile = self.homedir.joinpath('.config').joinpath('google-chrome').joinpath('Default')
-		if (sys.platform == 'darwin'):
-			self.exec_path = Path('/Applications').joinpath('Applications').joinpath('Google Chrome.app').joinpath('Contents').joinpath('MacOs').joinpath('Google Chrome')
-			self.profile = self.homedir.joinpath('Library').joinpath('Application Support').joinpath('Google').joinpath('Chrome').joinpath('Profile 1')
-		if (sys.platform == 'windows'):
-			self.exec_path = self.homedir.joinpath('AppData').joinpath('Local').joinpath('Google').joinpath('Chrome').joinpath('Application').joinpath('chrome.exe')
-			self.profile = self.homedir.joinpath('AppData').joinpath('Local').joinpath('Google').joinpath('Chrome').joinpath('User Data')
-		
-		options = Options()
-		# options.add_argument('--user-data-dir=' + str(self.profile))
-		options.add_argument("--no-sandbox")
-		options.add_argument("--disable-dev-shm-usage")
-		options.add_argument("--headless=new")
-		options.add_argument("--disable-popup-blocking")
-
-		if (sys.platform == 'linux' or sys.platform == 'darwin'):
-			self.browser = webdriver.Chrome(options = options, service = Service(ChromeDriverManager().install()))
-		else:
-			self.browser = webdriver.Chrome(options = options, service = Service(executable_path = self.exec_path))
-		
-		self.now = datetime.now()
-		print(self.now)
-		self.current_time = self.now.strftime("%H:%M")
-		self.start_shift = '14:55' # 2:55 PM
-		self.end_shift = '00:00' # 12:00 AM
-
-		self.get_data()
-
-	def get_data(self):
-
-		# target_game = "Fortune Gems 2"
-		target_game = "Super Ace"
-
-		try:
-		    game_elem = self.browser.find_element(
-		        By.XPATH,
-		        f"//div[@class='gameName' and normalize-space(text())='{target_game}']"
-		    )
-
-		    parent = game_elem.find_element(By.XPATH, "./..")
-
-		    jackpot_span = parent.find_element(By.CLASS_NAME, "jackpotPercentage").find_element(By.TAG_NAME, "span")
-		    jackpot_value = jackpot_span.text.strip()
-
-		    # history_percents = self.browser.find_elements(By.CSS_SELECTOR, ".historyDetails.percentage div")
-		    # ten_mins = history_percents[0].text
-		    # one_hr = history_percents[1].text
-		    # three_hrs = history_percents[2].text
-		    # six_hrs = history_percents[3].text
-
-		    # print(f"{ target_game }".upper())
-		    print(f"Jackpot: {jackpot_value}")
-		    # print(f"10 Mins: {ten_mins}")
-		    # print(f"1 Hr: {one_hr}")
-		    # print(f"3 Hrs: {three_hrs}")
-		    # print(f"6 Hrs: {six_hrs}")
-
-		except Exception as e:
-			print(f"[Error] Could not extract data for '{target_game}': {e}")
+from selenium.webdriver.common.by import By 
+from bs4 import BeautifulSoup
+from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS)
 
 
-if __name__ == '__main__':
-	print('\nJACKPOT')
-	print(f'\nCreated by: { __author__ }\n')
+def setup_driver(session_id: int, game: str):
+    options = Options()
+    if platform.system() != "Darwin" or os.getenv("IS_DOCKER") == "1":
+        options.binary_location = "/opt/google/chrome/chrome"
+        options.add_argument('--disable-dev-shm-usage')
 
-	Jackpot()
+    options.add_argument('--headless=new')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-gpu')
+    options.add_argument("--disable-logging")
+    options.add_argument("--log-level=3")
+    options.add_argument(f"--user-data-dir={os.getcwd()}/chrome_profile_{session_id}")
+    options.add_argument(f"--profile-directory=Profile_{game.lower()}")
 
-	print('\n\nDONE...!!!\n')
+    service = Service(shutil.which("chromedriver"))
+    return webdriver.Chrome(service=service, options=options)
 
+def fetch_html_via_selenium(driver: webdriver.Chrome, game: str, url: str, provider: str):
+    if "Wild Ape" in game and "PG" in provider:
+       game = f"{game.replace('x10000', '#3258')}" if "x10000" in game else f"{game}#3258"
+       
+    driver.get(url)
+    time.sleep(1)
+
+    search_box = driver.find_element(By.ID, "van-search-1-input")
+    search_box.send_keys(game)
+
+    if "helpslot" in url:
+        provider_items = driver.find_elements(By.CSS_SELECTOR, ".provider-item")
+
+        for item in provider_items:
+            try:
+                img_elem = item.find_element(By.CSS_SELECTOR, ".provider-icon img")
+                img_url = img_elem.get_attribute("src")
+
+                if PROVIDERS.get(provider).img_url in img_url.lower():
+                    item.click()
+                    break
+            except Exception:
+                continue
+
+    time.sleep(1)
+    return driver.page_source
+
+def extract_game_data(html: str, game: str, provider: str, driver=None):
+    soup = BeautifulSoup(html, "html.parser")
+    game_blocks = soup.select("div.game-list .game-block")
+    if not game_blocks:
+        return None
+
+    target_block = None
+    for block in game_blocks:
+        name_tag = block.find("div", class_="game-title")
+        if not name_tag:
+            continue
+
+        if "Wild Ape" in [ name_tag, game ] and "PG" in provider:
+            fixed = f"{game.replace('x10000', '#3258')}" if "x10000" in game else f"{game}#3258"
+            name_tag_clean = fixed
+            game_clean = fixed
+        else:
+            name_tag_clean = re.sub(r'\s+', '', name_tag.get_text(strip=True).lower())
+            game_clean = game.strip().replace(' ', '').lower()
+
+        if game_clean == name_tag_clean:
+            target_block = block
+            break
+
+    if not target_block:
+        return None
+
+    jackpot_value = None
+    progress_value = target_block.find("div", class_="progress-value")
+    if progress_value:
+        jackpot_value = progress_value.get_text(strip=True)
+
+    meter_color = None
+    if driver:
+        try:
+            progress_bar_elem = driver.find_element(By.CSS_SELECTOR,f"div.game-block:nth-of-type({game_blocks.index(target_block)+1}) .progress-bar")
+            bg = progress_bar_elem.value_of_css_property("background-color").lower()
+            meter_color = "red" if "255, 0, 0" in bg else "green"
+        except Exception as e:
+            print("Error checking meter color:", e)
+
+    history = {}
+    history_tags = target_block.select(".game-info-list .game-info-value")
+
+    if history_tags and len(history_tags) >= 4:
+        history = {
+            "10m": history_tags[0].get_text(strip=True),
+            "1h":  history_tags[1].get_text(strip=True),
+            "3h":  history_tags[2].get_text(strip=True),
+            "6h":  history_tags[3].get_text(strip=True)
+        }
+        
+    return {
+        "provider": provider,
+        "game": game,
+        "jackpot": jackpot_value,
+        "meter": meter_color,
+        "history": history
+    }
+
+def fetch_jackpot(provider: str, game: str, session_id: int = 1):
+    url = f"https://www.helpslot.win/helpSlot?manuf={provider}"
+    driver = setup_driver(session_id, game)
+    
+    try:
+        html = fetch_html_via_selenium(driver, game, url, provider)
+        data = extract_game_data(html, game, provider, driver=driver)
+        return data or {
+            "provider": provider,
+            "game": game,
+            "jackpot": None,
+            "meter": None,
+            "history": None,
+            "error": "Game not found"
+        }
+    except Exception as e:
+        return {
+            "provider": provider,
+            "game": game,
+            "jackpot": None,
+            "meter": None,
+            "history": None,
+            "error": str(e)
+        }
+    finally:
+        driver.quit()
+        atexit.register(driver.quit)

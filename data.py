@@ -147,7 +147,7 @@ async def poller_loop():
                     print(f"\nChanged: {BLRED}{changed}{RES}")
                     next_t = ((int(now) // 10) + 1) * 10
                     sleep_time = next_t - now
-                    print(f"\n⏳  Sleeping {LMAG}{sleep_time:.3f}{RES}s to align with next boundary...\n")
+                    print(f"\n⏳   Sleeping {LMAG}{sleep_time:.3f}{RES}s to align with next boundary...\n")
                     await asyncio.sleep(sleep_time)
             else:
                 # next_t = ((int(now) // POLL_INTERVAL) + 1) * POLL_INTERVAL
@@ -160,7 +160,7 @@ async def poller_loop():
 
 
 # ──────────────
-# LIFESPAN
+# LIFESPAN 
 # ──────────────
 
 @asynccontextmanager

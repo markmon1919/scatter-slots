@@ -178,9 +178,9 @@ GAME_CONFIGS = {
     "Wisdom of Athena 1000": GameConfig(False, True, True, True, True, True, "PP"),
     "Zeus vs Hades - Gods of War": GameConfig(False, True, True, True, True, True, "PP"),
     # JFF
-    "Fortune Gems (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
-    "Fortune Gems 2 (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
-    "Fortune Gems 3 (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
+    # "Fortune Gems (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
+    # "Fortune Gems 2 (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
+    # "Fortune Gems 3 (JFF)": GameConfig(False, True, True, None, False, True, "JFF"),
     # R88
     "Maya Gems": GameConfig(False, True, True, None, False, True, "R88"),
     # Royal Slot Gaming
@@ -196,23 +196,41 @@ GAME_CONFIGS = {
 
 DEFAULT_GAME_CONFIG = GameConfig(False, True, True, None, False, False, None)
 
-ProviderProps = namedtuple("ProviderProps", [ "provider", "color" ])
+ProviderProps = namedtuple("ProviderProps", [ "provider", "color", "img_url" ])
 
 PROVIDERS = {
-    "JILI": ProviderProps("Jili", LRED),
-    "FC": ProviderProps("Fa Chai", YEL),
-    "PG": ProviderProps("PG Slots", LCYN),
-    "PP": ProviderProps("Pragmatic Play", LMAG),
-    "JDB": ProviderProps("JDB", LBLU),
-    "YB": ProviderProps("Yellow Bat", LYEL),
-    "JFF": ProviderProps("JFF", MAG),
-    "R88": ProviderProps("R88", GRE),
-    "RSG": ProviderProps("Royal Slot Gaming", RED),
-    "CQ9": ProviderProps("CQ9", CYN),
-    "BNG": ProviderProps("BNG", BLCYN),
+    "JILI": ProviderProps("Jili", LRED, "41786877e5b48c0f35948ec66abdc1bd"),
+    "PG": ProviderProps("PG Slots", LCYN, "02ee299d177a5a4f39645cf0392243b0"),
+    "FC": ProviderProps("Fa Chai", YEL, "25bd8e424761c1572da6d990e8515e52"),
+    "PP": ProviderProps("Pragmatic Play", LMAG, "aea0a2cbc715c3d2ce3d0e802361d859"),
+    "BNG": ProviderProps("BNG", BLCYN, "61ae92544fbe87d4271f20e29ca389a1"),
+    "JDB": ProviderProps("JDB", LBLU, "7594bb75a92e18ff81c7c8e1d65a6dad"),
+    "YB": ProviderProps("Yellow Bat", LYEL, "92ee026c472b91d14c61e38d32cce3eb"),
+    "CQ9": ProviderProps("CQ9", CYN, "cq9"),
+    "CEWIN": ProviderProps("CE Win", MAG, "abf4cf415aa6292c7fca502425c987d5"),
+    "MW": ProviderProps("Mega Win", WHTE, "3bf4202ead643e783126554143bd52e0"),
+    "RSG": ProviderProps("Royal Slot Gaming", RED, "4ac8285dc8ba6fb336c5bafb3c10b246"),
+    "R88": ProviderProps("R88", GRE, "7a45dcd8865cc3922917682df217571a"),
+    "KA": ProviderProps("KA Gaming", WHTE, "50ea64224d3e6b76c68bdd6e39740661"),
+    "SG": ProviderProps("Spadegaming", WHTE, "027a3554136a9f4b03bbf92e25da6396"),
+    "NET": ProviderProps("NET Entertainment", WHTE, "2f61a64aa0e14422adf6334f52fc1bf0"),
+    "AMS": ProviderProps("Ask Me Slot", WHTE, "d9476193be84830ee6e05b7ebe3df5e6"),
+    "DS": ProviderProps("Dragoon Soft", WHTE, "001e5786030e25f207e329ed2a820c5d"),
+    "HSG": ProviderProps("Hacksaw Gaming", WHTE, "7b6c3cb2219792a230e1d022c6986cfc"),
+    "AMEBA": ProviderProps("AMEBA Entertainment", WHTE, "9be642a0e1d8a3a7c5e015d09f08adfe"),
+    "BTG": ProviderProps("BTG", WHTE, "7adfed5a9cd06a581eff167bfbadd630"),
+    "MEGA": ProviderProps("MEGA Entertainment", WHTE, "40d155acff304e642252f253993b126e"),
+    "DNA": ProviderProps("DNA Slot", WHTE, "a035b23795134651bcd27a923b7453f9"),
+    "WM": ProviderProps("World Match", WHTE, "f6823427a35f41b1a378ad050a676db8"),
+    "F": ProviderProps("5", WHTE, "014e6a00b1ff714d5e5cd44064d16f48"),
+    "NEXT": ProviderProps("Next Spin", WHTE, "6ad041e11133876eda65b5f993a66d4f"),
+    "RG": ProviderProps("Rich Game", WHTE, "133480bdccbc68ca1bc4cea932a0e8b7"),
+    "MAHA": ProviderProps("MAHA Gaming", WHTE, "fb40ff7da5ca4a8cbd1383d7d89c5b0f"),
+    "BT": ProviderProps("BT Gaming", WHTE, "78eaafcc8f8e8bf4716e5dcb416c1abb"),
+    # "JFF": ProviderProps("JFF", MAG, ""),
 }
 
-DEFAULT_PROVIDER_PROPS = ProviderProps(None, WHTE)
+DEFAULT_PROVIDER_PROPS = ProviderProps("Jili", WHTE, "41786877e5b48c0f35948ec66abdc1bd")
 
 URLS = [ "https://www.helpslot.win", "https://slimeserveahead.github.io/monitor" ]
 
