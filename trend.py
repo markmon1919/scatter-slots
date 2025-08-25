@@ -99,13 +99,15 @@ if __name__ == "__main__":
 
     data, request_from = get_game_data_from_local_api(provider)
     if data and "success" in data:
+        games_found = False
         parsed_data = extract_game_data(data.get('data'))
-        print(f'\n\t{DGRY}Checking Trend...{RES}\n')
+        print(f'\n\t{DGRY}Checking Trend...{RES} ({provider_color}{provider}{RES})\n')
         for name, value in sorted(parsed_data, key=lambda g: g[0]):
             # GET HELPSLOT METER TREND
             fetch_data = fetch_jackpot(provider, name, session_id=1)
-            if pct(fetch_data.get('jackpot')) >= 90:
+            if pct(fetch_data.get('jackpot')) >= 80:
                 print(f"\t{YEL}{name}{RES} {DGRY}→ {RED}{value}{RES}")
+                games_found = True
             else:
-                print(f"\t{BLRED}No Trending Games Found!{RES}")
+                print(f"\t{BLRED}No Trending Games Found!{RES}") if not games_found else None
                 break

@@ -1,2 +1,3 @@
-2025/08/25-20:32:04.017 6e0bac Creating DB /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_chocolate deluxe/shared_proto_db since it was missing.
-2025/08/25-20:32:04.025 6e0bac Reusing MANIFEST /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_chocolate deluxe/shared_proto_db/MANIFEST-000001
+2025/08/25-21:28:52.262 6f2cc6 Reusing MANIFEST /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_chocolate deluxe/shared_proto_db/MANIFEST-000001
+2025/08/25-21:28:52.262 6f2cc6 Recovering log #3
+2025/08/25-21:28:52.263 6f2cc6 Reusing old log /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_chocolate deluxe/shared_proto_db/000003.log 
