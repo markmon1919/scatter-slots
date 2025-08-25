@@ -100,6 +100,7 @@ if __name__ == "__main__":
         stop_event = threading.Event()
         alert_queue = ThQueue()
         alert_thread = threading.Thread(target=play_alert, daemon=True)
+        alert_thread.start()
 
         while True:
             try:
@@ -109,6 +110,7 @@ if __name__ == "__main__":
                     provider_name = providers[choice - 1][1].provider
                     provider_color = providers[choice - 1][1].color
                     print(f"\n\tSelected: {provider_color}{provider_name}{RES}")
+                    alert_queue.put(provider_name)
                     break
                 else:
                     print("\t⚠️  Invalid choice. Try again.")
@@ -121,15 +123,19 @@ if __name__ == "__main__":
             percent = f"{LGRY}%{RES}"
             parsed_data = extract_game_data(data.get('data'))
             print(f'\n\t{LGRY}Checking Trend{BLNK}...{RES} ({provider_color}{provider}{RES})\n')
+            
             for name, value in sorted(parsed_data, key=lambda g: g[0]):
                 # GET HELPSLOT METER TREND
                 fetch_data = fetch_jackpot(provider, name, session_id=1)
                 if pct(fetch_data.get('jackpot')) >= 80:
-                    print(f"\t🔥  {YEL}{name}{RES} {DGRY}→ {RED}{value}{RES}{percent} ({RED}{pct(fetch_data.get('jackpot'))}{RES}{percent} {DGRY}Helpslot{RES})")
                     games_found = True
+                    print(f"\t🔥  {YEL}{name}{RES} {DGRY}→ {RED}{value}{RES}{percent} ({RED}{pct(fetch_data.get('jackpot'))}{RES}{percent} {DGRY}Helpslot{RES})")
+                    alert_queue.put(re.sub(r"\s*\(.*?\)", "", name))
                 else:
                     print(f"\n\t🚫 {BLRED}No Trending Games Found !\n{RES}") if not games_found else None
+                    alert_queue.put("No Trending Games Found")
                     break
     except KeyboardInterrupt:
         print(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
         stop_event.set()
+        
