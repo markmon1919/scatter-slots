@@ -387,13 +387,13 @@ def compare_data(prev: dict, current: dict):
         diff = f"({YEL}Prev{DGRY}:{RES} {GRE}{prev_jackpot}{RES}{percent}{DGRY}, {LMAG}Δ{DGRY}: {sign}{colored_delta}{percent})"
 
         logger.info(f"{banner}")
-        logger.info(f"\n\t🎰 {BWHTE}Helpslot Meter{RES}: {RED if fetch_data.get('meter') == "red" else GRE}{fetch_jackpot_value}{percent} ({DGRY}Bet {bet_value}{RES})")
+        logger.info(f"\n\t🎰 {BWHTE}Helpslot Meter{RES}: {RED if fetch_data.get('meter') == "red" else GRE}{fetch_jackpot_value}{percent} ({bet_value})")
         logger.info(f"\n\t{jackpot_bar_helpslot} {helpslot_signal} {colored_fetch_data_history_10m} {colored_fetch_data_history_1h} {colored_fetch_data_history_3h} {colored_fetch_data_history_6h}")
         logger.info(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {RED if current_jackpot < prev_jackpot else GRE}{current_jackpot}{percent} {diff}")
         logger.info(f"\n\t{jackpot_bar} {signal} {colored_time_data_jackpot_10m} {colored_time_data_jackpot_1h} {colored_time_data_jackpot_3h} {colored_time_data_jackpot_6h} {DGRY}History{RES}\n")
     else:
         logger.info(f"{banner}")
-        logger.info(f"\n\t🎰 {BWHTE}Helpslot Meter{RES}: {RED if fetch_data.get('meter') == "red" else GRE}{fetch_jackpot_value}{percent} ({DGRY}Bet {bet_value}{RES})")
+        logger.info(f"\n\t🎰 {BWHTE}Helpslot Meter{RES}: {RED if fetch_data.get('meter') == "red" else GRE}{fetch_jackpot_value}{percent} ({bet_value})")
         logger.info(f"\n\t{jackpot_bar_helpslot} {helpslot_signal} {colored_fetch_data_history_10m} {colored_fetch_data_history_1h} {colored_fetch_data_history_3h} {colored_fetch_data_history_6h}")
         logger.info(f"\n\t🎰 {BLMAG}Jackpot Meter{RES}: {RED if current['color'] == 'red' else GRE}{current_jackpot}{RES}{percent}")
         logger.info(f"\n\t{jackpot_bar} {LCYN}◉{RES} {colored_time_data_jackpot_10m} {colored_time_data_jackpot_1h} {colored_time_data_jackpot_3h} {colored_time_data_jackpot_6h} {DGRY}History{RES}\n")
