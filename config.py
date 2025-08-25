@@ -222,7 +222,7 @@ PROVIDERS = {
     "MEGA": ProviderProps("MEGA Entertainment", WHTE, "40d155acff304e642252f253993b126e"),
     "DNA": ProviderProps("DNA Slot", WHTE, "a035b23795134651bcd27a923b7453f9"),
     "WM": ProviderProps("World Match", WHTE, "f6823427a35f41b1a378ad050a676db8"),
-    "F": ProviderProps("5", WHTE, "014e6a00b1ff714d5e5cd44064d16f48"),
+    "FIVE": ProviderProps("5", WHTE, "014e6a00b1ff714d5e5cd44064d16f48"),
     "NEXT": ProviderProps("Next Spin", WHTE, "6ad041e11133876eda65b5f993a66d4f"),
     "RG": ProviderProps("Rich Game", WHTE, "133480bdccbc68ca1bc4cea932a0e8b7"),
     "MAHA": ProviderProps("MAHA Gaming", WHTE, "fb40ff7da5ca4a8cbd1383d7d89c5b0f"),
