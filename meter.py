@@ -19,6 +19,7 @@ def setup_driver(session_id: int, game: str):
     options.add_argument('--headless=new')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-gpu')
+    options.add_argument('--blink-settings=imagesEnabled=false')  # Disable images
     options.add_argument("--disable-logging")
     options.add_argument("--log-level=3")
     options.add_argument(f"--user-data-dir={os.getcwd()}/chrome_profile_{session_id}")
