@@ -1,6 +1,6 @@
 #!/usr/bin/env .venv/bin/python
 
-import json, platform, random, re, requests, subprocess, threading
+import json, platform, random, re, requests, subprocess, threading, time
 from queue import Queue as ThQueue, Empty
 from meter import fetch_jackpot
 from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, BLNK, BLCYN, BLRED, BWHTE, DGRY, LGRY, MAG, RED, YEL, WHTE, CLEAR, RES)
@@ -62,7 +62,7 @@ def get_game_data_from_local_api(provider: str):
 
 def extract_game_data(data: list) -> dict:
     if data and isinstance(data, list) and len(data) > 0:
-        trending_games = [(game['name'], game['value']) for game in data if game['value'] >= 80]
+        trending_games = [(game['name'], game['value']) for game in data if game['value'] >= 90]
         return trending_games
 
 def pct(p):
@@ -117,24 +117,32 @@ if __name__ == "__main__":
             except ValueError:
                 print("\t⚠️  Please enter a valid number.")
 
-        data, request_from = get_game_data_from_local_api(provider)
-        if data and "success" in data:
+        while True:
+            data, request_from = get_game_data_from_local_api(provider)
             games_found = False
             percent = f"{LGRY}%{RES}"
-            parsed_data = extract_game_data(data.get('data'))
-            print(f'\n\t{LGRY}Checking Trend{BLNK}...{RES} ({provider_color}{provider}{RES})\n')
-            
-            for name, value in sorted(parsed_data, key=lambda g: g[0]):
-                # GET HELPSLOT METER TREND
-                fetch_data = fetch_jackpot(provider, name, session_id=1)
-                if pct(fetch_data.get('jackpot')) >= 80:
-                    games_found = True
-                    print(f"\t🔥  {YEL}{name}{RES} {DGRY}→ {RED}{value}{RES}{percent} ({RED}{pct(fetch_data.get('jackpot'))}{RES}{percent} {DGRY}Helpslot{RES})")
-                    alert_queue.put(re.sub(r"\s*\(.*?\)", "", name))
-                else:
-                    print(f"\n\t🚫 {BLRED}No Trending Games Found !\n{RES}") if not games_found else None
-                    alert_queue.put("No Trending Games Found") if not games_found else None
-                    break
+
+            if data and isinstance(data, dict) and "data" in data:
+                parsed_data = extract_game_data(data.get('data'))
+                print(f'\n\t{LGRY}Checking Trend{BLNK}...{RES} ({provider_color}{provider}{RES})\n')
+                
+                for name, value in sorted(parsed_data, key=lambda g: g[0]):
+                    fetch_data = fetch_jackpot(provider, name, session_id=1)
+                    if pct(fetch_data.get('jackpot')) >= 80:
+                        games_found = True
+                        print(f"\t🔥  {YEL}{name}{RES} {DGRY}→ {RED}{value}{RES}{percent} ({RED}{pct(fetch_data.get('jackpot'))}{RES}{percent} {DGRY}Helpslot{RES})")
+                        alert_queue.put(re.sub(r"\s*\(.*?\)", "", name))
+                
+                if not games_found:
+                    print(f"\n\t🚫 {BLRED}No Trending Games Found !\n{RES}")
+                    alert_queue.put("No Trending Games Found")
+
+            else:
+                print(f"\n\t❌ {BLRED}Error fetching data: {data}{RES}")
+
+            # Wait 30 seconds before the next check
+            time.sleep(5)
+
     except KeyboardInterrupt:
         print(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
         stop_event.set()
