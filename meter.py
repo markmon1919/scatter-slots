@@ -67,7 +67,7 @@ def extract_game_data(html: str, game: str, provider: str, driver=None):
         if not name_tag:
             continue
 
-        if "Wild Ape" in [ name_tag, game ] and "PG" in provider:
+        if "Wild Ape" in game and "PG" in provider:
             fixed = f"{game.replace('x10000', '#3258')}" if "x10000" in game else f"{game}#3258"
             name_tag_clean = fixed
             game_clean = fixed
@@ -86,7 +86,7 @@ def extract_game_data(html: str, game: str, provider: str, driver=None):
     progress_value = target_block.find("div", class_="progress-value")
     if progress_value:
         jackpot_value = progress_value.get_text(strip=True)
-
+        
     meter_color = None
     if driver:
         try:
@@ -116,7 +116,7 @@ def extract_game_data(html: str, game: str, provider: str, driver=None):
     }
 
 def fetch_jackpot(provider: str, game: str, session_id: int = 1):
-    url = f"https://www.helpslot.win/helpSlot?manuf={provider}"
+    url = f"https://www.helpslot.win"
     driver = setup_driver(session_id, game)
     
     try:
@@ -140,5 +140,6 @@ def fetch_jackpot(provider: str, game: str, session_id: int = 1):
             "error": str(e)
         }
     finally:
+        # time.sleep(10) # for debug
         driver.quit()
         atexit.register(driver.quit)
