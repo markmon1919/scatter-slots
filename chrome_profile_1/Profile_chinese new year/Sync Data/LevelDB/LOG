@@ -1,2 +1,3 @@
-2025/08/25-21:14:49.795 6ec83a Creating DB /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_chinese new year/Sync Data/LevelDB since it was missing.
-2025/08/25-21:14:49.804 6ec83a Reusing MANIFEST /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_chinese new year/Sync Data/LevelDB/MANIFEST-000001
+2025/08/25-21:40:57.883 6f7962 Reusing MANIFEST /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_chinese new year/Sync Data/LevelDB/MANIFEST-000001
+2025/08/25-21:40:57.883 6f7962 Recovering log #3
+2025/08/25-21:40:57.883 6f7962 Reusing old log /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_chinese new year/Sync Data/LevelDB/000003.log 

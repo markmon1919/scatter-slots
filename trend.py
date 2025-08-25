@@ -2,7 +2,7 @@
 
 import json, random, requests
 from meter import fetch_jackpot
-from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, BLCYN, BLRED, BWHTE, DGRY, MAG, RED, YEL, WHTE, RES)
+from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, BLNK, BLCYN, BLRED, BWHTE, DGRY, LGRY, MAG, RED, YEL, WHTE, RES)
 
 # # GET TRENDING BY PROVIDER (METER)
 # curl -sG --max-time 5 "https://www.helpslot.win/api/games" -H "Accept: application/json" --data-urlencode "manuf=PG" | jq -s '[.[].data[]] | sort_by(.name)[] | select(.value >= 90) | "\(.name) \(.value)"'
@@ -100,14 +100,15 @@ if __name__ == "__main__":
     data, request_from = get_game_data_from_local_api(provider)
     if data and "success" in data:
         games_found = False
+        percent = f"{LGRY}%{RES}"
         parsed_data = extract_game_data(data.get('data'))
-        print(f'\n\t{DGRY}Checking Trend...{RES} ({provider_color}{provider}{RES})\n')
+        print(f'\n\t{LGRY}Checking Trend{BLNK}...{RES} ({provider_color}{provider}{RES})\n')
         for name, value in sorted(parsed_data, key=lambda g: g[0]):
             # GET HELPSLOT METER TREND
             fetch_data = fetch_jackpot(provider, name, session_id=1)
             if pct(fetch_data.get('jackpot')) >= 80:
-                print(f"\t🔥  {YEL}{name}{RES} {DGRY}→ {RED}{value}{RES}")
+                print(f"\t🔥  {YEL}{name}{RES} {DGRY}→ {RED}{value}{RES}{percent} ({RED}{pct(fetch_data.get('jackpot'))}{RES}{percent} {DGRY}Helpslot{RES})")
                 games_found = True
             else:
-                print(f"\t{BLRED}No Trending Games Found!{RES}") if not games_found else None
+                print(f"\n\t🚫 {BLRED}No Trending Games Found !\n{RES}") if not games_found else None
                 break
