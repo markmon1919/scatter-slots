@@ -133,7 +133,7 @@ if __name__ == "__main__":
                     alert_queue.put(re.sub(r"\s*\(.*?\)", "", name))
                 else:
                     print(f"\n\t🚫 {BLRED}No Trending Games Found !\n{RES}") if not games_found else None
-                    alert_queue.put("No Trending Games Found")
+                    alert_queue.put("No Trending Games Found") if not games_found else None
                     break
     except KeyboardInterrupt:
         print(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
