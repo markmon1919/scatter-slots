@@ -212,7 +212,7 @@ PROVIDERS = {
     "RSG": ProviderProps("Royal Slot Gaming", RED, "4ac8285dc8ba6fb336c5bafb3c10b246"),
     "R88": ProviderProps("R88", GRE, "7a45dcd8865cc3922917682df217571a"),
     "KA": ProviderProps("KA Gaming", LGRY, "50ea64224d3e6b76c68bdd6e39740661"),
-    "SG": ProviderProps("Spadegaming", WHTE, "027a3554136a9f4b03bbf92e25da6396"),
+    "SG": ProviderProps("Spadegaming", LGRE, "027a3554136a9f4b03bbf92e25da6396"),
     "NET": ProviderProps("NET Entertainment", WHTE, "2f61a64aa0e14422adf6334f52fc1bf0"),
     "AMS": ProviderProps("Ask Me Slot", WHTE, "d9476193be84830ee6e05b7ebe3df5e6"),
     "DS": ProviderProps("Dragoon Soft", WHTE, "001e5786030e25f207e329ed2a820c5d"),
