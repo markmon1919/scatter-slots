@@ -143,3 +143,4 @@ def fetch_jackpot(provider: str, game: str, session_id: int = 1):
         # time.sleep(10) # for debug
         driver.quit()
         atexit.register(driver.quit)
+        

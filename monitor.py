@@ -2979,5 +2979,6 @@ if __name__ == "__main__":
         
         if os.path.exists(DATA_FILE):
             os.remove(DATA_FILE)
-
+            
         logger.warning(f"\n\n\t🤖❌  {LYEL}All threads shut down...{RES}")
+        
