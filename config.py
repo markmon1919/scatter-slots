@@ -63,9 +63,11 @@ LGRE='\033[92m'; LYEL='\033[93m'; LBLU='\033[94m'
 LMAG='\033[95m'; LCYN='\033[96m'; WHTE='\033[97m'
 BLNK='\033[5m'; NBLNK='\033[25m'; RES='\033[0m'
 BLRED = '\033[1;91m'; BLGRE = '\033[1;92m'; BLYEL = '\033[1;93m'
-BLMAG = '\033[1;95m'; BWHTE = '\033[1;97m'
-BLBLU = '\033[1;94m'; BLCYN = '\033[1;96m'; BMAG = '\033[1;35m'
-BYEL = '\033[1;33m'; BCYN = '\033[1;36m'; CLEAR = '\033[H\033[J'
+BRED = '\033[1;91m'; BMAG = '\033[1;35m'; BYEL = '\033[1;33m'
+BBLU = '\033[1;34m'; BGRE='\033[1;32m'; BCYN = '\033[1;36m' 
+BWHTE = '\033[1;97m'; BDGRY = '\033[1;90m'; BLGRY = '\033[1;37m'; 
+BLMAG = '\033[1;95m'; BLBLU = '\033[1;94m'; BLCYN = '\033[1;96m'
+CLEAR = '\033[H\033[J'
 
 GameConfig = namedtuple("GameConfig", [
     "spin", "auto_spin", "turbo", "feature",
@@ -203,30 +205,30 @@ PROVIDERS = {
     "PG": ProviderProps("PG Slots", LCYN, "02ee299d177a5a4f39645cf0392243b0"),
     "FC": ProviderProps("Fa Chai", YEL, "25bd8e424761c1572da6d990e8515e52"),
     "PP": ProviderProps("Pragmatic Play", LMAG, "aea0a2cbc715c3d2ce3d0e802361d859"),
-    "BNG": ProviderProps("BNG", BLCYN, "61ae92544fbe87d4271f20e29ca389a1"),
+    "BNG": ProviderProps("BNG", GRE, "61ae92544fbe87d4271f20e29ca389a1"),
     "JDB": ProviderProps("JDB", LBLU, "7594bb75a92e18ff81c7c8e1d65a6dad"),
     "YB": ProviderProps("Yellow Bat", LYEL, "92ee026c472b91d14c61e38d32cce3eb"),
     "CQ9": ProviderProps("CQ9", CYN, "cq9"),
     "CEWIN": ProviderProps("CE Win", MAG, "abf4cf415aa6292c7fca502425c987d5"),
-    "MW": ProviderProps("Mega Win", GRE, "3bf4202ead643e783126554143bd52e0"),
+    "MW": ProviderProps("Mega Win", BLU, "3bf4202ead643e783126554143bd52e0"),
     "RSG": ProviderProps("Royal Slot Gaming", RED, "4ac8285dc8ba6fb336c5bafb3c10b246"),
     "R88": ProviderProps("R88", DGRY, "7a45dcd8865cc3922917682df217571a"),
-    "KA": ProviderProps("KA Gaming", LGRY, "50ea64224d3e6b76c68bdd6e39740661"),
-    "SG": ProviderProps("Spadegaming", LGRE, "027a3554136a9f4b03bbf92e25da6396"),
-    "NET": ProviderProps("NET Entertainment", WHTE, "2f61a64aa0e14422adf6334f52fc1bf0"),
-    "AMS": ProviderProps("Ask Me Slot", WHTE, "d9476193be84830ee6e05b7ebe3df5e6"),
-    "DS": ProviderProps("Dragoon Soft", WHTE, "001e5786030e25f207e329ed2a820c5d"),
-    "HSG": ProviderProps("Hacksaw Gaming", WHTE, "7b6c3cb2219792a230e1d022c6986cfc"),
-    "AMEBA": ProviderProps("AMEBA Entertainment", WHTE, "9be642a0e1d8a3a7c5e015d09f08adfe"),
-    "BTG": ProviderProps("BTG", WHTE, "7adfed5a9cd06a581eff167bfbadd630"),
-    "MEGA": ProviderProps("MEGA Entertainment", WHTE, "40d155acff304e642252f253993b126e"),
-    "DNA": ProviderProps("DNA Slot", WHTE, "a035b23795134651bcd27a923b7453f9"),
-    "WM": ProviderProps("World Match", WHTE, "f6823427a35f41b1a378ad050a676db8"),
-    "FIVE": ProviderProps("5", WHTE, "014e6a00b1ff714d5e5cd44064d16f48"),
-    "NEXT": ProviderProps("Next Spin", WHTE, "6ad041e11133876eda65b5f993a66d4f"),
-    "RG": ProviderProps("Rich Game", WHTE, "133480bdccbc68ca1bc4cea932a0e8b7"),
-    "MAHA": ProviderProps("MAHA Gaming", WHTE, "fb40ff7da5ca4a8cbd1383d7d89c5b0f"),
-    "BT": ProviderProps("BT Gaming", WHTE, "78eaafcc8f8e8bf4716e5dcb416c1abb"),
+    "KA": ProviderProps("KA Gaming", LGRE, "50ea64224d3e6b76c68bdd6e39740661"),
+    "SG": ProviderProps("Spadegaming", LGRY, "027a3554136a9f4b03bbf92e25da6396"),
+    "NET": ProviderProps("NET Entertainment", BDGRY, "2f61a64aa0e14422adf6334f52fc1bf0"),
+    "AMS": ProviderProps("Ask Me Slot", BGRE, "d9476193be84830ee6e05b7ebe3df5e6"),
+    "DS": ProviderProps("Dragoon Soft", BRED, "001e5786030e25f207e329ed2a820c5d"),
+    "HSG": ProviderProps("Hacksaw Gaming", BBLU, "7b6c3cb2219792a230e1d022c6986cfc"),
+    "AMEBA": ProviderProps("AMEBA Entertainment",BMAG, "9be642a0e1d8a3a7c5e015d09f08adfe"),
+    "BTG": ProviderProps("BTG", BCYN, "7adfed5a9cd06a581eff167bfbadd630"),
+    "MEGA": ProviderProps("MEGA Entertainment", BYEL, "40d155acff304e642252f253993b126e"),
+    "DNA": ProviderProps("DNA Slot", BLGRY, "a035b23795134651bcd27a923b7453f9"),
+    "WM": ProviderProps("World Match", BLRED, "f6823427a35f41b1a378ad050a676db8"),
+    "FIVE": ProviderProps("5", BLCYN, "014e6a00b1ff714d5e5cd44064d16f48"),
+    "NEXT": ProviderProps("Next Spin", BLMAG, "6ad041e11133876eda65b5f993a66d4f"),
+    "RG": ProviderProps("Rich Game", BLYEL, "133480bdccbc68ca1bc4cea932a0e8b7"),
+    "MAHA": ProviderProps("MAHA Gaming", BWHTE, "fb40ff7da5ca4a8cbd1383d7d89c5b0f"),
+    "BT": ProviderProps("BT Gaming", BLGRE, "78eaafcc8f8e8bf4716e5dcb416c1abb"),
     # "JFF": ProviderProps("JFF", MAG, ""),
 }
 
