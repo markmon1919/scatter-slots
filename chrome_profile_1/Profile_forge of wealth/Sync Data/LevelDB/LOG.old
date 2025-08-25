@@ -1,2 +1,3 @@
-2025/08/25-20:32:20.526 6e0fb9 Creating DB /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_forge of wealth/Sync Data/LevelDB since it was missing.
-2025/08/25-20:32:20.538 6e0fb9 Reusing MANIFEST /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_forge of wealth/Sync Data/LevelDB/MANIFEST-000001
+2025/08/25-20:33:45.865 6e1ca4 Reusing MANIFEST /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_forge of wealth/Sync Data/LevelDB/MANIFEST-000001
+2025/08/25-20:33:45.865 6e1ca4 Recovering log #3
+2025/08/25-20:33:45.865 6e1ca4 Reusing old log /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_forge of wealth/Sync Data/LevelDB/000003.log 

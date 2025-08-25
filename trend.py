@@ -106,7 +106,7 @@ if __name__ == "__main__":
             # GET HELPSLOT METER TREND
             fetch_data = fetch_jackpot(provider, name, session_id=1)
             if pct(fetch_data.get('jackpot')) >= 80:
-                print(f"\t{YEL}{name}{RES} {DGRY}→ {RED}{value}{RES}")
+                print(f"\t🔥  {YEL}{name}{RES} {DGRY}→ {RED}{value}{RES}")
                 games_found = True
             else:
                 print(f"\t{BLRED}No Trending Games Found!{RES}") if not games_found else None
