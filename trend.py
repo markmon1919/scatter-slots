@@ -1,6 +1,6 @@
 #!/usr/bin/env .venv/bin/python
 
-import json, platform, random, requests, subprocess, threading
+import json, platform, random, re, requests, subprocess, threading
 from queue import Queue as ThQueue, Empty
 from meter import fetch_jackpot
 from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, BLNK, BLCYN, BLRED, BWHTE, DGRY, LGRY, MAG, RED, YEL, WHTE, CLEAR, RES)
