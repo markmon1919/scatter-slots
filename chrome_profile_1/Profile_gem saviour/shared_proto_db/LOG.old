@@ -1,2 +1,3 @@
-2025/08/25-21:19:28.414 6eea27 Creating DB /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_gem saviour/shared_proto_db since it was missing.
-2025/08/25-21:19:28.418 6eea27 Reusing MANIFEST /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_gem saviour/shared_proto_db/MANIFEST-000001
+2025/08/25-21:20:11.326 6ef29f Reusing MANIFEST /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_gem saviour/shared_proto_db/MANIFEST-000001
+2025/08/25-21:20:11.326 6ef29f Recovering log #3
+2025/08/25-21:20:11.326 6ef29f Reusing old log /Users/markmon1919/Projects/Mark/scatter-slots/chrome_profile_1/Profile_gem saviour/shared_proto_db/000003.log 

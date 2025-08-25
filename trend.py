@@ -2,15 +2,12 @@
 
 import json, random, requests
 from meter import fetch_jackpot
-from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, BLNK, BLCYN, BLRED, BWHTE, DGRY, LGRY, MAG, RED, YEL, WHTE, RES)
+from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, BLNK, BLCYN, BLRED, BWHTE, DGRY, LGRY, MAG, RED, YEL, WHTE, CLEAR, RES)
 
-# # GET TRENDING BY PROVIDER (METER)
-# curl -sG --max-time 5 "https://www.helpslot.win/api/games" -H "Accept: application/json" --data-urlencode "manuf=PG" | jq -s '[.[].data[]] | sort_by(.name)[] | select(.value >= 90) | "\(.name) \(.value)"'
-
-# # GET RED JACKPOT BY NAME (METER)
-# curl -sG --max-time 5 "https://www.helpslot.win/api/games" -H "Accept: application/json" --data-urlencode "name=Wild Ape #3258" | jq -s '[.[].data[]] | sort_by(.name)[] | select(.value >= 90) | "\(.name) \(.value)"'
 
 def render_providers():
+    print(f"\n\n\t📘 {MAG}SCATTER TREND CHECK{RES}\n\n")
+    
     providers = list(PROVIDERS.items())
     half = (len(providers) + 1) // 2
     lines = list()
@@ -79,8 +76,8 @@ def pct(p):
 
 
 if __name__ == "__main__":
-    print(f"\n\n\t📘 {MAG}SCATTER TREND CHECK{RES}\n\n")
     providers = list(PROVIDERS.items())
+    print(f"{CLEAR}", end="")
     print(render_providers())
         
     while True:
