@@ -127,7 +127,7 @@ if __name__ == "__main__":
                 parsed_data = extract_game_data(data.get('data'))
                 print(f'\n\t{LGRY}Checking Trend{BLNK}...{RES} ({provider_color}{provider}{RES})\n')
                 
-                for name, value, up in sorted(parsed_data, key=lambda g: g[1]):
+                for name, value, up in sorted(parsed_data, key=lambda g: g[1], reverse=True):
                     if "Wild Ape" in name and "PG" in provider:
                         name = f"{name.replace('#3258', '')}"
 
