@@ -130,7 +130,7 @@ if __name__ == "__main__":
                     if "Wild Ape" in name and "PG" in provider:
                         name = f"{name.replace('#3258', '')}"
 
-                    print(f"\tChecking Game >>> {name} {value} {up}") # DEBUG
+                    # print(f"\tChecking Game >>> {name} {value} {up}") # DEBUG
                     fetch_data = fetch_jackpot(provider, name, session_id=1)
                     if pct(fetch_data.get('jackpot')) >= 80:
                         games_found = True
