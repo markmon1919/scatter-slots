@@ -28,10 +28,7 @@ def setup_driver(session_id: int, game: str):
     service = Service(shutil.which("chromedriver"))
     return webdriver.Chrome(service=service, options=options)
 
-def fetch_html_via_selenium(driver: webdriver.Chrome, game: str, url: str, provider: str):
-    if "Wild Ape" in game and "PG" in provider:
-       game = f"{game.replace('x10000', '#3258')}" if "x10000" in game else f"{game}#3258"
-       
+def fetch_html_via_selenium(driver: webdriver.Chrome, game: str, url: str, provider: str):       
     driver.get(url)
     time.sleep(1)
 
@@ -67,14 +64,8 @@ def extract_game_data(html: str, game: str, provider: str, driver=None):
         if not name_tag:
             continue
 
-        if "Wild Ape" in game and "PG" in provider:
-            fixed = f"{game.replace('x10000', '#3258')}" if "x10000" in game else f"{game}#3258"
-            name_tag_clean = fixed
-            game_clean = fixed
-        else:
-            name_tag_clean = re.sub(r'\s+', '', name_tag.get_text(strip=True).lower())
-            game_clean = game.strip().replace(' ', '').lower()
-
+        name_tag_clean = re.sub(r'\s+', '', name_tag.get_text(strip=True).lower())
+        game_clean = game.strip().replace(' ', '').lower()
         if game_clean == name_tag_clean:
             target_block = block
             break
@@ -118,10 +109,14 @@ def extract_game_data(html: str, game: str, provider: str, driver=None):
 def fetch_jackpot(provider: str, game: str, session_id: int = 1):
     url = f"https://www.helpslot.win"
     driver = setup_driver(session_id, game)
-    
+
     try:
+        if "Wild Ape" in game and "PG" in provider:
+            game = f"{game.replace('x10000', '#3258')}" if "x10000" in game else f"{game}#3258"
+
         html = fetch_html_via_selenium(driver, game, url, provider)
         data = extract_game_data(html, game, provider, driver=driver)
+
         return data or {
             "provider": provider,
             "game": game,

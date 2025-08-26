@@ -127,6 +127,9 @@ if __name__ == "__main__":
                 print(f'\n\t{LGRY}Checking Trend{BLNK}...{RES} ({provider_color}{provider}{RES})\n')
                 
                 for name, value, up in sorted(parsed_data, key=lambda g: g[1]):
+                    if "Wild Ape" in name and "PG" in provider:
+                        name = f"{name.replace('#3258', '')}"
+
                     # print(f"Checking Game >>> {name} {value} {up}") # DEBUG
                     fetch_data = fetch_jackpot(provider, name, session_id=1)
                     if pct(fetch_data.get('jackpot')) >= 80:
@@ -144,8 +147,7 @@ if __name__ == "__main__":
                 print(f"\n\t❌ {BLRED}Error fetching data: {data}{RES}")
 
             # Wait 30 seconds before the next check
-            time.sleep(5)
-
+            time.sleep(3)
     except KeyboardInterrupt:
         print(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
         stop_event.set()
