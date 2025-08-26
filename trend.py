@@ -3,7 +3,7 @@
 import json, platform, random, re, requests, subprocess, threading, time
 from queue import Queue as ThQueue, Empty
 from meter import fetch_jackpot
-from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, BLNK, BLCYN, BLRED, BWHTE, DGRY, LGRY, MAG, RED, YEL, WHTE, CLEAR, RES)
+from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, BLNK, BLCYN, BLRED, BWHTE, DGRY, LGRY, LRED, LGRE, MAG, RED, GRE, YEL, WHTE, CLEAR, RES)
 
 
 def render_providers():
@@ -62,7 +62,7 @@ def get_game_data_from_local_api(provider: str):
 
 def extract_game_data(data: list) -> dict:
     if data and isinstance(data, list) and len(data) > 0:
-        trending_games = [(game['name'], game['value']) for game in data if game['value'] >= 90]
+        trending_games = [(game['name'], game['value'], game['up']) for game in data if game['value'] >= 80]
         return trending_games
 
 def pct(p):
@@ -126,11 +126,13 @@ if __name__ == "__main__":
                 parsed_data = extract_game_data(data.get('data'))
                 print(f'\n\t{LGRY}Checking Trend{BLNK}...{RES} ({provider_color}{provider}{RES})\n')
                 
-                for name, value in sorted(parsed_data, key=lambda g: g[0]):
+                for name, value, up in sorted(parsed_data, key=lambda g: g[0]):
                     fetch_data = fetch_jackpot(provider, name, session_id=1)
                     if pct(fetch_data.get('jackpot')) >= 80:
                         games_found = True
-                        print(f"\t🔥  {YEL}{name}{RES} {DGRY}→ {RED}{value}{RES}{percent} ({RED}{pct(fetch_data.get('jackpot'))}{RES}{percent} {DGRY}Helpslot{RES})")
+                        signal = f"{LRED}⬇{RES}" if not up else f"{LGRE}⬆{RES}"
+                        helpslot_signal = f"{LRED}⬇{RES}" if fetch_data.get('meter') == "red" else f"{LGRE}⬆{RES}"
+                        print(f"\t🔥  {YEL}{name}{RES} {DGRY}→ {signal} {RED if not up else GRE}{value}{RES}{percent} ({helpslot_signal} {RED if fetch_data.get('meter') == 'red' else GRE}{pct(fetch_data.get('jackpot'))}{RES}{percent} {DGRY}Helpslot{RES})")
                         alert_queue.put(re.sub(r"\s*\(.*?\)", "", name))
                 
                 if not games_found:

@@ -132,6 +132,7 @@ GAME_CONFIGS = {
     "Cocktail Nights": GameConfig(False, True, True, None, False, False, "PG"),
     "Cruise Royale": GameConfig(False, True, True, None, False, False, "PG"),
     "Crypto Gold": GameConfig(False, True, True, None, False, False, "PG"),
+    "Destiny of Sun & Moon": GameConfig(False, True, True, None, False, False, "PG"),
     "Diner Delights": GameConfig(False, True, True, None, False, False, "PG"),
     "Dragon Hatch": GameConfig(False, True, True, None, False, False, "PG"),
     "Dragon Hatch 2": GameConfig(False, True, True, None, False, False, "PG"),
@@ -153,9 +154,11 @@ GAME_CONFIGS = {
     "Museum Mystery": GameConfig(False, True, True, None, False, False, "PG"),
     "Oishi Delights": GameConfig(False, True, True, None, False, False, "PG"),
     "Queen of Bounty": GameConfig(False, True, True, None, False, False, "PG"),
+    "Raider Jane's Crypt of Fortune": GameConfig(False, True, True, None, False, False, "PG"),
     "Rise of Apollo": GameConfig(False, True, True, None, False, False, "PG"),
     "Songkran Splash": GameConfig(False, True, True, None, False, False, "PG"),
     "Super Golf Drive": GameConfig(False, True, True, None, False, False, "PG"),
+    "Speed Winner": GameConfig(False, True, True, None, False, False, "PG"),
     "Three Crazy Piggies": GameConfig(False, True, True, None, False, False, "PG"),
     "The Queen's Banquet": GameConfig(False, True, True, None, False, False, "PG"),
     "Ways of the Qilin": GameConfig(False, True, True, None, False, False, "PG"),
@@ -218,7 +221,7 @@ ProviderProps = namedtuple("ProviderProps", [ "provider", "color", "img_url" ])
 
 PROVIDERS = {
     "JILI": ProviderProps("Jili", LRED, "41786877e5b48c0f35948ec66abdc1bd"),
-    "PG": ProviderProps("PG Slots", LCYN, "02ee299d177a5a4f39645cf0392243b0"),
+    "PG": ProviderProps("Pocket Game Soft", LCYN, "02ee299d177a5a4f39645cf0392243b0"),
     "FC": ProviderProps("Fa Chai", YEL, "25bd8e424761c1572da6d990e8515e52"),
     "PP": ProviderProps("Pragmatic Play", LMAG, "aea0a2cbc715c3d2ce3d0e802361d859"),
     "BNG": ProviderProps("BNG", GRE, "61ae92544fbe87d4271f20e29ca389a1"),
