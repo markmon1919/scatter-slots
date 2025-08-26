@@ -62,7 +62,7 @@ def get_game_data_from_local_api(provider: str):
 
 def extract_game_data(data: list) -> dict:
     if data and isinstance(data, list) and len(data) > 0:
-        trending_games = [(game['name'], game['value'], game['up']) for game in data if game['value'] >= 80]
+        trending_games = [(game['name'], game['value'], game['up']) for game in data if game['value'] >= 90]
         return trending_games
 
 def pct(p):
@@ -126,7 +126,8 @@ if __name__ == "__main__":
                 parsed_data = extract_game_data(data.get('data'))
                 print(f'\n\t{LGRY}Checking Trend{BLNK}...{RES} ({provider_color}{provider}{RES})\n')
                 
-                for name, value, up in sorted(parsed_data, key=lambda g: g[0]):
+                for name, value, up in sorted(parsed_data, key=lambda g: g[1]):
+                    # print(f"Checking Game >>> {name} {value} {up}") # DEBUG
                     fetch_data = fetch_jackpot(provider, name, session_id=1)
                     if pct(fetch_data.get('jackpot')) >= 80:
                         games_found = True
