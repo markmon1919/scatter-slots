@@ -3,7 +3,7 @@
 import json, platform, random, re, requests, subprocess, threading, time
 from queue import Queue as ThQueue, Empty
 from meter import fetch_jackpot
-from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, BLNK, BLCYN, BLRED, BWHTE, DGRY, LGRY, LRED, LGRE, MAG, RED, GRE, YEL, WHTE, CLEAR, RES)
+from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, BLNK, BLCYN, BLRED, BWHTE, DGRY, LGRY, LRED, LGRE, LCYN, MAG, RED, GRE, YEL, WHTE, CLEAR, RES)
 
 
 def render_providers():
@@ -81,7 +81,7 @@ def play_alert(say: str=None):
             try:
                 say = alert_queue.get_nowait()
                 sound_file = (say)
-                voice = VOICES["Trinoids"] if "bet max" in sound_file or "bet high" in sound_file else VOICES["Samantha"]
+                voice = VOICES["Trinoids"] if "trending" in sound_file else VOICES["Samantha"]
                 subprocess.run(["say", "-v", voice, "--", sound_file])
                     
             except Empty:
@@ -120,6 +120,7 @@ if __name__ == "__main__":
         while True:
             data, request_from = get_game_data_from_local_api(provider)
             games_found = False
+            trending = False
             percent = f"{LGRY}%{RES}"
 
             if data and isinstance(data, dict) and "data" in data:
@@ -130,14 +131,17 @@ if __name__ == "__main__":
                     if "Wild Ape" in name and "PG" in provider:
                         name = f"{name.replace('#3258', '')}"
 
-                    # print(f"\t{DGRY}Checking Game Trend > {name} {value} {up}{RES}") # Uncomment to see Trend Scan
                     fetch_data = fetch_jackpot(provider, name, session_id=1)
+                    signal = f"{LRED}⬇{RES}" if not up else f"{LGRE}⬆{RES}"
+                    helpslot_signal = f"{LRED}⬇{RES}" if fetch_data.get('meter') == "red" else f"{LGRE}⬆{RES}"
                     if pct(fetch_data.get('jackpot')) >= 80:
                         games_found = True
-                        signal = f"{LRED}⬇{RES}" if not up else f"{LGRE}⬆{RES}"
-                        helpslot_signal = f"{LRED}⬇{RES}" if fetch_data.get('meter') == "red" else f"{LGRE}⬆{RES}"
-                        print(f"\t🔥  {YEL}{name}{RES} {DGRY}→ {signal} {RED if not up else GRE}{value}{RES}{percent} ({helpslot_signal} {RED if fetch_data.get('meter') == 'red' else GRE}{pct(fetch_data.get('jackpot'))}{RES}{percent} {DGRY}Helpslot{RES})")
-                        alert_queue.put(re.sub(r"\s*\(.*?\)", "", name))
+                        trending = True if (not up or value >= 95) and fetch_data.get('meter') == 'red' else False
+                        tag = f"💥💥💥 " if trending else "🔥 "
+                        print(f"\t{tag} {YEL}{name}{RES} {DGRY}→ {signal} {RED if not up else GRE}{value}{RES}{percent} ({helpslot_signal} {RED if fetch_data.get('meter') == 'red' else GRE}{pct(fetch_data.get('jackpot'))}{RES}{percent} {DGRY}Helpslot{RES})")
+                        alert_queue.put(f"{re.sub(r"\s*\(.*?\)", "", name), "trending" if trending else ""}")
+                    else:
+                        print(f"\t {LCYN}◉{RES}  {DGRY}Potential Game Trend: {YEL}{name}{RES} {DGRY}→ {signal} {RED if not up else GRE}{value}{RES}{percent} ({helpslot_signal} {RED if fetch_data.get('meter') == 'red' else GRE}{pct(fetch_data.get('jackpot'))}{RES}{percent} {DGRY}Helpslot{RES})")
                 
                 if not games_found:
                     print(f"\n\t🚫 {BLRED}No Trending Games Found !\n{RES}")
@@ -146,8 +150,7 @@ if __name__ == "__main__":
             else:
                 print(f"\n\t❌ {BLRED}Error fetching data: {data}{RES}")
 
-            # Wait 30 seconds before the next check
-            time.sleep(3)
+            time.sleep(1) # wait before the next check
     except KeyboardInterrupt:
         print(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
         stop_event.set()
