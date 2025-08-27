@@ -233,7 +233,7 @@ if __name__ == "__main__":
                         tag = "💥💥💥 " if trending else "🔥 "
                         signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
                         helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
-                        bet_value = f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}" if not game.get('up') else None
+                        bet_value = f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}" if not game.get('up') else 'Caution'
 
                         print(
                             f"\t{tag} {YEL}{clean_name}{RES} [{BLMAG}{bet_value.upper()}{RES}] {DGRY}→ {signal} "
