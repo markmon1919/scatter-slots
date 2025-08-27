@@ -58,7 +58,7 @@ def providers_list():
                 provider = providers[choice - 1][0]
                 provider_name = providers[choice - 1][1].provider
                 provider_color = providers[choice - 1][1].color
-                print(f"\n\tSelected: {provider_color}{provider_name}{RES}")
+                print(f"\n\tSelected: {provider_color}{provider_name}{RES}\n\n")
                 return provider, provider_name
             else:
                 print("\t⚠️  Invalid choice. Try again.")
@@ -166,6 +166,7 @@ def play_alert(alert_queue, stop_event):
                     say = alert_queue.get_nowait()
                     sound_file = (say)
                     voice = VOICES["Trinoids"] if "trending" in sound_file else VOICES["Samantha"]
+                    sound_file = say.replace("trending", "").strip()
                     subprocess.run(["say", "-v", voice, "--", sound_file])
                         
                 except Empty:
@@ -197,7 +198,7 @@ if __name__ == "__main__":
         alert_queue.put(provider_name)
 
         last_alerts = {}
-        ALERT_COOLDOWN = 10  # seconds
+        alert_cooldown = 5  # seconds
 
         while True:
             games_found = False
@@ -210,15 +211,28 @@ if __name__ == "__main__":
                     signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
                     helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
 
+                    potential_trend = (
+                        game.get('value') >= 95 and game.get('jackpot_value') >= 85
+                        and game.get('meter_color') == 'green'
+                    )
+
                     trending = (
-                        (not game.get('up') or game.get('value') >= 95)
+                        not game.get('up')
                         and game.get('meter_color') == 'red'
                     )
 
+                    # trending = (
+                    #     (not game.get('up') or (game.get('value') >= 95 and game.get('jackpot_value') >= 85))
+                    #     and game.get('meter_color') == 'red'
+                    # )
+
                     tag = "💥💥💥 " if trending else "🔥 "
 
-                    if trending:
+                    if trending or potential_trend:
                         games_found = True
+                        if "Wild Ape" in game and "PG" in provider:
+                            game = f"{game.replace('#3258', '')}"
+
                         clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
 
                         print(
@@ -228,8 +242,9 @@ if __name__ == "__main__":
                         )
 
                         now = time.time()
-                        if clean_name not in last_alerts or now - last_alerts[clean_name] > ALERT_COOLDOWN:
-                            alert_queue.put(f"{clean_name} trending")
+
+                        if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
+                            alert_queue.put(f"{clean_name} {'trending' if trending else ''}")
                             last_alerts[clean_name] = now
 
             if not games_found:
