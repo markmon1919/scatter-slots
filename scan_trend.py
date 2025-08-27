@@ -209,7 +209,7 @@ if __name__ == "__main__":
                 percent = f"{LGRY}%{RES}"
                 for game in data:
                     potential_trend = (
-                        game.get('value') >= 98 and game.get('jackpot_value') >= 88
+                        game.get('value') >= 90 and game.get('jackpot_value') >= 88
                         and game.get('meter_color') == 'red'
                     )
 
@@ -235,7 +235,7 @@ if __name__ == "__main__":
                         bet_value = f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}"
 
                         print(
-                            f"\t{tag} {YEL}{game.get('name')}{RES} [{BLMAG}{bet_value.upper()}{RES}] {DGRY}→ {signal} "
+                            f"\t{tag} {YEL}{clean_name}{RES} [{BLMAG}{bet_value.upper()}{RES}] {DGRY}→ {signal} "
                             f"{RED if not game.get('up') else GRE}{game.get('value')}{RES}{percent} "
                             f"({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})"
                         )
