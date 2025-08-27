@@ -251,6 +251,7 @@ if __name__ == "__main__":
             # if not games or len(games) == 0:
             #     print(f"\n\t🚫 {BLRED}No Trending Games Found !\n{RES}")
             #     break
+            print('\n')
             time.sleep(1)
         
     except KeyboardInterrupt:
