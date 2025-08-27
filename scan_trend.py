@@ -228,14 +228,14 @@ if __name__ == "__main__":
                         clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
                         if "Wild Ape" in clean_name and "PG" in provider:
                             clean_name = clean_name.replace("#3258", "").strip()
-                            
+
                         tag = "💥💥💥 " if trending else "🔥 "
                         signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
                         helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
                         bet_value = f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}"
 
                         print(
-                            f"\t{tag}  {YEL}{game.get('name')}{RES} [{BLMAG}{bet_value.upper()}{RES}] {DGRY}→ {signal} "
+                            f"\t{tag} {YEL}{game.get('name')}{RES} [{BLMAG}{bet_value.upper()}{RES}] {DGRY}→ {signal} "
                             f"{RED if not game.get('up') else GRE}{game.get('value')}{RES}{percent} "
                             f"({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})"
                         )
