@@ -220,11 +220,6 @@ if __name__ == "__main__":
                         game.get('meter_color') == 'red'
                     )
 
-                    # trending = (
-                    #     (not game.get('up') or (game.get('value') >= 95 and game.get('jackpot_value') >= 85))
-                    #     and game.get('meter_color') == 'red'
-                    # )
-
                     if trending or potential_trend:
                         games_found = True                            
                         clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
@@ -238,7 +233,7 @@ if __name__ == "__main__":
                         colored_value_1h = f"{RED if game.get('hr1') < 0 else GRE if game.get('hr1') > 0 else CYN}{game.get('hr1')}{RES}"
                         colored_value_3h = f"{RED if game.get('hr3') < 0 else GRE if game.get('hr3') > 0 else CYN}{game.get('hr3')}{RES}"
                         colored_value_6h = f"{RED if game.get('hr6') < 0 else GRE if game.get('hr6') > 0 else CYN}{game.get('hr6')}{RES}"
-                        # bet_value = f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}" if not game.get('up') else 'Caution'
+
                         bet_value = (
                             f"{'Bonus' if game.get('value') >= 97 and game.get('jackpot_value') >= 87 and game.get('meter_color') == 'red'
                             else 'High' if (game.get('value') >= 80 and not game.get('up')) or game.get('min10') <= -60
@@ -267,7 +262,6 @@ if __name__ == "__main__":
                 print(f"\t🚫 {BLRED}No Trending Games Found !{RES}")
                 alert_queue.put("No Trending Games Found")
 
-            print('\n')
             time.sleep(1)
 
     except KeyboardInterrupt:
