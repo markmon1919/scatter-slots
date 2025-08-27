@@ -6,7 +6,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By 
-from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, BLNK, BLCYN, BLRED, BWHTE, DGRY, LGRY, LRED, LGRE, LCYN, MAG, RED, GRE, YEL, WHTE, CLEAR, RES)
+from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, BLNK, BLCYN, BLMAG, BLRED, BWHTE, DGRY, LGRY, LRED, LGRE, LCYN, MAG, RED, GRE, YEL, WHTE, CLEAR, RES)
 
 def setup_driver():
     options = Options()
@@ -208,9 +208,6 @@ if __name__ == "__main__":
             if data:
                 percent = f"{LGRY}%{RES}"
                 for game in data:
-                    signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
-                    helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
-
                     potential_trend = (
                         game.get('value') >= 98 and game.get('jackpot_value') >= 88
                         and game.get('meter_color') == 'red'
@@ -231,9 +228,12 @@ if __name__ == "__main__":
                     if trending or potential_trend:
                         games_found = True                            
                         clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
+                        signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
+                        helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
+                        bet_value = f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}".upper()
 
                         print(
-                            f"\t{tag} {YEL}{game.get('name')}{RES} {DGRY}→ {signal} "
+                            f"\t{tag} [{BLMAG}{bet_value}{RES}] {YEL}{game.get('name')}{RES} {DGRY}→ {signal} "
                             f"{RED if not game.get('up') else GRE}{game.get('value')}{RES}{percent} "
                             f"({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})"
                         )
@@ -244,7 +244,7 @@ if __name__ == "__main__":
                             if "Wild Ape" in clean_name and "PG" in provider:
                                 clean_name = clean_name.replace("#3258", "").strip()
                             alert_queue.put(f"{clean_name} {'trending' if trending else ''}")
-                            alert_queue.put(f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}")
+                            alert_queue.put(bet_value)
                             last_alerts[clean_name] = now
 
             if not games_found:
