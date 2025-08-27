@@ -87,7 +87,7 @@ def play_alert(say: str=None):
             except Empty:
                 continue
             except Exception as e:
-                logger.info(f"\n\t[Alert Thread Error] {e}")
+                print(f"\n\t[Alert Thread Error] {e}")
     else:
         pass
 

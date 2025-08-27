@@ -2,7 +2,6 @@
 
 import atexit, json, os, platform, random, re, requests, shutil, subprocess, threading, time
 from queue import Queue as ThQueue, Empty
-# from meter import fetch_jackpot
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -84,33 +83,15 @@ def get_game_data_from_local_api(provider: str, games: list):
         if response.status_code == 200:
             try:
                 json_data = response.json()
-                # games = [g for g in json_data if g.get("name", 0) >= 90]
                 data = json_data.get("data", [])  # adjust key if needed
-                # high_values = [g for g in data if g.get("name") in games]
-                # ✅ dict for quick lookup
                 games_found = {g["name"]: g for g in games}
-                # print(f'GAMES FOUND >> {games_found}')
 
-                # # ✅ single-pass enrich
                 enriched = [
                     {**g,
                      "jackpot_value": games_found[g["name"]].get("value"),
                      "meter_color": games_found[g["name"]].get("up")}
                     for g in data if g.get("name") in games_found
                 ]
-
-                # print(f'ENRICHED JSON >> {enriched}')
-
-
-                # print(f'JSON DATA >> {data}')
-                # print(f'GAMES >> {games_found}')
-                # high_values = [
-                #     g for g in data
-                #     if float(str(g.get("value", 0)).replace("%", "")) >= 90
-                # ]
-
-                # ✅ if you also want only the ones present in your `games` list:
-                # if games:
             except ValueError:
                 print(f"❌ Server did not return JSON: {response.text}")
                 json_data = {"error": "Invalid JSON response"}
@@ -125,11 +106,6 @@ def get_game_data_from_local_api(provider: str, games: list):
     except Exception as e:
         print(f"❌ Error calling API: {e}")
         return {"error": str(e)}, REQUEST_FROM
-
-# def extract_game_data(data: list) -> dict:
-#     if data and isinstance(data, list) and len(data) > 0:
-#         trending_games = [(game['name'], game['value'], game['up']) for game in data if game['value'] >= 90]
-#         return trending_games
     
 def fetch_html_via_selenium(driver: webdriver.Chrome, url: str, provider: str):
     driver.get(url)
@@ -182,117 +158,91 @@ def pct(p):
     except (TypeError, ValueError):
         return 0.0
 
-def play_alert(say: str=None):
-    if platform.system() == "Darwin":
-        while not stop_event.is_set():
-            try:
-                say = alert_queue.get_nowait()
-                sound_file = (say)
-                voice = VOICES["Trinoids"] if "trending" in sound_file else VOICES["Samantha"]
-                subprocess.run(["say", "-v", voice, "--", sound_file])
-                    
-            except Empty:
-                continue
-            except Exception as e:
-                print(f"\n\t[Alert Thread Error] {e}")
-    else:
-        pass
+def play_alert(alert_queue, stop_event):
+    while not stop_event.is_set():
+        if platform.system() == "Darwin":
+            while not stop_event.is_set():
+                try:
+                    say = alert_queue.get_nowait()
+                    sound_file = (say)
+                    voice = VOICES["Trinoids"] if "trending" in sound_file else VOICES["Samantha"]
+                    subprocess.run(["say", "-v", voice, "--", sound_file])
+                        
+                except Empty:
+                    time.sleep(0.05)
+                except Exception as e:
+                    print(f"\n\t[Alert Thread Error] {e}")
+        else:
+            pass
+
 
 if __name__ == "__main__":
     try:
         driver = setup_driver()
         print(f"{CLEAR}", end="")
         print(render_providers())
+
         url = next((url for url in URLS if 'helpslot' in url), None)
         provider, provider_name = providers_list()
         html = fetch_html_via_selenium(driver, url, provider)
-        
+
         stop_event = threading.Event()
         alert_queue = ThQueue()
-        alert_thread = threading.Thread(target=play_alert, daemon=True)
+
+        # Start background alert worker for "non-trending" messages
+        alert_thread = threading.Thread(target=play_alert, args=(alert_queue, stop_event), daemon=True)
         alert_thread.start()
+
+        # Initial provider name sound
         alert_queue.put(provider_name)
+
+        last_alerts = {}
+        ALERT_COOLDOWN = 10  # seconds
 
         while True:
             games_found = False
             games = extract_game_data(html, provider, driver)
-            # print(f'GAMES >> {games}')
+            data = get_game_data_from_local_api(provider, games) if games else None
 
-            if games:
-                data = get_game_data_from_local_api(provider, games)
-            # signal = f"{LRED}⬇{RES}" if not up else f"{LGRE}⬆{RES}"
-            # helpslot_signal = f"{LRED}⬇{RES}" if fetch_data.get('meter') == "red" else f"{LGRE}⬆{RES}"
-
-
-            # if data and isinstance(data, dict) and "data" in data:
             if data:
                 percent = f"{LGRY}%{RES}"
                 for game in data:
                     signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
                     helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
-                    trending = True if (not game.get('up') or game.get('value') >= 95) and game.get('meter_color') == 'red' else False
-                    tag = f"💥💥💥 " if trending else "🔥 "
+
+                    trending = (
+                        (not game.get('up') or game.get('value') >= 95)
+                        and game.get('meter_color') == 'red'
+                    )
+
+                    tag = "💥💥💥 " if trending else "🔥 "
+
                     if trending:
                         games_found = True
-                        print(f"\t{tag} {YEL}{game.get('name')}{RES} {DGRY}→ {signal} {RED if not game.get('up') else GRE}{game.get('value')}{RES}{percent} ({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})")
-                        alert_queue.put(f"{re.sub(r"\s*\(.*?\)", "", game.get('name')), "trending" if trending else ""}")
+                        clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
+
+                        print(
+                            f"\t{tag} {YEL}{game.get('name')}{RES} {DGRY}→ {signal} "
+                            f"{RED if not game.get('up') else GRE}{game.get('value')}{RES}{percent} "
+                            f"({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})"
+                        )
+
+                        now = time.time()
+                        if clean_name not in last_alerts or now - last_alerts[clean_name] > ALERT_COOLDOWN:
+                            alert_queue.put(f"{clean_name} trending")
+                            last_alerts[clean_name] = now
 
             if not games_found:
                 print(f"\n\t🚫 {BLRED}No Trending Games Found !\n{RES}")
                 alert_queue.put("No Trending Games Found")
 
-            # if pct(fetch_data.get('jackpot')) >= 80:
-            # games_found = True
-            # trending = True if (not up or value >= 95) and fetch_data.get('meter') == 'red' else False
-            # tag = f"💥💥💥 " if trending else "🔥 "
-            # print(f"\t{tag} {YEL}{name}{RES} {DGRY}→ {signal} {RED if not up else GRE}{value}{RES}{percent} ({helpslot_signal} {RED if fetch_data.get('meter') == 'red' else GRE}{pct(fetch_data.get('jackpot'))}{RES}{percent} {DGRY}Helpslot{RES})")
-
-
-            # if not games or len(games) == 0:
-            #     print(f"\n\t🚫 {BLRED}No Trending Games Found !\n{RES}")
-            #     break
             print('\n')
             time.sleep(1)
-        
+
     except KeyboardInterrupt:
         print(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
         stop_event.set()
+
     finally:
         driver.quit()
         atexit.register(driver.quit)
-        
-
-        # while True:
-        #     data, request_from = get_game_data_from_local_api(provider)
-        #     games_found = False
-        #     trending = False
-        #     percent = f"{LGRY}%{RES}"
-
-        #     if data and isinstance(data, dict) and "data" in data:
-        #         parsed_data = extract_game_data(data.get('data'))
-        #         print(f'\n\t{LGRY}Checking Trend{BLNK}...{RES} ({provider_color}{provider}{RES})\n')
-                
-        #         for name, value, up in sorted(parsed_data, key=lambda g: g[1], reverse=True):
-        #             if "Wild Ape" in name and "PG" in provider:
-        #                 name = f"{name.replace('#3258', '')}"
-
-        #             fetch_data = fetch_jackpot(provider, name, session_id=1)
-        #             signal = f"{LRED}⬇{RES}" if not up else f"{LGRE}⬆{RES}"
-        #             helpslot_signal = f"{LRED}⬇{RES}" if fetch_data.get('meter') == "red" else f"{LGRE}⬆{RES}"
-        #             if pct(fetch_data.get('jackpot')) >= 80:
-        #                 games_found = True
-        #                 trending = True if (not up or value >= 95) and fetch_data.get('meter') == 'red' else False
-        #                 tag = f"💥💥💥 " if trending else "🔥 "
-        #                 print(f"\t{tag} {YEL}{name}{RES} {DGRY}→ {signal} {RED if not up else GRE}{value}{RES}{percent} ({helpslot_signal} {RED if fetch_data.get('meter') == 'red' else GRE}{pct(fetch_data.get('jackpot'))}{RES}{percent} {DGRY}Helpslot{RES})")
-        #                 alert_queue.put(f"{re.sub(r"\s*\(.*?\)", "", name), "trending" if trending else ""}")
-        #             else:
-        #                 print(f"\t {LCYN}◉{RES}  {DGRY}Potential Game Trend: {YEL}{name}{RES} {DGRY}→ {signal} {RED if not up else GRE}{value}{RES}{percent} ({helpslot_signal} {RED if fetch_data.get('meter') == 'red' else GRE}{pct(fetch_data.get('jackpot'))}{RES}{percent} {DGRY}Helpslot{RES})")
-                
-        #         if not games_found:
-        #             print(f"\n\t🚫 {BLRED}No Trending Games Found !\n{RES}")
-        #             alert_queue.put("No Trending Games Found")
-
-        #     else:
-        #         print(f"\n\t❌ {BLRED}Error fetching data: {data}{RES}")
-
-        #     time.sleep(1) # wait before the next check
