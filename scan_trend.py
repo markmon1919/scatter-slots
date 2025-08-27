@@ -6,7 +6,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By 
-from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, BLNK, BLCYN, BLMAG, BLRED, BWHTE, DGRY, LGRY, LRED, LGRE, LCYN, MAG, RED, GRE, YEL, WHTE, CLEAR, RES)
+from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, BLNK, BLCYN, BLMAG, BLRED, BWHTE, DGRY, LGRY, LRED, LGRE, LCYN, LYEL, CYN,  MAG, RED, GRE, YEL, WHTE, CLEAR, RES)
 
 def setup_driver():
     options = Options()
@@ -233,6 +233,10 @@ if __name__ == "__main__":
                         tag = "💥💥💥 " if trending else "🔥 "
                         signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
                         helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
+                        colored_value_10m = f"{RED if game.get('min10') < 0 else GRE if game.get('min10') > 0 else CYN}{game.get('min10')}{RES}"
+                        colored_value_1h = f"{RED if game.get('hr1') < 0 else GRE if game.get('hr1') > 0 else CYN}{game.get('hr1')}{RES}"
+                        colored_value_3h = f"{RED if game.get('hr3') < 0 else GRE if game.get('hr3') > 0 else CYN}{game.get('hr3')}{RES}"
+                        colored_value_6h = f"{RED if game.get('hr6') < 0 else GRE if game.get('hr6') > 0 else CYN}{game.get('hr6')}{RES}"
                         bet_value = f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}" if not game.get('up') else 'Caution'
 
                         print(
@@ -240,6 +244,8 @@ if __name__ == "__main__":
                             f"{RED if not game.get('up') else GRE}{game.get('value')}{RES}{percent} "
                             f"({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})"
                         )
+
+                        print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}: {colored_value_10m}{percent} {CYN}⏱{RES} {LYEL}1h{RES}: {colored_value_1h}{percent} {CYN}⏱{RES} {LYEL}3h{RES}: {colored_value_3h}{percent} {CYN}⏱{RES} {LYEL}6h{RES}: {colored_value_6h}{percent}")
 
                         now = time.time()
 
