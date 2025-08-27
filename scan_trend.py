@@ -264,7 +264,7 @@ if __name__ == "__main__":
                             last_alerts[clean_name] = now
 
             if not games_found:
-                print(f"\t🚫 {BLRED}No Trending Games Found !\n{RES}")
+                print(f"\t🚫 {BLRED}No Trending Games Found !{RES}")
                 alert_queue.put("No Trending Games Found")
 
             print('\n')
