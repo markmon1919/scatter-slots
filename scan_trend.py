@@ -245,8 +245,9 @@ if __name__ == "__main__":
 
                         if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
                             alert_queue.put(f"{clean_name} {'trending' if trending else ''}")
+                            alert_queue.put(f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else ''}")
                             last_alerts[clean_name] = now
-
+                            
             if not games_found:
                 print(f"\n\t🚫 {BLRED}No Trending Games Found !\n{RES}")
                 alert_queue.put("No Trending Games Found")
