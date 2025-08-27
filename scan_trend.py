@@ -245,7 +245,7 @@ if __name__ == "__main__":
                             f"({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})"
                         )
 
-                        print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}: {colored_value_10m}{percent} {CYN}⏱{RES} {LYEL}1h{RES}: {colored_value_1h}{percent} {CYN}⏱{RES} {LYEL}3h{RES}: {colored_value_3h}{percent} {CYN}⏱{RES} {LYEL}6h{RES}: {colored_value_6h}{percent}")
+                        print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10m}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1h}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3h}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6h}{percent}\n")
 
                         now = time.time()
 
