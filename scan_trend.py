@@ -210,12 +210,13 @@ if __name__ == "__main__":
                 for game in data:
                     potential_trend = (
                         game.get('value') >= 90 and game.get('jackpot_value') >= 88
-                        and game.get('meter_color') == 'red'
+                        # and game.get('meter_color') == 'red'
                     )
 
                     trending = (
-                        not game.get('up')
-                        and game.get('meter_color') == 'red'
+                        # not game.get('up')
+                        # and game.get('meter_color') == 'red'
+                        game.get('meter_color') == 'red'
                     )
 
                     # trending = (
@@ -241,9 +242,9 @@ if __name__ == "__main__":
                         )
 
                         now = time.time()
-
+                        
                         if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
-                            alert_queue.put(f"{clean_name} {'trending' if trending else ''}")
+                            alert_queue.put(f"{clean_name} {'trending' if trending else 'buy bonus' if game.get('meter_color') == 'green' else ''}")
                             alert_queue.put(bet_value)
                             last_alerts[clean_name] = now
 
