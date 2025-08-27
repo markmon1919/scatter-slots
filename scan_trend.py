@@ -229,10 +229,7 @@ if __name__ == "__main__":
                     tag = "💥💥💥 " if trending else "🔥 "
 
                     if trending or potential_trend:
-                        games_found = True
-                        if "Wild Ape" in game and "PG" in provider:
-                            game = f"{game.replace('#3258', '')}"
-
+                        games_found = True                            
                         clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
 
                         print(
@@ -244,10 +241,12 @@ if __name__ == "__main__":
                         now = time.time()
 
                         if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
+                            if "Wild Ape" in clean_name and "PG" in provider:
+                                clean_name = clean_name.replace("#3258", "").strip()
                             alert_queue.put(f"{clean_name} {'trending' if trending else ''}")
-                            alert_queue.put(f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else ''}")
+                            alert_queue.put(f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}")
                             last_alerts[clean_name] = now
-                            
+
             if not games_found:
                 print(f"\n\t🚫 {BLRED}No Trending Games Found !\n{RES}")
                 alert_queue.put("No Trending Games Found")
