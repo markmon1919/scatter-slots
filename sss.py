@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
-import os, platform, time, threading, random, pyautogui
+import os, platform, time, threading, random, pyautogui, subprocess
+from queue import Queue as ThQueue, Empty
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 from pynput.mouse import Listener as MouseListener, Button
 from dataclasses import dataclass
+from config import VOICES
 
 
 @dataclass
@@ -540,7 +542,28 @@ def on_click(x, y, button, pressed):
 #     with pynput_keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
 #         listener.join()
 
+def play_alert(alert_queue, stop_event):
+    if platform.system() == "Darwin":
+        while not stop_event.is_set():
+            try:
+                say = alert_queue.get_nowait()
+                sound_file = (say)
+                voice = VOICES["Samantha"]
+                subprocess.run(["say", "-v", voice, "--", sound_file])
+                    
+            except Empty:
+                time.sleep(0.05)
+            except Exception as e:
+                print(f"\n\t[Alert Thread Error] {e}")
+    else:
+        pass
+
 def start_listeners(settings):
+    # stop_event = threading.Event()
+    # alert_queue = ThQueue()
+    # alert_thread = threading.Thread(target=play_alert, args=(alert_queue, stop_event), daemon=True)
+    # alert_thread.start()
+
     try:
         with KeyboardListener(on_press=on_key_press, on_release=on_key_release) as kb_listener, \
              MouseListener(on_click=on_click) as mouse_listener:
@@ -548,6 +571,7 @@ def start_listeners(settings):
             mouse_listener.join()
     except KeyboardInterrupt:
         print("\n\n[!] Program interrupted by user. Exiting cleanly...\n")
+        # stop_event.set()
 
 
 if __name__ == "__main__":

@@ -205,7 +205,7 @@ if __name__ == "__main__":
             data = get_game_data_from_local_api(provider, games) if games else None
 
             if data:
-                alert_cooldown = len(data) * 2
+                alert_cooldown = len(data) * 2 # seconds
                 percent = f"{LGRY}%{RES}"
                 for game in data:
                     potential_trend = (
