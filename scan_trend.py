@@ -237,20 +237,29 @@ if __name__ == "__main__":
                         colored_value_1h = f"{RED if game.get('hr1') < 0 else GRE if game.get('hr1') > 0 else CYN}{game.get('hr1')}{RES}"
                         colored_value_3h = f"{RED if game.get('hr3') < 0 else GRE if game.get('hr3') > 0 else CYN}{game.get('hr3')}{RES}"
                         colored_value_6h = f"{RED if game.get('hr6') < 0 else GRE if game.get('hr6') > 0 else CYN}{game.get('hr6')}{RES}"
-                        bet_value = f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}" if not game.get('up') else 'Caution'
+                        # bet_value = f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}" if not game.get('up') else 'Caution'
+                        bet_value = (
+                            f"{'Bonus' if game.get('value') >= 98 and game.get('jackpot_value') >= 88
+                            else 'High' if game.get('value') >= 80 and (not game.get('up') or game.get('min10') <= -60)
+                            else 'Mid' if game.get('value') >= 60 and (not game.get('up') or game.get('min10') <= -30)
+                            else 'Low'}"
+                        )
+                        # if not game.get('up')
+                        # game.get('min10')
 
                         print(
-                            f"\t{tag} {YEL}{clean_name}{RES} [{BLMAG}{bet_value.upper()}{RES}] {DGRY}→ {signal} "
+                            f"\n\t{tag} {YEL}{clean_name}{RES} [{BLMAG}{bet_value.upper()}{RES}] {DGRY}→ {signal} "
                             f"{RED if not game.get('up') else GRE}{game.get('value')}{RES}{percent} "
                             f"({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})"
                         )
 
-                        print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10m}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1h}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3h}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6h}{percent}\n")
+                        print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10m}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1h}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3h}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6h}{percent}")
 
                         now = time.time()
 
                         if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
-                            alert_queue.put(f"{clean_name} {'trending' if trending else 'buy bonus' if game.get('meter_color') == 'green' else ''}")
+                            # alert_queue.put(f"{clean_name} {'trending' if trending else 'buy bonus' if game.get('meter_color') == 'green' else ''}")
+                            alert_queue.put(f"{clean_name} {'trending' if trending else ''}")
                             alert_queue.put(bet_value)
                             last_alerts[clean_name] = now
 
