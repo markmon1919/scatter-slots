@@ -230,10 +230,10 @@ if __name__ == "__main__":
                         clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
                         signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
                         helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
-                        bet_value = f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}".upper()
+                        bet_value = f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}"
 
                         print(
-                            f"\t{tag} [{BLMAG}{bet_value}{RES}] {YEL}{game.get('name')}{RES} {DGRY}→ {signal} "
+                            f"\t{tag}  {YEL}{game.get('name')}{RES} [{BLMAG}{bet_value.upper()}{RES}] {DGRY}→ {signal} "
                             f"{RED if not game.get('up') else GRE}{game.get('value')}{RES}{percent} "
                             f"({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})"
                         )
