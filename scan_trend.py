@@ -198,7 +198,6 @@ if __name__ == "__main__":
         alert_queue.put(provider_name)
 
         last_alerts = {}
-        alert_cooldown = 5  # seconds
 
         while True:
             games_found = False
@@ -206,6 +205,7 @@ if __name__ == "__main__":
             data = get_game_data_from_local_api(provider, games) if games else None
 
             if data:
+                alert_cooldown = len(data) * 2
                 percent = f"{LGRY}%{RES}"
                 for game in data:
                     potential_trend = (
@@ -242,7 +242,7 @@ if __name__ == "__main__":
                         )
 
                         now = time.time()
-                        
+
                         if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
                             alert_queue.put(f"{clean_name} {'trending' if trending else 'buy bonus' if game.get('meter_color') == 'green' else ''}")
                             alert_queue.put(bet_value)
