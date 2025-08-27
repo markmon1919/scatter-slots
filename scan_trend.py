@@ -212,8 +212,8 @@ if __name__ == "__main__":
                     helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
 
                     potential_trend = (
-                        game.get('value') >= 95 and game.get('jackpot_value') >= 85
-                        and game.get('meter_color') == 'green'
+                        game.get('value') >= 98 and game.get('jackpot_value') >= 88
+                        and game.get('meter_color') == 'red'
                     )
 
                     trending = (
