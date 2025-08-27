@@ -223,11 +223,13 @@ if __name__ == "__main__":
                     #     and game.get('meter_color') == 'red'
                     # )
 
-                    tag = "💥💥💥 " if trending else "🔥 "
-
                     if trending or potential_trend:
                         games_found = True                            
                         clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
+                        if "Wild Ape" in clean_name and "PG" in provider:
+                            clean_name = clean_name.replace("#3258", "").strip()
+                            
+                        tag = "💥💥💥 " if trending else "🔥 "
                         signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
                         helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
                         bet_value = f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}"
@@ -241,8 +243,6 @@ if __name__ == "__main__":
                         now = time.time()
 
                         if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
-                            if "Wild Ape" in clean_name and "PG" in provider:
-                                clean_name = clean_name.replace("#3258", "").strip()
                             alert_queue.put(f"{clean_name} {'trending' if trending else ''}")
                             alert_queue.put(bet_value)
                             last_alerts[clean_name] = now
