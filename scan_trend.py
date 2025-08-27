@@ -240,7 +240,7 @@ if __name__ == "__main__":
                         colored_value_6h = f"{RED if game.get('hr6') < 0 else GRE if game.get('hr6') > 0 else CYN}{game.get('hr6')}{RES}"
                         # bet_value = f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}" if not game.get('up') else 'Caution'
                         bet_value = (
-                            f"{'Bonus' if game.get('value') >= 98 and game.get('jackpot_value') >= 88 and game.get('meter_color') == 'red'
+                            f"{'Bonus' if game.get('value') >= 97 and game.get('jackpot_value') >= 87 and game.get('meter_color') == 'red'
                             else 'High' if (game.get('value') >= 80 and not game.get('up')) or game.get('min10') <= -60
                             else 'Mid' if (game.get('value') >= 50 and not game.get('up')) or game.get('min10') <= -30
                             else 'Low'}"
