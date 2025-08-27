@@ -240,12 +240,10 @@ if __name__ == "__main__":
                         # bet_value = f"{'High' if game.get('value') >= 80 else 'Mid' if game.get('value') >= 60 else 'Low'}" if not game.get('up') else 'Caution'
                         bet_value = (
                             f"{'Bonus' if game.get('value') >= 98 and game.get('jackpot_value') >= 88
-                            else 'High' if game.get('value') >= 80 and (not game.get('up') or game.get('min10') <= -60)
-                            else 'Mid' if game.get('value') >= 60 and (not game.get('up') or game.get('min10') <= -30)
+                            else 'High' if (game.get('value') >= 80 and not game.get('up')) or game.get('min10') <= -60
+                            else 'Mid' if (game.get('value') >= 60 and not game.get('up')) or game.get('min10') <= -30
                             else 'Low'}"
                         )
-                        # if not game.get('up')
-                        # game.get('min10')
 
                         print(
                             f"\n\t{tag} {YEL}{clean_name}{RES} [{BLMAG}{bet_value.upper()}{RES}] {DGRY}→ {signal} "
