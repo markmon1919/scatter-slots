@@ -7,8 +7,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from meter import fetch_jackpot
-from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES,
-                    LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
+from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, PING,
+                    LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BGRE, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
 def setup_driver():
@@ -223,9 +223,13 @@ def play_alert(alert_queue, stop_event):
                 try:
                     say = alert_queue.get_nowait()
                     sound_file = (say)
-                    voice = VOICES["Trinoids"] if "trending" in sound_file else VOICES["Samantha"]
-                    sound_file = say.replace("trending", "").strip()
-                    subprocess.run(["say", "-v", voice, "--", sound_file])
+                    
+                    if sound_file == "ping":
+                        subprocess.run(["afplay", PING])
+                    else:
+                        voice = VOICES["Trinoids"] if "trending" in sound_file else VOICES["Samantha"]
+                        sound_file = say.replace("trending", "").strip()
+                        subprocess.run(["say", "-v", voice, "--", sound_file])
                         
                 except Empty:
                     time.sleep(0.05)
@@ -289,10 +293,10 @@ if __name__ == "__main__":
                 # alert_cooldown = len(data) * 2 # seconds)
                 percent = f"{LGRY}%{RES}"
                 for game in data:
-                    potential_trend = (
-                        game.get('value') >= 90 and game.get('jackpot_value') >= 88
-                        # and game.get('meter_color') == 'red'
-                    )
+                    # potential_trend = (
+                    #     game.get('value') >= 90 and game.get('jackpot_value') >= 88
+                    #     # and game.get('meter_color') == 'red'
+                    # )
 
                     trending = (
                         # not game.get('up')
@@ -300,43 +304,44 @@ if __name__ == "__main__":
                         game.get('meter_color') == 'red'
                     )
 
-                    if trending or potential_trend:
-                        games_found = True                            
-                        clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
-                        if "Wild Ape" in clean_name and "PG" in provider:
-                            clean_name = clean_name.replace("#3258", "").strip()
+                    # if trending or potential_trend:
+                    games_found = True                        
+                    clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
+                    if "Wild Ape" in clean_name and "PG" in provider:
+                        clean_name = clean_name.replace("#3258", "").strip()
 
-                        tag = "💥💥💥 " if trending else "🔥🔥🔥 "
-                        signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
-                        helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
-                        colored_value_10m = f"{RED if game.get('min10') < 0 else GRE if game.get('min10') > 0 else CYN}{' ' + str(game.get('min10')) if game.get('min10') > 0 else game.get('min10')}{RES}"
-                        colored_value_1h = f"{RED if game.get('hr1') < 0 else GRE if game.get('hr1') > 0 else CYN}{' ' + str(game.get('hr1')) if game.get('hr1') > 0 else game.get('hr1')}{RES}"
-                        colored_value_3h = f"{RED if game.get('hr3') < 0 else GRE if game.get('hr3') > 0 else CYN}{' ' + str(game.get('hr3')) if game.get('hr3') > 0 else game.get('hr3')}{RES}"
-                        colored_value_6h = f"{RED if game.get('hr6') < 0 else GRE if game.get('hr6') > 0 else CYN}{' ' + str(game.get('hr6')) if game.get('hr6') > 0 else game.get('hr6')}{RES}"
+                    tag = "💥💥💥 " if trending else "🔥🔥🔥 "
+                    signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
+                    helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
+                    colored_value_10m = f"{RED if game.get('min10') < 0 else GRE if game.get('min10') > 0 else CYN}{' ' + str(game.get('min10')) if game.get('min10') > 0 else game.get('min10')}{RES}"
+                    colored_value_1h = f"{RED if game.get('hr1') < 0 else GRE if game.get('hr1') > 0 else CYN}{' ' + str(game.get('hr1')) if game.get('hr1') > 0 else game.get('hr1')}{RES}"
+                    colored_value_3h = f"{RED if game.get('hr3') < 0 else GRE if game.get('hr3') > 0 else CYN}{' ' + str(game.get('hr3')) if game.get('hr3') > 0 else game.get('hr3')}{RES}"
+                    colored_value_6h = f"{RED if game.get('hr6') < 0 else GRE if game.get('hr6') > 0 else CYN}{' ' + str(game.get('hr6')) if game.get('hr6') > 0 else game.get('hr6')}{RES}"
+                    
+                    bet_lvl = (
+                        f"{'Bonus' if game.get('value') >= 97 and game.get('jackpot_value') >= 87 and game.get('meter_color') == 'red'
+                        else 'High' if (game.get('value') >= 80 and game.get('jackpot_value') >= 80) or game.get('min10') <= -60
+                        # else 'High' if (game.get('value') >= 80 and not game.get('up')) or game.get('min10') <= -60
+                        else 'Mid' if (game.get('value') >= 50 and not game.get('up')) or game.get('min10') <= -30
+                        else 'Low'}"
+                    )
+                    bet_str = f"{BLNK if bet_lvl not in 'Low' else ''}💰 {BLU if bet_lvl in [ 'Mid', 'Low' ] else BLYEL if bet_lvl == 'Bonus' else BGRE}{bet_lvl.upper()}{RES} "
+                    
+                    print(
+                        f"\n\t{tag} {BMAG}{clean_name} {bet_str}{RES}{DGRY}→ {signal} "
+                        f"{RED if not game.get('up') else GRE}{game.get('value')}{RES}{percent} "
+                        f"({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})"
+                    )
 
-                        bet_lvl = (
-                            f"{'Bonus' if game.get('value') >= 97 and game.get('jackpot_value') >= 87 and game.get('meter_color') == 'red'
-                            else 'High' if (game.get('value') >= 80 and not game.get('up')) or game.get('min10') <= -60
-                            else 'Mid' if (game.get('value') >= 50 and not game.get('up')) or game.get('min10') <= -30
-                            else 'Low'}"
-                        )
-                        bet_str = f"{BLNK if bet_lvl not in 'Low' else ''}{BLU}💰 {bet_lvl.upper()}{RES} "
+                    print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10m}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1h}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3h}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6h}{percent}")
 
-                        print(
-                            f"\n\t{tag} {BMAG}{clean_name} {bet_str}{RES}{DGRY}→ {signal} "
-                            f"{RED if not game.get('up') else GRE}{game.get('value')}{RES}{percent} "
-                            f"({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})"
-                        )
+                    now = time.time()
 
-                        print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10m}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1h}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3h}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6h}{percent}")
-
-                        now = time.time()
-
-                        if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
-                            if bet_lvl not in 'Low':
-                                alert_queue.put(f"{clean_name} {'trending' if trending else ''}")
-                                alert_queue.put(f"{bet_lvl} {game.get('value') if bet_lvl == 'Bonus' else ''}")
-                            last_alerts[clean_name] = now
+                    if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
+                        last_alerts[clean_name] = now
+                        if bet_lvl not in 'Low':
+                            alert_queue.put(f"{clean_name} {'trending' if trending else ''}")
+                            alert_queue.put(f"{bet_lvl} {game.get('value') if bet_lvl == 'Bonus' else ''}")
                             
             print("\n")
             if not games_found:
