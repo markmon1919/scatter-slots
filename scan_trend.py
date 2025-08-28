@@ -280,7 +280,7 @@ if __name__ == "__main__":
                             fetch_data = [g for g in fetch_data if "Wild Bounty Showdown" not in g["name"]]
                         games.extend([g for g in fetch_data])
                         games.sort(key=lambda g: g["value"], reverse=True)
-                        
+
             data = get_game_data_from_local_api(provider, games) if games else None
 
             if data:
@@ -304,7 +304,7 @@ if __name__ == "__main__":
                         if "Wild Ape" in clean_name and "PG" in provider:
                             clean_name = clean_name.replace("#3258", "").strip()
 
-                        tag = "💥💥💥 " if trending else "🔥 "
+                        tag = "💥💥💥 " if trending else "🔥🔥🔥 "
                         signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
                         helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
                         colored_value_10m = f"{RED if game.get('min10') < 0 else GRE if game.get('min10') > 0 else CYN}{game.get('min10')}{RES}"
@@ -330,7 +330,6 @@ if __name__ == "__main__":
                         now = time.time()
 
                         if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
-                            # alert_queue.put(f"{clean_name} {'trending' if trending else 'buy bonus' if game.get('meter_color') == 'green' else ''}")
                             if bet_value not in 'Low':
                                 alert_queue.put(f"{clean_name} {'trending' if trending else ''}")
                                 alert_queue.put(bet_value)
