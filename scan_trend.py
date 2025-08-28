@@ -343,8 +343,8 @@ if __name__ == "__main__":
                 print(f"\t🚫 {BLRED}No Trending Games Found !{RES}")
                 alert_queue.put("No Trending Games Found")
 
+            print("\n")
             time.sleep(1)
-
     except KeyboardInterrupt:
         print(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
         stop_event.set()
