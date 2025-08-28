@@ -76,7 +76,11 @@ def extract_game_data(html: str, game: str, provider: str, driver=None):
     jackpot_value = None
     progress_value = target_block.find("div", class_="progress-value")
     if progress_value:
-        jackpot_value = progress_value.get_text(strip=True)
+        value = progress_value.get_text(strip=True)
+        jackpot_value = float(value.replace("%", ""))
+
+    if jackpot_value < 80:
+        return None
         
     meter_color = None
     if driver:
@@ -87,23 +91,23 @@ def extract_game_data(html: str, game: str, provider: str, driver=None):
         except Exception as e:
             print("Error checking meter color:", e)
 
-    history = {}
-    history_tags = target_block.select(".game-info-list .game-info-value")
+    # history = {}
+    # history_tags = target_block.select(".game-info-list .game-info-value")
 
-    if history_tags and len(history_tags) >= 4:
-        history = {
-            "10m": history_tags[0].get_text(strip=True),
-            "1h":  history_tags[1].get_text(strip=True),
-            "3h":  history_tags[2].get_text(strip=True),
-            "6h":  history_tags[3].get_text(strip=True)
-        }
+    # if history_tags and len(history_tags) >= 4:
+    #     history = {
+    #         "10m": history_tags[0].get_text(strip=True),
+    #         "1h":  history_tags[1].get_text(strip=True),
+    #         "3h":  history_tags[2].get_text(strip=True),
+    #         "6h":  history_tags[3].get_text(strip=True)
+    #     }
         
     return {
-        "provider": provider,
-        "game": game,
-        "jackpot": jackpot_value,
-        "meter": meter_color,
-        "history": history
+        # "provider": provider,
+        "name": game,
+        "value": jackpot_value,
+        "up": meter_color,
+        # "history": history
     }
 
 def fetch_jackpot(provider: str, game: str, session_id: int = 1):
@@ -118,20 +122,20 @@ def fetch_jackpot(provider: str, game: str, session_id: int = 1):
         data = extract_game_data(html, game, provider, driver=driver)
 
         return data or {
-            "provider": provider,
-            "game": game,
-            "jackpot": None,
-            "meter": None,
-            "history": None,
-            "error": "Game not found"
+            # "provider": provider,
+            "name": game,
+            "value": None,
+            "up": None,
+            # "history": None,
+            # "error": "Game not found"
         }
     except Exception as e:
         return {
-            "provider": provider,
-            "game": game,
-            "jackpot": None,
-            "meter": None,
-            "history": None,
+            # "provider": provider,
+            "name": game,
+            "value": None,
+            "up": None,
+            # "history": None,
             "error": str(e)
         }
     finally:

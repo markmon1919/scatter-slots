@@ -6,6 +6,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By 
+from meter import fetch_jackpot
 from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, BLNK, BLCYN, BLMAG, BLRED, BWHTE, DGRY, LGRY, LRED, LGRE, LCYN, LYEL, CYN,  MAG, RED, GRE, YEL, WHTE, CLEAR, RES)
 
 def setup_driver():
@@ -83,7 +84,7 @@ def get_game_data_from_local_api(provider: str, games: list):
         if response.status_code == 200:
             try:
                 json_data = response.json()
-                data = json_data.get("data", [])  # adjust key if needed
+                data = json_data.get("data", [])
                 games_found = {g["name"]: g for g in games}
 
                 enriched = [
@@ -126,10 +127,12 @@ def fetch_html_via_selenium(driver: webdriver.Chrome, url: str, provider: str):
     time.sleep(1)
     return driver.page_source
 
-def extract_game_data(html: str, provider: str, driver=None) -> list:
+from selenium.webdriver.common.by import By
+import time
+
+def extract_game_data(driver=None) -> list:
     games = []
     game_blocks = driver.find_elements(By.CSS_SELECTOR, ".game-block")
-
     for block in game_blocks:
         try:
             name = block.find_element(By.CSS_SELECTOR, ".game-title").text.strip()
@@ -146,7 +149,63 @@ def extract_game_data(html: str, provider: str, driver=None) -> list:
             continue
 
     games.sort(key=lambda g: g["value"], reverse=True)
+
     return games
+
+# def search_game_data(provider: str, driver=None) -> list:
+#     while not stop_event.is_set():
+#         try:
+                    
+#             # provider-specific search games if not found
+#             search_games = []
+#             if provider == 'JILI':
+#                 search_games.append("Pirate Queen 2")
+#             elif provider == 'PG':
+#                 search_games.extend([
+#                     "Queen of Bounty", "Captain's Bounty", "Mystical Spirits", 
+#                     "Spirited Wonders", "Gem Saviour", "Gem Saviour Sword", 
+#                     "Gem Saviour Conquest", "Galactic Gems", "Garuda Gems"
+#                 ])
+#             elif provider == 'FC':
+#                 search_games.append("Grand Blue")
+#             elif provider == 'PP':
+#                 pass
+
+#             games = []
+#             game_blocks = driver.find_elements(By.CSS_SELECTOR, ".game-block")
+
+#             # loop through search terms
+#             for game in search_games:
+#                 search_box = driver.find_element(By.ID, "van-search-1-input")
+#                 driver.execute_script("arguments[0].value = '';", search_box)
+#                 search_box.send_keys(game)
+#                 search_btn = driver.find_element(By.CLASS_NAME, "van-search__action")
+#                 search_btn.click()
+
+#                 time.sleep(1)
+
+#                 game_blocks = driver.find_elements(By.CSS_SELECTOR, ".game-block")
+#                 for block in game_blocks:
+#                     try:
+#                         name = block.find_element(By.CSS_SELECTOR, ".game-title").text.strip()
+#                         value_text = block.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
+#                         value = float(value_text.replace("%", ""))
+
+#                         progress_bar_elem = block.find_element(By.CSS_SELECTOR, ".progress-bar")
+#                         bg = progress_bar_elem.value_of_css_property("background-color").lower()
+#                         up = "red" if "255, 0, 0" in bg else "green"
+
+#                         if value >= 80:
+#                             games.append({"name": name, "value": value, "up": up})
+#                     except Exception:
+#                         continue
+
+#             games.sort(key=lambda g: g["value"], reverse=True)
+#             return games
+#         except Exception as e:
+#             print(f"🤖❌  {e}")
+
+#         time.sleep(0.5)
 
 def pct(p):
     if p is None:
@@ -189,12 +248,8 @@ if __name__ == "__main__":
 
         stop_event = threading.Event()
         alert_queue = ThQueue()
-
-        # Start background alert worker for "non-trending" messages
         alert_thread = threading.Thread(target=play_alert, args=(alert_queue, stop_event), daemon=True)
         alert_thread.start()
-
-        # Initial provider name sound
         alert_queue.put(provider_name)
 
         last_alerts = {}
@@ -202,7 +257,33 @@ if __name__ == "__main__":
 
         while True:
             games_found = False
-            games = extract_game_data(html, provider, driver)
+            games = extract_game_data(driver)
+
+            # if games not found.. search it
+            search_games = []
+            if provider == 'JILI':
+                search_games.append("Pirate Queen 2")
+            elif provider == 'PG':
+                search_games.extend(["Bounty", "Spirit"])
+                # search_games.extend([
+                #     "Queen of Bounty", "Captain's Bounty", "Mystical Spirits", 
+                #     "Spirited Wonders" "Gem Saviour", "Gem Saviour Sword", 
+                #     "Gem Saviour Conquest", "Galactic Gems", "Garuda Gems"
+                # ])
+            elif provider == 'FC':
+                search_games.append("Grand Blue")
+            elif provider == 'PP':
+                pass
+            
+            if games:
+                for game in search_games:
+                    fetch_data = fetch_jackpot(provider, game, session_id=1)
+                    if fetch_data and fetch_data.get('value'):
+                        if "PG" in provider and "Wild Bounty Showdown" in fetch_data.get('name'):
+                            continue
+                        games.append({"name": fetch_data.get('name'), "value": fetch_data.get('value'), "up": fetch_data.get('up')})
+                        games.sort(key=lambda g: g["value"], reverse=True)
+
             data = get_game_data_from_local_api(provider, games) if games else None
 
             if data:
