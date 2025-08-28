@@ -9,6 +9,7 @@ from selenium.webdriver.common.by import By
 from meter import fetch_jackpot
 from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, BLNK, BLCYN, BLMAG, BLRED, BWHTE, DGRY, LGRY, LRED, LGRE, LCYN, LYEL, CYN,  MAG, RED, GRE, YEL, WHTE, CLEAR, RES)
 
+
 def setup_driver():
     options = Options()
     if platform.system() != "Darwin" or os.getenv("IS_DOCKER") == "1":
