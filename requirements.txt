@@ -1,5 +1,4 @@
 asyncio
-atexit
 bs4
 datetime
 fastapi[standard]
