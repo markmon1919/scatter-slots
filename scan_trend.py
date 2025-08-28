@@ -307,10 +307,10 @@ if __name__ == "__main__":
                         tag = "💥💥💥 " if trending else "🔥🔥🔥 "
                         signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
                         helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
-                        colored_value_10m = f"{RED if game.get('min10') < 0 else GRE if game.get('min10') > 0 else CYN}{game.get('min10')}{RES}"
-                        colored_value_1h = f"{RED if game.get('hr1') < 0 else GRE if game.get('hr1') > 0 else CYN}{game.get('hr1')}{RES}"
-                        colored_value_3h = f"{RED if game.get('hr3') < 0 else GRE if game.get('hr3') > 0 else CYN}{game.get('hr3')}{RES}"
-                        colored_value_6h = f"{RED if game.get('hr6') < 0 else GRE if game.get('hr6') > 0 else CYN}{game.get('hr6')}{RES}"
+                        colored_value_10m = f"{RED if game.get('min10') < 0 else GRE if game.get('min10') > 0 else CYN}{' ' + str(game.get('min10')) if game.get('min10') > 0 else game.get('min10')}{RES}"
+                        colored_value_1h = f"{RED if game.get('hr1') < 0 else GRE if game.get('hr1') > 0 else CYN}{' ' + str(game.get('hr1')) if game.get('hr1') > 0 else game.get('hr1')}{RES}"
+                        colored_value_3h = f"{RED if game.get('hr3') < 0 else GRE if game.get('hr3') > 0 else CYN}{' ' + str(game.get('hr3')) if game.get('hr3') > 0 else game.get('hr3')}{RES}"
+                        colored_value_6h = f"{RED if game.get('hr6') < 0 else GRE if game.get('hr6') > 0 else CYN}{' ' + str(game.get('hr6')) if game.get('hr6') > 0 else game.get('hr6')}{RES}"
 
                         bet_value = (
                             f"{'Bonus' if game.get('value') >= 97 and game.get('jackpot_value') >= 87 and game.get('meter_color') == 'red'
