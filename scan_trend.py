@@ -338,12 +338,11 @@ if __name__ == "__main__":
                                 alert_queue.put(f"{clean_name} {'trending' if trending else ''}")
                                 alert_queue.put(bet_value)
                             last_alerts[clean_name] = now
-
+            print("\n")
             if not games_found:
                 print(f"\t🚫 {BLRED}No Trending Games Found !{RES}")
                 alert_queue.put("No Trending Games Found")
 
-            print("\n")
             time.sleep(1)
     except KeyboardInterrupt:
         print(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
