@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS)
 
 
-def setup_driver(session_id: int, game: str):
+def setup_driver():
     options = Options()
     if platform.system() != "Darwin" or os.getenv("IS_DOCKER") == "1":
         options.binary_location = "/opt/google/chrome/chrome"
@@ -22,8 +22,8 @@ def setup_driver(session_id: int, game: str):
     options.add_argument('--blink-settings=imagesEnabled=false')  # Disable images
     options.add_argument("--disable-logging")
     options.add_argument("--log-level=3")
-    options.add_argument(f"--user-data-dir={os.getcwd()}/chrome_profile_{session_id}")
-    options.add_argument(f"--profile-directory=Profile_{game.lower()}")
+    # options.add_argument(f"--user-data-dir={os.getcwd()}/chrome_profile_{session_id}")
+    # options.add_argument(f"--profile-directory=Profile_{game.lower()}")
 
     service = Service(shutil.which("chromedriver"))
     return webdriver.Chrome(service=service, options=options)
@@ -33,7 +33,10 @@ def fetch_html_via_selenium(driver: webdriver.Chrome, game: str, url: str, provi
     time.sleep(1)
 
     search_box = driver.find_element(By.ID, "van-search-1-input")
+    driver.execute_script("arguments[0].value = '';", search_box)
     search_box.send_keys(game)
+
+    time.sleep(1)
 
     if "helpslot" in url:
         provider_items = driver.find_elements(By.CSS_SELECTOR, ".provider-item")
@@ -110,34 +113,60 @@ def extract_game_data(html: str, game: str, provider: str, driver=None):
         # "history": history
     }
 
+def extract_game_keyword(driver=None) -> list:
+    games = []
+    game_blocks = driver.find_elements(By.CSS_SELECTOR, ".game-block")
+    for block in game_blocks:
+        try:
+            name = block.find_element(By.CSS_SELECTOR, ".game-title").text.strip()
+            value_text = block.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
+            value = float(value_text.replace("%", ""))
+
+            progress_bar_elem = block.find_element(By.CSS_SELECTOR, ".progress-bar")
+            bg = progress_bar_elem.value_of_css_property("background-color").lower()
+            up = "red" if "255, 0, 0" in bg else "green"
+
+            if value >= 80:
+                games.append({"name": name, "value": value, "up": up})
+        except Exception:
+            continue
+
+    # games.sort(key=lambda g: g["value"], reverse=True)
+
+    return games
+
 def fetch_jackpot(provider: str, game: str, session_id: int = 1):
     url = f"https://www.helpslot.win"
-    driver = setup_driver(session_id, game)
+    driver = setup_driver()
 
     try:
         if "Wild Ape" in game and "PG" in provider:
             game = f"{game.replace('x10000', '#3258')}" if "x10000" in game else f"{game}#3258"
 
         html = fetch_html_via_selenium(driver, game, url, provider)
-        data = extract_game_data(html, game, provider, driver=driver)
+        # data = extract_game_data(html, game, provider, driver=driver)
 
-        return data or {
-            # "provider": provider,
-            "name": game,
-            "value": None,
-            "up": None,
-            # "history": None,
-            # "error": "Game not found"
-        }
-    except Exception as e:
-        return {
-            # "provider": provider,
-            "name": game,
-            "value": None,
-            "up": None,
-            # "history": None,
-            "error": str(e)
-        }
+        data = extract_game_keyword(driver=driver)
+        
+        return data
+
+    #     return data or {
+    #         # "provider": provider,
+    #         "name": game,
+    #         "value": None,
+    #         "up": None,
+    #         # "history": None,
+    #         # "error": "Game not found"
+    #     }
+    # except Exception as e:
+    #     return {
+    #         # "provider": provider,
+    #         "name": game,
+    #         "value": None,
+    #         "up": None,
+    #         # "history": None,
+    #         "error": str(e)
+    #     }
     finally:
         # time.sleep(10) # for debug
         driver.quit()

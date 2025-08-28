@@ -5,7 +5,7 @@ from queue import Queue as ThQueue, Empty
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By 
+from selenium.webdriver.common.by import By
 from meter import fetch_jackpot
 from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, BLNK, BLCYN, BLMAG, BLRED, BWHTE, DGRY, LGRY, LRED, LGRE, LCYN, LYEL, CYN,  MAG, RED, GRE, YEL, WHTE, CLEAR, RES)
 
@@ -126,9 +126,6 @@ def fetch_html_via_selenium(driver: webdriver.Chrome, url: str, provider: str):
 
     time.sleep(1)
     return driver.page_source
-
-from selenium.webdriver.common.by import By
-import time
 
 def extract_game_data(driver=None) -> list:
     games = []
@@ -258,32 +255,32 @@ if __name__ == "__main__":
         while True:
             games_found = False
             games = extract_game_data(driver)
-
-            # if games not found.. search it
-            search_games = []
-            if provider == 'JILI':
-                search_games.append("Pirate Queen 2")
-            elif provider == 'PG':
-                search_games.extend(["Bounty", "Spirit"])
-                # search_games.extend([
-                #     "Queen of Bounty", "Captain's Bounty", "Mystical Spirits", 
-                #     "Spirited Wonders" "Gem Saviour", "Gem Saviour Sword", 
-                #     "Gem Saviour Conquest", "Galactic Gems", "Garuda Gems"
-                # ])
-            elif provider == 'FC':
-                search_games.append("Grand Blue")
-            elif provider == 'PP':
-                pass
             
             if games:
-                for game in search_games:
-                    fetch_data = fetch_jackpot(provider, game, session_id=1)
-                    if fetch_data and fetch_data.get('value'):
-                        if "PG" in provider and "Wild Bounty Showdown" in fetch_data.get('name'):
-                            continue
-                        games.append({"name": fetch_data.get('name'), "value": fetch_data.get('value'), "up": fetch_data.get('up')})
-                        games.sort(key=lambda g: g["value"], reverse=True)
+                # if games not found.. search it
+                search_games = []
+                if provider == 'JILI':
+                    search_games.append("Pirate Queen 2")
+                elif provider == 'PG':
+                    search_games.extend(["Bounty", "Spirit"])
+                    # search_games.extend([
+                    #     "Queen of Bounty", "Captain's Bounty", "Mystical Spirits", 
+                    #     "Spirited Wonders" "Gem Saviour", "Gem Saviour Sword", 
+                    #     "Gem Saviour Conquest", "Galactic Gems", "Garuda Gems"
+                    # ])
+                elif provider == 'FC':
+                    search_games.append("Grand Blue")
+                elif provider == 'PP':
+                    pass
 
+                for keyword in search_games:
+                    fetch_data = fetch_jackpot(provider, keyword, session_id=1)
+                    if fetch_data:
+                        if "Bounty" in keyword and 'PG' in provider:
+                            fetch_data = [g for g in fetch_data if "Wild Bounty Showdown" not in g["name"]]
+                        games.extend([g for g in fetch_data])
+                        games.sort(key=lambda g: g["value"], reverse=True)
+                        
             data = get_game_data_from_local_api(provider, games) if games else None
 
             if data:
