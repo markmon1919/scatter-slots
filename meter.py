@@ -145,7 +145,6 @@ def fetch_jackpot(provider: str, game: str, session_id: int = 1):
 
         html = fetch_html_via_selenium(driver, game, url, provider)
         # data = extract_game_data(html, game, provider, driver=driver)
-
         data = extract_game_keyword(driver=driver)
         
         return data
