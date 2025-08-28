@@ -345,7 +345,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
         stop_event.set()
-
-    finally:
-        driver.quit()
-        atexit.register(driver.quit)
+    # finally:
+    driver.quit()
+    atexit.register(driver.quit)
