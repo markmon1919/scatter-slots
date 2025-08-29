@@ -7,15 +7,18 @@ from config import (SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOL
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BGRE, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
-def spin(spin_queue, stop_event):
+def spin(spin_queue, stop_event, combo_spin: bool = False):
     while not stop_event.is_set():
         try:
-            spin_queue.get(timeout=1)
-
+            cmd, combo_spin = spin_queue.get_nowait()
             spin_types = [ "normal_spin", "spin_hold", "spin_delay", "spin_hold_delay", "turbo_spin", "board_spin", "board_spin_hold", "board_spin_delay", "board_spin_hold_delay", "board_spin_turbo", "spin_slide", "auto_spin" ]
 
-            if provider in [ 'PG' ]:
+            if not combo_spin and provider in [ 'PG' ]:
                 spin_types = [s for s in spin_types if not s.startswith("board")]
+
+            if combo_spin:
+                spin_types = [s for s in spin_types if s.startswith("board")]
+                spin_types.extend(["combo_spin", "turbo_spin", "quick_spin"])
 
             spin_type = random.choice(spin_types)
             cx, cy = CENTER_X, CENTER_Y
@@ -25,18 +28,29 @@ def spin(spin_queue, stop_event):
             height = int(min(RIGHT_X, BTM_Y) * (shrink_percentage / 100))
             border_space_top = cy // 3 if widescreen else 0
             radius_x, radius_y = width // 2, height // 2 #if widescreen else width // 2
-            rand_x = cx + random.randint(-radius_x, radius_x)
-            rand_y = cy + random.randint(-radius_y, radius_y) + (border_space_top if radius_y <= 0 else -border_space_top)
-            rand_x2 = cx + random.randint(-radius_x, radius_x)
-            rand_y2 = cy + random.randint(-radius_y, radius_y) + (border_space_top if radius_y <= 0 else -border_space_top)
+            # rand_x = cx + random.randint(-radius_x, radius_x)
+            # rand_y = cy + random.randint(-radius_y, radius_y) + (border_space_top if radius_y <= 0 else -border_space_top)
+            # rand_x2 = cx - random.randint(-radius_x, radius_x)
+            # rand_y2 = cy - random.randint(-radius_y, radius_y) + (border_space_top if radius_y <= 0 else -border_space_top)
+            rand_x = cx - random.randint(-radius_x, radius_x)
+            rand_x2 = cx - random.randint(-radius_x, radius_x)
+            rand_y = random.randint(100, cy)
+            rand_y2 = random.randint(100, cy)
+
+            print(f'\theight >>> {height}')
+            print(f'\tBTM_Y >>> {BTM_Y}')
+            print(f'\tcx >>> {cx}')
+            print(f'\tcy >>> {cy}')
+            print(f'\tradius_x >>> {radius_x}')
+            print(f'\tradius_y >>> {radius_y}')
+            print(f'\trand_x2 >>> {rand_x2}')
+            print(f'\trand_y2 >>> {rand_y2}')
             
             action = []
 
             hold_delay = random.uniform(*HOLD_DELAY_RANGE)
             spin_delay = random.uniform(*SPIN_DELAY_RANGE)
             timeout_delay = random.uniform(*TIMEOUT_DELAY_RANGE)
-
-            # spin_type = "spin_slide"
             # print(f'widescreen: {widescreen}')
             # print(f'spin_btn: {spin_btn}')
             
@@ -784,6 +798,14 @@ def spin(spin_queue, stop_event):
                     action.extend([
                         #
                     ])
+            elif spin_type == "combo_spin":
+                action.extend([
+                    lambda: pyautogui.moveTo(x=rand_x2, y=rand_y2)
+                    # lambda: (pyautogui.mouseDown(x=rand_x2, y=rand_y2, button='left'), time.sleep(hold_delay), pyautogui.moveTo(x=rand_x2, y=rand_y2), pyautogui.mouseUp()),
+                    # lambda: (pyautogui.mouseDown(x=rand_x2, y=rand_y2, button='right'), time.sleep(hold_delay), pyautogui.moveTo(x=rand_x2, y=rand_y2), pyautogui.mouseUp()),
+                    # lambda: (pyautogui.mouseDown(x=rand_x2, y=rand_y2, button='left'), pyautogui.moveTo(x=rand_x2, y=rand_y2), time.sleep(hold_delay), pyautogui.mouseUp()),
+                    # lambda: (pyautogui.mouseDown(x=rand_x2, y=rand_y2, button='right'), pyautogui.moveTo(x=rand_x2, y=rand_y2), time.sleep(hold_delay), pyautogui.mouseUp())
+                ])
             elif spin_type == "quick_spin":
                 if widescreen:
                     action.extend([
@@ -968,8 +990,10 @@ def spin(spin_queue, stop_event):
             print(f"\tHold Delay: {hold_delay:.2f}")
             print(f"\tSpin Delay: {spin_delay:.2f}")
             print(f"\tTimeout Delay: {timeout_delay:.2f}")
+            print(f"\tCombo Spin: {combo_spin}")
             print(f"\n\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {WHTE}{current_sec}{RES}>\n")
             alert_queue.put(f"{spin_type}, {current_sec}")
+            spin_in_progress.clear() if not combo_spin else combo_spin_in_progress.clear()
         except Empty:
             continue
 
@@ -1000,7 +1024,13 @@ def on_key_press(key):
     try:
         # if hasattr(key, "char") and key.char == "s":
         if key == Key.shift:
-            spin_queue.put("spin")
+            if not spin_in_progress.is_set():
+                spin_queue.put(("spin", False))
+                spin_in_progress.set() 
+        if key == Key.caps_lock:
+            if not combo_spin_in_progress.is_set():
+                spin_queue.put(("spin", True))
+                combo_spin_in_progress.set()
     except AttributeError:
         print(f"Error: SPECIAL KEY: {key}")
 
@@ -1020,14 +1050,15 @@ if __name__ == "__main__":
     LEFT_X, RIGHT_X, TOP_Y, BTM_Y = 0, SCREEN_POS.get("right_x"), 0, SCREEN_POS.get("bottom_y")
 
     stop_event = threading.Event()
-    reset_event = threading.Event()
+    spin_in_progress = threading.Event()
+    combo_spin_in_progress = threading.Event()
 
     alert_queue = ThQueue()
     spin_queue = ThQueue()
     
     alert_thread = threading.Thread(target=play_alert, args=(alert_queue, stop_event), daemon=True)
-    kb_thread   = threading.Thread(target=start_listeners, args=(stop_event,), daemon=True)
-    spin_thread = threading.Thread(target=spin, args=(spin_queue, stop_event), daemon=True)
+    kb_thread = threading.Thread(target=start_listeners, args=(stop_event,), daemon=True)
+    spin_thread = threading.Thread(target=spin, args=(spin_queue, stop_event, False), daemon=True)
 
     alert_thread.start()
     kb_thread.start()
