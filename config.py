@@ -49,9 +49,8 @@ VOICES = {
 }
 
 # === Default Timeouts ===
-# HOLD_DELAY_RANGE = (2.6, 3.5)  # Used with random.uniform(*HOLD_DELAY_RANGE)
-# SPIN_DELAY_RANGE = (2.8, 3.7)  # Used with random.uniform(*SPIN_DELAY_RANGE)
-HOLD_DELAY_RANGE = (2.6, 3.4)  # Used with random.uniform(*HOLD_DELAY_RANGE)
+# HOLD_DELAY_RANGE = (2.6, 3.4)  # Used with random.uniform(*HOLD_DELAY_RANGE)
+HOLD_DELAY_RANGE = (2, 3)  # Used with random.uniform(*HOLD_DELAY_RANGE)
 SPIN_DELAY_RANGE = (2.8, 3.5)  # Used with random.uniform(*SPIN_DELAY_RANGE)
 TIMEOUT_DELAY_RANGE = (0.5, 2.5)  # Used with random.uniform(*TIMEOUT_DELAY_RANGE)
 
