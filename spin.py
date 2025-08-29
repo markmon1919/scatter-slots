@@ -33,9 +33,11 @@ def spin(spin_queue, stop_event, combo_spin: bool = False):
             # rand_x2 = cx - random.randint(-radius_x, radius_x)
             # rand_y2 = cy - random.randint(-radius_y, radius_y) + (border_space_top if radius_y <= 0 else -border_space_top)
             rand_x = cx - random.randint(-radius_x, radius_x)
+            rand_y = random.randint(200, cy)
+            # mystic = 100
+            # cruise_royal = 100
             rand_x2 = cx - random.randint(-radius_x, radius_x)
-            rand_y = random.randint(100, cy)
-            rand_y2 = random.randint(100, cy)
+            rand_y2 = random.randint(200, cy)
 
             print(f'\theight >>> {height}')
             print(f'\tBTM_Y >>> {BTM_Y}')
