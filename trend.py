@@ -217,26 +217,25 @@ def pct(p):
         return 0.0
 
 def play_alert(alert_queue, stop_event):
-    while not stop_event.is_set():
-        if platform.system() == "Darwin":
-            while not stop_event.is_set():
-                try:
-                    say = alert_queue.get_nowait()
-                    sound_file = (say)
+    if platform.system() == "Darwin":
+        while not stop_event.is_set():
+            try:
+                say = alert_queue.get_nowait()
+                sound_file = (say)
+                
+                if sound_file == "ping":
+                    subprocess.run(["afplay", PING])
+                else:
+                    voice = VOICES["Trinoids"] if "trending" in sound_file else VOICES["Samantha"]
+                    sound_file = say.replace("trending", "").strip()
+                    subprocess.run(["say", "-v", voice, "--", sound_file])
                     
-                    if sound_file == "ping":
-                        subprocess.run(["afplay", PING])
-                    else:
-                        voice = VOICES["Trinoids"] if "trending" in sound_file else VOICES["Samantha"]
-                        sound_file = say.replace("trending", "").strip()
-                        subprocess.run(["say", "-v", voice, "--", sound_file])
-                        
-                except Empty:
-                    time.sleep(0.05)
-                except Exception as e:
-                    print(f"\n\t[Alert Thread Error] {e}")
-        else:
-            pass
+            except Empty:
+                time.sleep(0.05)
+            except Exception as e:
+                print(f"\n\t[Alert Thread Error] {e}")
+    else:
+        pass
 
 
 if __name__ == "__main__":
@@ -266,7 +265,7 @@ if __name__ == "__main__":
                 # if games not found.. search it
                 search_games = []
                 if provider == 'JILI':
-                    search_games.append("Pirate Queen 2")
+                    search_games.extend(["Pirate Queen 2", "Ali Baba"])
                 elif provider == 'PG':
                     search_games.extend(["Bounty", "Spirit"])
                     # search_games.extend([
