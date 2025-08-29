@@ -53,7 +53,7 @@ VOICES = {
 # SPIN_DELAY_RANGE = (2.8, 3.7)  # Used with random.uniform(*SPIN_DELAY_RANGE)
 HOLD_DELAY_RANGE = (2.6, 3.4)  # Used with random.uniform(*HOLD_DELAY_RANGE)
 SPIN_DELAY_RANGE = (2.8, 3.5)  # Used with random.uniform(*SPIN_DELAY_RANGE)
-TIMEOUT_DELAY_RANGE = (1, 5)  # Used with random.uniform(*TIMEOUT_DELAY_RANGE)
+TIMEOUT_DELAY_RANGE = (0.5, 2.5)  # Used with random.uniform(*TIMEOUT_DELAY_RANGE)
 
 # COLORS
 RED='\033[31m'; GRE='\033[32m'; YEL='\033[33m'
