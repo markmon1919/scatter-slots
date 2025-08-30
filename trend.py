@@ -360,7 +360,7 @@ if __name__ == "__main__":
 
                     if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
                         last_alerts[clean_name] = now
-                        if bet_lvl not in 'Low':
+                        if bet_lvl in [ 'Bonus', 'High' ]:
                             alert_queue.put(f"{clean_name} {'trending' if trending else ''}")
                             alert_queue.put(f"{bet_lvl} {game.get('value') if bet_lvl == 'Bonus' else ''}")
                             
