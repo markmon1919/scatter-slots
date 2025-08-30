@@ -7,7 +7,7 @@ from config import (SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOL
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BGRE, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
-def spin(combo_spin: bool = False):
+def spin(combo_spin: bool = False, spam_spin: bool = False):
     # while not stop_event.is_set():
     if spin_in_progress.is_set():
         print("\t⚠️ Spin still in action, skipping")
@@ -19,7 +19,7 @@ def spin(combo_spin: bool = False):
         # cmd, combo_spin = spin_queue.get_nowait()
         # spin_in_progress, combo_spin = spin_queue.get(timeout=1)
         spin_types = [ "normal_spin", "spin_hold", "spin_delay", "spin_hold_delay", "turbo_spin", "board_spin", "board_spin_hold", "board_spin_delay", "board_spin_hold_delay", "board_spin_turbo", "spin_slide", "auto_spin" ]
-
+        
         if not combo_spin and provider in [ 'PG' ]:
             spin_types = [s for s in spin_types if not s.startswith("board")]
 
@@ -27,7 +27,7 @@ def spin(combo_spin: bool = False):
             spin_types = [s for s in spin_types if s.startswith("board")]
             spin_types.extend(["combo_spin", "spam_spin", "turbo_spin"])
 
-        spin_type = random.choice(spin_types) #if not combo_spin else "combo_spin"
+        spin_type = random.choice(spin_types) if not spam_spin else "spam_spin"
         cx, cy = CENTER_X, CENTER_Y
 
         shrink_percentage = 60 if widescreen else 32
@@ -841,11 +841,18 @@ def spin(combo_spin: bool = False):
                 # lambda: pyautogui.doubleClick(x=rand_x, y=rand_y, clicks=3, interval=0, button="left"),
                 lambda: pyautogui.click(x=cx, y=BTM_Y - 105, clicks=6, interval=0, button="left"),
                 # lambda: pyautogui.doubleClick(x=cx, y=BTM_Y - 105, clicks=3, interval=0, button="left"),
+                
+                lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button='left'), time.sleep(hold_delay), pyautogui.moveTo(x=rand_x2, y=rand_y2), pyautogui.mouseUp()),
+                lambda: (pyautogui.mouseDown(x=cx, y=BTM_Y - 105, button="left"), pyautogui.typewrite(['space'] * 6, interval=0)),
+                lambda: (pyautogui.mouseDown(x=rand_x, y=rand_y, button="left"), pyautogui.typewrite(['space'] * 6, interval=0)),
+                lambda: (pyautogui.keyDown('space'), pyautogui.click(x=rand_x, y=rand_y, clicks=6, interval=0, button="left")),
+                lambda: (pyautogui.keyDown('space'), pyautogui.click(x=cx, y=BTM_Y - 105, clicks=6, interval=0, button="left")),
+                
                 lambda: [ (pyautogui.press("space"), pyautogui.click(x=rand_x, y=rand_y, button="left")) for _ in range(3) ],
-                lambda: [ (pyautogui.press("space"), pyautogui.doubleClick(x=rand_x, y=rand_y, button="left")) for _ in range(3) ],
+                # lambda: [ (pyautogui.press("space"), pyautogui.doubleClick(x=rand_x, y=rand_y, button="left")) for _ in range(3) ],
                 lambda: [ (pyautogui.press("space"), pyautogui.click(x=cx, y=BTM_Y - 105, button="left")) for _ in range(3) ],
-                lambda: [ (pyautogui.press("space"), pyautogui.doubleClick(x=cx, y=BTM_Y - 105, button="left")) for _ in range(3) ],
-                lambda: [ (pyautogui.click(x=cx, y=BTM_Y - 105, button="left"), pyautogui.click(x=rand_x, y=rand_y, button="left")) for _ in range(3) ]
+                # lambda: [ (pyautogui.press("space"), pyautogui.doubleClick(x=cx, y=BTM_Y - 105, button="left")) for _ in range(3) ],
+                lambda: [ (pyautogui.click(x=cx, y=BTM_Y - 105, button="left"), pyautogui.click(x=rand_x, y=rand_y, button="left")) for _ in range(3) ],
             ])
         elif spin_type == "quick_spin":
             if widescreen:
@@ -1069,23 +1076,25 @@ def play_alert(alert_queue, stop_event):
         pass
 
 def on_key_press(key):
-    pyautogui.PAUSE = 0
-    pyautogui.FAILSAFE = False
-
     try:
+        pyautogui.PAUSE = 0
+        pyautogui.FAILSAFE = False
         # if hasattr(key, "char") and key.char == "s":
         if key == Key.shift:
-            threading.Thread(target=spin, args=(False,), daemon=True)
-            spin(False)
+            threading.Thread(target=spin, args=(False, False,), daemon=True)
+            spin(False, False)
             # if not spin_in_progress.is_set():
             #     spin_queue.put(("spin", False))
             #     spin_in_progress.set() 
         if key == Key.caps_lock:
-            threading.Thread(target=spin, args=(True,), daemon=True)
-            spin(True)
+            threading.Thread(target=spin, args=(True, False,), daemon=True)
+            spin(True, False)
             # if not spin_in_progress.is_set():
             #     spin_queue.put(("spin", True))
             #     spin_in_progress.set()
+        if key == Key.tab:
+            threading.Thread(target=spin, args=(False, True,), daemon=True)
+            spin(False, True)
     except AttributeError:
         print(f"Error: SPECIAL KEY: {key}")
 

@@ -61,7 +61,7 @@ def providers_list():
                 provider = providers[choice - 1][0]
                 provider_name = providers[choice - 1][1].provider
                 provider_color = providers[choice - 1][1].color
-                print(f"\n\tSelected: {provider_color}{provider_name}{RES}\n\n")
+                print(f"\n\tSelected: {provider_color}{provider_name} {RES}({provider_color}{provider}{RES})\n\n")
                 return provider, provider_name
             else:
                 print("\t⚠️  Invalid choice. Try again.")
@@ -110,9 +110,28 @@ def get_game_data_from_local_api(provider: str, games: list):
         print(f"❌ Error calling API: {e}")
         return {"error": str(e)}, REQUEST_FROM
     
+def scroll_game_list(driver, pause_time: float = 1.0, max_tries: int = 50):
+    """Scroll the .scroll-view.with-provider element until all games are loaded."""
+    container = driver.find_element(By.CSS_SELECTOR, ".scroll-view.with-provider")
+
+    last_height = 0
+    for _ in range(max_tries):
+        driver.execute_script("""
+            arguments[0].scrollTo(0, arguments[0].scrollHeight);
+        """, container)
+
+        time.sleep(pause_time)
+        
+        new_height = driver.execute_script("return arguments[0].scrollHeight", container)
+
+        if new_height == last_height:
+            break
+        last_height = new_height
+
 def fetch_html_via_selenium(driver: webdriver.Chrome, url: str, provider: str):
     driver.get(url)
-    time.sleep(1)
+    time.sleep(2)
+
     provider_items = driver.find_elements(By.CSS_SELECTOR, ".provider-item")
 
     for item in provider_items:
@@ -120,13 +139,15 @@ def fetch_html_via_selenium(driver: webdriver.Chrome, url: str, provider: str):
             img_elem = item.find_element(By.CSS_SELECTOR, ".provider-icon img")
             img_url = img_elem.get_attribute("src")
 
-            if PROVIDERS.get(provider).img_url in img_url.lower():
+            if PROVIDERS.get(provider).img_url.lower() in img_url.lower():
+                driver.execute_script("arguments[0].scrollIntoView(true);", item)
                 item.click()
+                time.sleep(2)
+                scroll_game_list(driver)
                 break
         except Exception:
             continue
 
-    time.sleep(1)
     return driver.page_source
 
 def extract_game_data(driver=None) -> list:
@@ -134,14 +155,15 @@ def extract_game_data(driver=None) -> list:
     game_blocks = driver.find_elements(By.CSS_SELECTOR, ".game-block")
     for block in game_blocks:
         try:
-            name = block.find_element(By.CSS_SELECTOR, ".game-title").text.strip()
+            name = block.find_element(By.CSS_SELECTOR, ".game-title").text.strip().title()
             value_text = block.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
 
             progress_bar_elem = block.find_element(By.CSS_SELECTOR, ".progress-bar")
             bg = progress_bar_elem.value_of_css_property("background-color").lower()
             up = "red" if "255, 0, 0" in bg else "green"
-
+            
+            # print(f'\tName: {name}')
             if value >= 80:
                 games.append({"name": name, "value": value, "up": up})
         except Exception:
@@ -261,30 +283,30 @@ if __name__ == "__main__":
             games_found = False
             games = extract_game_data(driver)
             
-            if games:
-                # if games not found.. search it
-                search_games = []
-                if provider == 'JILI':
-                    search_games.extend(["Pirate Queen 2", "Ali Baba"])
-                elif provider == 'PG':
-                    search_games.extend(["Bounty", "Spirit"])
-                    # search_games.extend([
-                    #     "Queen of Bounty", "Captain's Bounty", "Mystical Spirits", 
-                    #     "Spirited Wonders" "Gem Saviour", "Gem Saviour Sword", 
-                    #     "Gem Saviour Conquest", "Galactic Gems", "Garuda Gems"
-                    # ])
-                elif provider == 'FC':
-                    search_games.append("Grand Blue")
-                elif provider == 'PP':
-                    pass
+            # if games:
+            #     # if games not found.. search it
+            #     search_games = []
+            #     if provider == 'JILI':
+            #         search_games.extend(["Pirate Queen 2", "Ali Baba"])
+            #     elif provider == 'PG':
+            #         search_games.extend(["Bounty", "Spirit"])
+            #         # search_games.extend([
+            #         #     "Queen of Bounty", "Captain's Bounty", "Mystical Spirits", 
+            #         #     "Spirited Wonders" "Gem Saviour", "Gem Saviour Sword", 
+            #         #     "Gem Saviour Conquest", "Galactic Gems", "Garuda Gems"
+            #         # ])
+            #     elif provider == 'FC':
+            #         search_games.append("Grand Blue")
+            #     elif provider == 'PP':
+            #         pass
 
-                for keyword in search_games:
-                    fetch_data = fetch_jackpot(provider, keyword, session_id=1)
-                    if fetch_data:
-                        if "Bounty" in keyword and 'PG' in provider:
-                            fetch_data = [g for g in fetch_data if "Wild Bounty Showdown" not in g["name"]]
-                        games.extend([g for g in fetch_data])
-                        games.sort(key=lambda g: g["value"], reverse=True)
+            #     for keyword in search_games:
+            #         fetch_data = fetch_jackpot(provider, keyword, session_id=1)
+            #         if fetch_data:
+            #             if "Bounty" in keyword and 'PG' in provider:
+            #                 fetch_data = [g for g in fetch_data if "Wild Bounty Showdown" not in g["name"]]
+            #             games.extend([g for g in fetch_data])
+            #             games.sort(key=lambda g: g["value"], reverse=True)
 
             data = get_game_data_from_local_api(provider, games) if games else None
 
