@@ -113,7 +113,7 @@ def extract_game_data(driver=None) -> list:
     game_blocks = driver.find_elements(By.CSS_SELECTOR, ".game-block")
     for block in game_blocks:
         try:
-            name = block.find_element(By.CSS_SELECTOR, ".game-title").text.strip().title()
+            name = block.find_element(By.CSS_SELECTOR, ".game-title").text.strip()
             value_text = block.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
 
@@ -121,15 +121,19 @@ def extract_game_data(driver=None) -> list:
             bg = progress_bar_elem.value_of_css_property("background-color").lower()
             up = "red" if "255, 0, 0" in bg else "green"
             
-            # print(f"\tName: {name}")
-            if value >= 0: # TEST
-            # if value >= 80:
+            # if value >= 0:  # TEST
+            # if "Yakuza" in name:
+            if value >= 80:
                 games.append({"name": name, "value": value, "up": up})
         except Exception:
             continue
-
-    games.sort(key=lambda g: g["value"], reverse=True)
-
+        
+    games = sorted([{
+        "name": " ".join(w.capitalize() if w.lower() != "of" else w.lower() for w in g["name"].split()), **{k: v for k, v in g.items() if k != "name"}} for g in games],
+        key=lambda g: g["name"], reverse=False)
+    
+    # print(f"\n\tHelpslot Games: \n\t{PROVIDERS.get(provider).color}{'\n\t'.join(g['name'] for g in games)}{RES}")
+    
     return games
 
 def get_game_data_from_local_api(provider: str, games: list):
@@ -151,10 +155,10 @@ def get_game_data_from_local_api(provider: str, games: list):
             try:
                 json_data = response.json()
                 data = json_data.get("data", [])
-                games_found = {g["name"].title(): g for g in games}
+                games_found = {g["name"]: g for g in games}
                 search_games = [name for name in games_found if name not in {g["name"] for g in data}]
                 
-                # print(f"\tSearch Games: {PROVIDERS.get(provider).color}{'\n'.join(sorted(search_games))}{RES}")
+                # print(f"\n\tBulk API Games by Manuf: \n\t{PROVIDERS.get(provider).color}{'\n\t'.join(sorted(search_games))}{RES}")
                 
                 if search_games:
                     data.extend(filter(None, (search_game_data_from_local_api(game) for game in search_games if game in games_found)))
@@ -267,32 +271,6 @@ if __name__ == "__main__":
         while True:
             games_found = False
             games = extract_game_data(driver)
-            
-            # if games:
-            #     # if games not found.. search it
-            #     search_games = []
-            #     if provider == 'JILI':
-            #         search_games.extend(["Pirate Queen 2", "Ali Baba"])
-            #     elif provider == 'PG':
-            #         search_games.extend(["Bounty", "Spirit"])
-            #         # search_games.extend([
-            #         #     "Queen of Bounty", "Captain's Bounty", "Mystical Spirits", 
-            #         #     "Spirited Wonders" "Gem Saviour", "Gem Saviour Sword", 
-            #         #     "Gem Saviour Conquest", "Galactic Gems", "Garuda Gems"
-            #         # ])
-            #     elif provider == 'FC':
-            #         search_games.append("Grand Blue")
-            #     elif provider == 'PP':
-            #         pass
-
-            #     for keyword in search_games:
-            #         fetch_data = fetch_jackpot(provider, keyword, session_id=1)
-            #         if fetch_data:
-            #             if "Bounty" in keyword and 'PG' in provider:
-            #                 fetch_data = [g for g in fetch_data if "Wild Bounty Showdown" not in g["name"]]
-            #             games.extend([g for g in fetch_data])
-            #             games.sort(key=lambda g: g["value"], reverse=True)
-
             data = get_game_data_from_local_api(provider, games) if games else None
 
             if data:
