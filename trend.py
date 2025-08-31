@@ -6,7 +6,6 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-# from meter import fetch_jackpot
 from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, PING,
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BGRE, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
@@ -240,8 +239,8 @@ def play_alert(alert_queue, stop_event):
                 if sound_file == "ping":
                     subprocess.run(["afplay", PING])
                 else:
-                    voice = VOICES["Trinoids"] if "Bonus" in sound_file else VOICES["Samantha"]
-                    # sound_file = say.replace("trending", "").strip()
+                    voice = VOICES["Trinoids"] if ("Bonus" in sound_file or "Trending" in sound_file) else VOICES["Samantha"]
+                    # sound_file = say.replace("Trending", "").strip()
                     subprocess.run(["say", "-v", voice, "--", sound_file])
                     
             except Empty:
@@ -309,11 +308,14 @@ if __name__ == "__main__":
                     print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10m}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1h}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3h}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6h}{percent}")
 
                     if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
-                        last_alerts[clean_name] = now
                         if game.get('bet_lvl') in [ 'Bonus', 'High' ] or game.get('trending'):
-                            alert_queue.put(clean_name)
-                            alert_queue.put(f"{game.get('bet_lvl')} {game.get('value')}") if game.get('bet_lvl') == 'Bonus' else None
-                            
+                            last_alerts[clean_name] = now
+                            alert_queue.put(
+                                f"{clean_name} {game.get('bet_lvl')} {game.get('value')}" if game.get("bet_lvl") == "Bonus"
+                                else f"{clean_name} Trending" if game.get("trending")
+                                else clean_name
+                            )
+                                          
             print("\n")
             if not games_found:
                 print(f"\t🚫 {BLRED}No Trending Games Found !{RES}")
