@@ -170,7 +170,7 @@ def get_game_data_from_local_api(provider: str, games: list):
                         not g.get("up")
                         and games_found[g["name"]].get("up") == "red"
                         and g.get("min10", 0) < 5
-                        and g.get("min10", 0) < g.get("hr1", 0)
+                        # and g.get("min10", 0) < g.get("hr1", 0)
                     ),
                     "bet_lvl": (
                         "Bonus"
