@@ -107,7 +107,7 @@ def fetch_html_via_selenium(driver: webdriver.Chrome, url: str, provider: str):
 
     return driver.page_source
 
-def extract_game_data(driver=None) -> list:
+def extract_game_data(driver) -> list:
     games = []
     game_blocks = driver.find_elements(By.CSS_SELECTOR, ".game-block")
     for block in game_blocks:
@@ -121,8 +121,8 @@ def extract_game_data(driver=None) -> list:
             up = "red" if "255, 0, 0" in bg else "green"
             
             # if value >= 0:  # TEST
-            # if "Wild Ape" in name:
-            if value >= 87 or (value >= 50 and up == "red"):
+            # if "Wild Bounty Showdown" in name:
+            if value >= 85 or (value >= 70 and up == "red"):
                 games.append({"name": name, "value": value, "up": up})
         except Exception:
             continue
@@ -135,79 +135,91 @@ def extract_game_data(driver=None) -> list:
     
     return games
 
+from concurrent.futures import ThreadPoolExecutor
+
 def get_game_data_from_local_api(provider: str, games: list):
     user_agent = random.choice(USER_AGENTS)
     REQUEST_FROM = random.choice(["H5", "H6"])
     URL = next((url for url in URLS if 'helpslot' in url), None)
-    HEADERS = {
-        "Accept": "application/json",
-        "User-Agent": user_agent
-    }
+    HEADERS = {"Accept": "application/json", "User-Agent": user_agent}
 
     try:
-        response = requests.get(
-            f"{URL}/api/games?manuf={provider}&requestFrom={REQUEST_FROM}",
-            headers=HEADERS
-        )
-
-        if response.status_code == 200:
-            try:
-                json_data = response.json()
-                data = json_data.get("data", [])
-                if provider == "PG" and any(g.get("name") == "Wild Ape#3258" for g in data):
-                    data = [g for g in data if g.get("name") != "Wild Ape#3258"]
-                    
-                games_found = {g["name"]: g for g in games}
-                search_games = [name for name in games_found if name not in {g["name"] for g in data}]
-                
-                # print(f"\n\tSearch Games not in Bulk API: \n\t{PROVIDERS.get(provider).color}{'\n\t'.join(sorted(search_games))}{RES}")
-                
-                if search_games:
-                    data.extend(filter(None, (search_game_data_from_local_api(game) for game in search_games)))    
-                
-                enriched = [{
-                    **g,
-                    "jackpot_value": games_found[g["name"]].get("value"),
-                    "meter_color": games_found[g["name"]].get("up"),
-                    "trending": (
-                        # not g.get("up")
-                        # and games_found[g["name"]].get("up") == "red"
-                        games_found[g["name"]].get("up") == "red"
-                        and g.get("min10", 0) < 5
-                        and (
-                            g.get("hr1", 0) < 0
-                            or g.get("hr3", 0) < 0
-                            or g.get("hr6", 0) < 0
-                    )),
-                    "bet_lvl": (
-                        "Bonus"
-                        if g.get("value", 0) >= 97 and games_found[g["name"]].get("value", 0) >= 88 and games_found[g["name"]].get("up") == "red"
-                        else "High"
-                        if (g.get("value", 0) >= 80 and games_found[g["name"]].get("value", 0) >= 80) or g.get("min10", 0) <= -60
-                        else "Mid"
-                        if (g.get("value", 0) >= 50 and not g.get("up")) or g.get("min10", 0) <= -30
-                        else "Low"
-                    )}
-                    for g in data if g.get("name") in games_found
-                ]
-            except ValueError:
-                print(f"❌ Server did not return JSON: {response.text}")
-                json_data = {"error": "Invalid JSON response"}
-        else:
+        response = requests.get(f"{URL}/api/games?manuf={provider}&requestFrom={REQUEST_FROM}", headers=HEADERS)
+        if response.status_code != 200:
             print(f"❌ Error {response.status_code}: {response.text}")
-            json_data = {"error": f"HTTP {response.status_code}"}
-            
-        priority = {"Bonus": 4, "High": 3, "Mid": 2, "Low": 1}
+            return []
+
+        try:
+            json_data = response.json()
+            data = json_data.get("data", [])
+        except ValueError:
+            print(f"❌ Server did not return JSON: {response.text}")
+            return []
         
-        # enriched = [g for g in enriched if not (g["bet_lvl"] == "Low" and (g["value"] < 50 or (g["meter_color"] == "red" and g["jackpot_value"] <= 82)))]
+        if provider == "PG":
+            data = [g for g in data if g.get("name") != "Wild Ape#3258"]
+
+        # Precompute for fast lookup
+        data_names = {g["name"] for g in data}
+        games_found = {g["name"]: g for g in games}
+        search_games = [name for name in games_found if name not in data_names]
+
+        # Fetch missing games in parallel
+        if search_games:
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                results = list(executor.map(search_game_data_from_local_api, search_games))
+            data.extend(filter(None, results))
+            
+        enriched = []
+        for g in data:
+            name = g.get("name")
+            gf = games_found.get(name)
+            if not gf:
+                continue
+
+            trending = gf.get("up") == "red" and g.get("min10", 0) < 5 and any(
+                g.get(hr, 0) < 0 for hr in ["hr1", "hr3", "hr6"]
+            )
+            
+            value = g.get("value", 0)
+            gf_value = gf.get("value", 0)
+            up = gf.get("up")
+
+            if value >= 95 and gf_value >= 87: #and up == "red":
+                bet_lvl = "Bonus"
+            elif (value >= 80 and gf_value >= 80) or g.get("min10", 0) <= -60:
+                bet_lvl = "High"
+            elif (value >= 50 and not g.get("up")) or g.get("min10", 0) <= -30:
+                bet_lvl = "Mid"
+            else:
+                bet_lvl = "Low"
+
+            enriched.append({
+                **g,
+                "jackpot_value": gf_value,
+                "meter_color": up,
+                "trending": trending,
+                "bet_lvl": bet_lvl
+            })
+            
         enriched = [g for g in enriched if not (g["bet_lvl"] in ["Mid", "Low"] and not g.get("trending"))]
-        enriched.sort(key=lambda g: (priority[g["bet_lvl"]], g.get("trending", False), g["value"], g["jackpot_value"]), reverse=True)
+        priority = {"Bonus": 4, "High": 3, "Mid": 2, "Low": 1}
+
+        enriched.sort(
+            key=lambda g: (
+                priority[g["bet_lvl"]],
+                0 if (g["bet_lvl"] in ["Bonus", "High"] and not g.get("trending")) 
+                    or (g["bet_lvl"] in ["Mid", "Low"] and g.get("trending")) else 1,
+                g["value"],
+                g["jackpot_value"]
+            ),
+            reverse=True
+        )
         
         return enriched
-
     except Exception as e:
-        print(f"❌ Error calling API: {e}")
-        return {"error": str(e)}, REQUEST_FROM
+        print(f"❌ Exception: {e}")
+        return []
     
 def search_game_data_from_local_api(game: str):
     user_agent = random.choice(USER_AGENTS)
@@ -296,7 +308,7 @@ if __name__ == "__main__":
                 )
                 percent = f"{LGRY}%{RES}"
                 for game in data:
-                    games_found = True                        
+                    games_found = True   
                     clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
                     if "Wild Ape" in clean_name and "PG" in provider:
                         clean_name = clean_name.replace("#3258", "").strip()
