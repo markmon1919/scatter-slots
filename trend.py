@@ -122,7 +122,7 @@ def extract_game_data(driver) -> list:
             
             # if value >= 0:  # TEST
             # if "Wild Bounty Showdown" in name:
-            if value >= 85 or (value >= 70 and up == "red"):
+            if value >= 85 or (value >= 80 and up == "red"):
                 games.append({"name": name, "value": value, "up": up})
         except Exception:
             continue
