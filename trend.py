@@ -167,7 +167,7 @@ def get_game_data_from_local_api(provider: str, games: list):
                     "jackpot_value": games_found[g["name"]].get("value"),
                     "meter_color": games_found[g["name"]].get("up"),
                     "trending": (
-                        not g.get("up")
+                        # not g.get("up")
                         and games_found[g["name"]].get("up") == "red"
                         and g.get("min10", 0) < 5
                         and (
