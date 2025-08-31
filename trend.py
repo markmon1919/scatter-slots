@@ -121,8 +121,9 @@ def extract_game_data(driver=None) -> list:
             bg = progress_bar_elem.value_of_css_property("background-color").lower()
             up = "red" if "255, 0, 0" in bg else "green"
             
-            # print(f'\tName: {name}')
-            if value >= 80:
+            # print(f"\tName: {name}")
+            if value >= 0: # TEST
+            # if value >= 80:
                 games.append({"name": name, "value": value, "up": up})
         except Exception:
             continue
@@ -150,8 +151,14 @@ def get_game_data_from_local_api(provider: str, games: list):
             try:
                 json_data = response.json()
                 data = json_data.get("data", [])
-                games_found = {g["name"]: g for g in games}
-
+                games_found = {g["name"].title(): g for g in games}
+                search_games = [name for name in games_found if name not in {g["name"] for g in data}]
+                
+                # print(f"\tSearch Games: {PROVIDERS.get(provider).color}{'\n'.join(sorted(search_games))}{RES}")
+                
+                if search_games:
+                    data.extend(filter(None, (search_game_data_from_local_api(game) for game in search_games if game in games_found)))
+                                
                 enriched = [{
                     **g,
                     "jackpot_value": games_found[g["name"]].get("value"),
@@ -185,6 +192,34 @@ def get_game_data_from_local_api(provider: str, games: list):
         
         return enriched
 
+    except Exception as e:
+        print(f"❌ Error calling API: {e}")
+        return {"error": str(e)}, REQUEST_FROM
+    
+def search_game_data_from_local_api(game: str) -> list:
+    user_agent = random.choice(USER_AGENTS)
+    REQUEST_FROM = random.choice(["H5", "H6"])
+    URL = next((url for url in URLS if 'helpslot' in url), None)
+    HEADERS = {
+        "Accept": "application/json",
+        "User-Agent": user_agent
+    }
+
+    try:
+        response = requests.get(
+            f"{URL}/api/games?name={game}&requestFrom={REQUEST_FROM}",
+            headers=HEADERS
+        )
+
+        if response.status_code == 200:
+            try:
+                json_data = response.json()
+                data = json_data.get("data", [])
+                game_data = data[0] if data else {}
+                return game_data
+            except ValueError:
+                print(f"❌ Server did not return JSON: {response.text}")
+                json_data = {"error": "Invalid JSON response"}
     except Exception as e:
         print(f"❌ Error calling API: {e}")
         return {"error": str(e)}, REQUEST_FROM
