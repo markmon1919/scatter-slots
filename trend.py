@@ -122,7 +122,7 @@ def extract_game_data(driver=None) -> list:
             
             # if value >= 0:  # TEST
             # if "Yakuza" in name:
-            if value >= 80:
+            if value >= 87 or (value >= 50 and up == "red"):
                 games.append({"name": name, "value": value, "up": up})
         except Exception:
             continue
@@ -243,7 +243,8 @@ def play_alert(alert_queue, stop_event):
                 if sound_file == "ping":
                     subprocess.run(["afplay", PING])
                 else:
-                    voice = VOICES["Trinoids"] if ("Bonus" in sound_file or "Trending" in sound_file) else VOICES["Samantha"]
+                    # voice = VOICES["Trinoids"] if ("Bonus" in sound_file or "Trending" in sound_file) else VOICES["Samantha"]
+                    voice = VOICES["Trinoids"] if "Bonus" in sound_file else VOICES["Samantha"]
                     sound_file = sound_file.replace("Trending", "").strip()
                     subprocess.run(["say", "-v", voice, "--", sound_file])
                     
@@ -277,9 +278,9 @@ if __name__ == "__main__":
             games_found = False
             games = extract_game_data(driver)
             data = get_game_data_from_local_api(provider, games) if games else None
-
+            
             if data:
-                alert_cooldown = min(sum(1 for g in data if g.get("bet_lvl") in ["Bonus", "High"] or g.get("trending")) * 2, 10)
+                alert_cooldown = min(sum(1 for g in data if g.get("bet_lvl") == "Bonus" or (g.get("bet_lvl") in [ "High", "Mid" ] and g.get("trending"))) * 2, 10)
                 now = time.time()
                 today = time.localtime(now)
                 
@@ -313,7 +314,7 @@ if __name__ == "__main__":
                     
                     if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
                         last_alerts[clean_name] = now
-                        if game.get('bet_lvl') in [ 'Bonus', 'High' ] or game.get('trending'):
+                        if game.get('bet_lvl') == 'Bonus' or (game.get('bet_lvl') in [ 'High', 'Mid' ] and game.get('trending')):
                             alert_queue.put(
                                 f"{clean_name} {game.get('bet_lvl')} {game.get('value')}" if game.get("bet_lvl") == "Bonus"
                                 else f"{clean_name} Trending" if game.get("trending")
