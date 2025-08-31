@@ -192,6 +192,8 @@ def get_game_data_from_local_api(provider: str, games: list):
             json_data = {"error": f"HTTP {response.status_code}"}
             
         priority = {"Bonus": 4, "High": 3, "Mid": 2, "Low": 1}
+        
+        enriched = [g for g in enriched if not (g["bet_lvl"] == "Low" and (g["value"] < 50 or (g["meter_color"] == "red" and g["jackpot_value"] <= 82)))]
         enriched.sort(key=lambda g: (priority[g["bet_lvl"]], g.get("trending", False), g["value"], g["jackpot_value"]), reverse=True)
         
         return enriched
