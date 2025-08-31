@@ -6,7 +6,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from meter import fetch_jackpot
+# from meter import fetch_jackpot
 from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, PING,
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BGRE, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
@@ -67,48 +67,6 @@ def providers_list():
                 print("\t⚠️  Invalid choice. Try again.")
         except ValueError:
             print("\t⚠️  Please enter a valid number.")
-
-def get_game_data_from_local_api(provider: str, games: list):
-    user_agent = random.choice(USER_AGENTS)
-    REQUEST_FROM = random.choice(["H5", "H6"])
-    URL = next((url for url in URLS if 'helpslot' in url), None)
-    HEADERS = {
-        "Accept": "application/json",
-        "User-Agent": user_agent
-    }
-
-    try:
-        response = requests.get(
-            f"{URL}/api/games?manuf={provider}&requestFrom={REQUEST_FROM}",
-            headers=HEADERS
-        )
-
-        if response.status_code == 200:
-            try:
-                json_data = response.json()
-                data = json_data.get("data", [])
-                games_found = {g["name"]: g for g in games}
-
-                enriched = [
-                    {**g,
-                     "jackpot_value": games_found[g["name"]].get("value"),
-                     "meter_color": games_found[g["name"]].get("up")}
-                    for g in data if g.get("name") in games_found
-                ]
-            except ValueError:
-                print(f"❌ Server did not return JSON: {response.text}")
-                json_data = {"error": "Invalid JSON response"}
-        else:
-            print(f"❌ Error {response.status_code}: {response.text}")
-            json_data = {"error": f"HTTP {response.status_code}"}
-
-        # print(f"📡 Response >> [{BWHTE}{REQUEST_FROM}{RES}] {json_data}")
-        enriched.sort(key=lambda g: g["jackpot_value"], reverse=True)
-        return enriched
-
-    except Exception as e:
-        print(f"❌ Error calling API: {e}")
-        return {"error": str(e)}, REQUEST_FROM
     
 def scroll_game_list(driver, pause_time: float = 1.0, max_tries: int = 50):
     """Scroll the .scroll-view.with-provider element until all games are loaded."""
@@ -173,70 +131,63 @@ def extract_game_data(driver=None) -> list:
 
     return games
 
-# def search_game_data(provider: str, driver=None) -> list:
-#     while not stop_event.is_set():
-#         try:
-                    
-#             # provider-specific search games if not found
-#             search_games = []
-#             if provider == 'JILI':
-#                 search_games.append("Pirate Queen 2")
-#             elif provider == 'PG':
-#                 search_games.extend([
-#                     "Queen of Bounty", "Captain's Bounty", "Mystical Spirits", 
-#                     "Spirited Wonders", "Gem Saviour", "Gem Saviour Sword", 
-#                     "Gem Saviour Conquest", "Galactic Gems", "Garuda Gems"
-#                 ])
-#             elif provider == 'FC':
-#                 search_games.append("Grand Blue")
-#             elif provider == 'PP':
-#                 pass
+def get_game_data_from_local_api(provider: str, games: list):
+    user_agent = random.choice(USER_AGENTS)
+    REQUEST_FROM = random.choice(["H5", "H6"])
+    URL = next((url for url in URLS if 'helpslot' in url), None)
+    HEADERS = {
+        "Accept": "application/json",
+        "User-Agent": user_agent
+    }
 
-#             games = []
-#             game_blocks = driver.find_elements(By.CSS_SELECTOR, ".game-block")
-
-#             # loop through search terms
-#             for game in search_games:
-#                 search_box = driver.find_element(By.ID, "van-search-1-input")
-#                 driver.execute_script("arguments[0].value = '';", search_box)
-#                 search_box.send_keys(game)
-#                 search_btn = driver.find_element(By.CLASS_NAME, "van-search__action")
-#                 search_btn.click()
-
-#                 time.sleep(1)
-
-#                 game_blocks = driver.find_elements(By.CSS_SELECTOR, ".game-block")
-#                 for block in game_blocks:
-#                     try:
-#                         name = block.find_element(By.CSS_SELECTOR, ".game-title").text.strip()
-#                         value_text = block.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
-#                         value = float(value_text.replace("%", ""))
-
-#                         progress_bar_elem = block.find_element(By.CSS_SELECTOR, ".progress-bar")
-#                         bg = progress_bar_elem.value_of_css_property("background-color").lower()
-#                         up = "red" if "255, 0, 0" in bg else "green"
-
-#                         if value >= 80:
-#                             games.append({"name": name, "value": value, "up": up})
-#                     except Exception:
-#                         continue
-
-#             games.sort(key=lambda g: g["value"], reverse=True)
-#             return games
-#         except Exception as e:
-#             print(f"🤖❌  {e}")
-
-#         time.sleep(0.5)
-
-def pct(p):
-    if p is None:
-        return 0.0
-    if isinstance(p, str) and '%' in p:
-        return float(p.strip('%'))
     try:
-        return float(p)
-    except (TypeError, ValueError):
-        return 0.0
+        response = requests.get(
+            f"{URL}/api/games?manuf={provider}&requestFrom={REQUEST_FROM}",
+            headers=HEADERS
+        )
+
+        if response.status_code == 200:
+            try:
+                json_data = response.json()
+                data = json_data.get("data", [])
+                games_found = {g["name"]: g for g in games}
+
+                enriched = [{
+                    **g,
+                    "jackpot_value": games_found[g["name"]].get("value"),
+                    "meter_color": games_found[g["name"]].get("up"),
+                    "trending": (
+                        not g.get("up")
+                        and games_found[g["name"]].get("up") == "red"
+                        and g.get("min10", 0) < 0
+                        and g.get("min10", 0) > g.get("hr1", 0)
+                    ),
+                    "bet_lvl": (
+                        "Bonus"
+                        if g.get("value", 0) >= 97 and games_found[g["name"]].get("value", 0) >= 88 and games_found[g["name"]].get("up") == "red"
+                        else "High"
+                        if (g.get("value", 0) >= 80 and games_found[g["name"]].get("value", 0) >= 80) or g.get("min10", 0) <= -60
+                        else "Mid"
+                        if (g.get("value", 0) >= 50 and not g.get("up")) or g.get("min10", 0) <= -30
+                        else "Low"
+                    )}
+                    for g in data if g.get("name") in games_found
+                ]
+            except ValueError:
+                print(f"❌ Server did not return JSON: {response.text}")
+                json_data = {"error": "Invalid JSON response"}
+        else:
+            print(f"❌ Error {response.status_code}: {response.text}")
+            json_data = {"error": f"HTTP {response.status_code}"}
+            
+        priority = {"Bonus": 4, "High": 3, "Mid": 2, "Low": 1}
+        enriched.sort(key=lambda g: (priority[g["bet_lvl"]], g.get("trending", False), g["value"], g["jackpot_value"]), reverse=True)
+        
+        return enriched
+
+    except Exception as e:
+        print(f"❌ Error calling API: {e}")
+        return {"error": str(e)}, REQUEST_FROM
 
 def play_alert(alert_queue, stop_event):
     if platform.system() == "Darwin":
@@ -248,8 +199,8 @@ def play_alert(alert_queue, stop_event):
                 if sound_file == "ping":
                     subprocess.run(["afplay", PING])
                 else:
-                    voice = VOICES["Trinoids"] if "trending" in sound_file else VOICES["Samantha"]
-                    sound_file = say.replace("trending", "").strip()
+                    voice = VOICES["Trinoids"] if "Bonus" in sound_file else VOICES["Samantha"]
+                    # sound_file = say.replace("trending", "").strip()
                     subprocess.run(["say", "-v", voice, "--", sound_file])
                     
             except Empty:
@@ -277,7 +228,6 @@ if __name__ == "__main__":
         alert_queue.put(provider_name)
 
         last_alerts = {}
-        alert_cooldown = 10 # seconds
 
         while True:
             games_found = False
@@ -311,58 +261,43 @@ if __name__ == "__main__":
             data = get_game_data_from_local_api(provider, games) if games else None
 
             if data:
-                # alert_cooldown = len(data) * 2 # seconds)
+                alert_cooldown = sum(1 for g in data if g.get('bet_lvl') in ['Bonus', 'High'] or g.get('trending')) * 2
+                now = time.time()
+                today = time.localtime(now)
+                
+                print(
+                    f"\n\t\t\t\t⏰  {BYEL}{time.strftime('%I', today)}{BWHTE}:{BYEL}{time.strftime('%M', today)}"
+                    f"{BWHTE}:{BLYEL}{time.strftime('%S', today)} {LBLU}{time.strftime('%p', today)} "
+                    f"{MAG}{time.strftime('%a', today)}{RES}"
+                )
                 percent = f"{LGRY}%{RES}"
                 for game in data:
-                    # potential_trend = (
-                    #     game.get('value') >= 90 and game.get('jackpot_value') >= 88
-                    #     # and game.get('meter_color') == 'red'
-                    # )
-
-                    trending = (
-                        # not game.get('up')
-                        # and game.get('meter_color') == 'red'
-                        game.get('meter_color') == 'red'
-                    )
-
-                    # if trending or potential_trend:
                     games_found = True                        
                     clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
                     if "Wild Ape" in clean_name and "PG" in provider:
                         clean_name = clean_name.replace("#3258", "").strip()
-
-                    tag = "💥💥💥 " if trending else "🔥🔥🔥 "
+                        
+                    tag = "💥💥💥 " if game.get('trending') else "🔥🔥🔥 "
                     signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
                     helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
                     colored_value_10m = f"{RED if game.get('min10') < 0 else GRE if game.get('min10') > 0 else CYN}{' ' + str(game.get('min10')) if game.get('min10') > 0 else game.get('min10')}{RES}"
                     colored_value_1h = f"{RED if game.get('hr1') < 0 else GRE if game.get('hr1') > 0 else CYN}{' ' + str(game.get('hr1')) if game.get('hr1') > 0 else game.get('hr1')}{RES}"
                     colored_value_3h = f"{RED if game.get('hr3') < 0 else GRE if game.get('hr3') > 0 else CYN}{' ' + str(game.get('hr3')) if game.get('hr3') > 0 else game.get('hr3')}{RES}"
                     colored_value_6h = f"{RED if game.get('hr6') < 0 else GRE if game.get('hr6') > 0 else CYN}{' ' + str(game.get('hr6')) if game.get('hr6') > 0 else game.get('hr6')}{RES}"
-                    
-                    bet_lvl = (
-                        f"{'Bonus' if game.get('value') >= 97 and game.get('jackpot_value') >= 87 and game.get('meter_color') == 'red'
-                        else 'High' if (game.get('value') >= 80 and game.get('jackpot_value') >= 80) or game.get('min10') <= -60
-                        # else 'High' if (game.get('value') >= 80 and not game.get('up')) or game.get('min10') <= -60
-                        else 'Mid' if (game.get('value') >= 50 and not game.get('up')) or game.get('min10') <= -30
-                        else 'Low'}"
-                    )
-                    bet_str = f"{BLNK if bet_lvl not in 'Low' else ''}💰 {BLU if bet_lvl in [ 'Mid', 'Low' ] else BLYEL if bet_lvl == 'Bonus' else BGRE}{bet_lvl.upper()}{RES} "
+                    bet_str = f"{BLNK if game.get('bet_lvl') not in 'Low' else ''}💰 {BLU if game.get('bet_lvl') in [ 'Mid', 'Low' ] else BLYEL if game.get('bet_lvl') == 'Bonus' else BGRE}{game.get('bet_lvl').upper()}{RES} "
                     
                     print(
                         f"\n\t{tag} {BMAG}{clean_name} {bet_str}{RES}{DGRY}→ {signal} "
                         f"{RED if not game.get('up') else GRE}{game.get('value')}{RES}{percent} "
                         f"({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})"
                     )
-
                     print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10m}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1h}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3h}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6h}{percent}")
-
-                    now = time.time()
 
                     if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
                         last_alerts[clean_name] = now
-                        if bet_lvl in [ 'Bonus', 'High' ]:
-                            alert_queue.put(f"{clean_name} {'trending' if trending else ''}")
-                            alert_queue.put(f"{bet_lvl} {game.get('value') if bet_lvl == 'Bonus' else ''}")
+                        if game.get('bet_lvl') in [ 'Bonus', 'High' ] or game.get('trending'):
+                            alert_queue.put(clean_name)
+                            alert_queue.put(f"{game.get('bet_lvl')} {game.get('value')}") if game.get('bet_lvl') == 'Bonus' else None
                             
             print("\n")
             if not games_found:
