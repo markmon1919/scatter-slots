@@ -240,6 +240,7 @@ def play_alert(alert_queue, stop_event):
                     subprocess.run(["afplay", PING])
                 else:
                     voice = VOICES["Trinoids"] if ("Bonus" in sound_file or "Trending" in sound_file) else VOICES["Samantha"]
+                    sound_file = sound_file.replace("Trending", "").strip()
                     subprocess.run(["say", "-v", voice, "--", sound_file])
                     
             except Empty:
