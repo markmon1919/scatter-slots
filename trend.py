@@ -274,7 +274,7 @@ if __name__ == "__main__":
             data = get_game_data_from_local_api(provider, games) if games else None
 
             if data:
-                alert_cooldown = sum(1 for g in data if g.get('bet_lvl') in ['Bonus', 'High'] or g.get('trending')) * 2
+                alert_cooldown = min(sum(1 for g in data if g.get("bet_lvl") in ["Bonus", "High"] or g.get("trending")) * 2, 10)
                 now = time.time()
                 today = time.localtime(now)
                 
