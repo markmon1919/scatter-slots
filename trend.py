@@ -169,8 +169,8 @@ def get_game_data_from_local_api(provider: str, games: list):
                     "trending": (
                         not g.get("up")
                         and games_found[g["name"]].get("up") == "red"
-                        and g.get("min10", 0) < 0
-                        and g.get("min10", 0) > g.get("hr1", 0)
+                        and g.get("min10", 0) < 5
+                        and g.get("min10", 0) < g.get("hr1", 0)
                     ),
                     "bet_lvl": (
                         "Bonus"
@@ -240,7 +240,6 @@ def play_alert(alert_queue, stop_event):
                     subprocess.run(["afplay", PING])
                 else:
                     voice = VOICES["Trinoids"] if ("Bonus" in sound_file or "Trending" in sound_file) else VOICES["Samantha"]
-                    # sound_file = say.replace("Trending", "").strip()
                     subprocess.run(["say", "-v", voice, "--", sound_file])
                     
             except Empty:
