@@ -1,6 +1,6 @@
 #!/usr/bin/env .venv/bin/python
 
-import platform, threading, time, random, pyautogui, subprocess, sys
+import math, platform, threading, time, random, pyautogui, subprocess, sys
 from queue import Queue as ThQueue, Empty
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 from config import (SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, VOICES,
@@ -792,11 +792,11 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
             else:
                 if provider in [ 'PG' ]:
                     action.extend([
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx - 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx - 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx + 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx + 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx - 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx - 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx + 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx + 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
                         # lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx - 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
                         # lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx - 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
                         # lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
@@ -1097,6 +1097,22 @@ def on_key_press(key):
             spin(False, True)
     except AttributeError:
         print(f"Error: SPECIAL KEY: {key}")
+        
+def countdown_timer(seconds: int = 10):
+    while not stop_event.is_set():
+        now_time = time.time()
+        current_sec = int(now_time) % seconds
+        
+        sys.stdout.write(f"\r{current_sec}")
+        sys.stdout.flush()
+        
+        if current_sec % 10 == 9:
+            threading.Thread(target=spin, args=(False, False,), daemon=True)
+            spin(False, False)
+        
+        next_sec = math.ceil(now_time)
+        sleep_time = max(0, next_sec - time.time())
+        time.sleep(sleep_time)
 
 def start_listeners(stop_event):
     with KeyboardListener(on_press=on_key_press) as kb_listener:
@@ -1121,11 +1137,13 @@ if __name__ == "__main__":
     
     alert_thread = threading.Thread(target=play_alert, args=(alert_queue, stop_event,), daemon=True)
     kb_thread = threading.Thread(target=start_listeners, args=(stop_event,), daemon=True)
+    countdown_thread = threading.Thread(target=countdown_timer, daemon=True)
     # spin_thread = threading.Thread(target=spin, args=(spin_queue, stop_event, False), daemon=True)
     # spin_thread = threading.Thread(target=spin, args=(False,), daemon=True)
 
     alert_thread.start()
     kb_thread.start()
+    countdown_thread.start()
     # spin_thread.start()
 
     try:

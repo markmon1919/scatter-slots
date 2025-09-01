@@ -122,7 +122,7 @@ def extract_game_data(driver) -> list:
             
             # if value >= 0:  # TEST
             # if "Wild Bounty Showdown" in name:
-            if value >= 85 or (value >= 80 and up == "red"):
+            if value >= 88 or (value >= 85 and up == "red"):
                 games.append({"name": name, "value": value, "up": up})
         except Exception:
             continue
@@ -166,7 +166,7 @@ def get_game_data_from_local_api(provider: str, games: list):
 
         # Fetch missing games in parallel
         if search_games:
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            with ThreadPoolExecutor(max_workers=len(search_games)) as executor:
                 results = list(executor.map(search_game_data_from_local_api, search_games))
             data.extend(filter(None, results))
             
@@ -176,7 +176,12 @@ def get_game_data_from_local_api(provider: str, games: list):
             gf = games_found.get(name)
             if not gf:
                 continue
-
+            
+            # if not g.get("value") > 60 or not (g.get("min10") < 0 or g.get("hr1") < -10):
+            if not g.get("value") >= 60 or not (g.get("hr1") < g.get("hr3") < g.get("hr6") and g.get("min10") < 0):
+            # if not g.get("value") >= 60 or not (g.get("hr1") < g.get("hr3") < g.get("hr6") and g.get("min10") < 0 and g.get("hr6") <= 20):
+                continue
+            
             trending = gf.get("up") == "red" and g.get("min10", 0) < 5 and any(
                 g.get(hr, 0) < 0 for hr in ["hr1", "hr3", "hr6"]
             )
@@ -295,6 +300,7 @@ if __name__ == "__main__":
             games_found = False
             games = extract_game_data(driver)
             data = get_game_data_from_local_api(provider, games) if games else None
+            percent = f"{LGRY}%{RES}"
             
             if data:
                 alert_cooldown = min(sum(1 for g in data if g.get("bet_lvl") == "Bonus" or (g.get("bet_lvl") in [ "High", "Mid" ] and g.get("trending"))) * 2, 10)
@@ -306,7 +312,7 @@ if __name__ == "__main__":
                     f"{BWHTE}:{BLYEL}{time.strftime('%S', today)} {LBLU}{time.strftime('%p', today)} "
                     f"{MAG}{time.strftime('%a', today)}{RES}"
                 )
-                percent = f"{LGRY}%{RES}"
+                
                 for game in data:
                     games_found = True   
                     clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
@@ -329,14 +335,20 @@ if __name__ == "__main__":
                     )
                     print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10m}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1h}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3h}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6h}{percent}")
                     
-                    if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
-                        last_alerts[clean_name] = now
-                        if game.get('bet_lvl') == 'Bonus' or (game.get('bet_lvl') in [ 'High', 'Mid' ] and game.get('trending')):
-                            alert_queue.put(
-                                f"{clean_name} {game.get('bet_lvl')} {game.get('value')}" if game.get("bet_lvl") == "Bonus"
-                                else f"{clean_name} Trending" if game.get("trending")
-                                else clean_name
-                            )
+                    alert_queue.put(
+                        f"{clean_name} {game.get('bet_lvl')} {game.get('value')}" if game.get("bet_lvl") == "Bonus"
+                        else f"{clean_name} Trending" if game.get("trending")
+                        else clean_name
+                    )
+                    
+                    # if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
+                    #     last_alerts[clean_name] = now
+                    #     if game.get('bet_lvl') == 'Bonus' or (game.get('bet_lvl') in [ 'High', 'Mid' ] and game.get('trending')):
+                    #         alert_queue.put(
+                    #             f"{clean_name} {game.get('bet_lvl')} {game.get('value')}" if game.get("bet_lvl") == "Bonus"
+                    #             else f"{clean_name} Trending" if game.get("trending")
+                    #             else clean_name
+                    #         )
                                           
             print("\n")
             if not games_found:
