@@ -1202,7 +1202,7 @@ if __name__ == "__main__":
     provider, provider_name = providers_list()
     alert_queue.put(provider_name)
     spin_btn = True if provider in [ "FC" ] else False
-    user_input = input(f"\tDo you want to enable {CYN}Wide Screen{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
+    user_input = input(f"\tDo you want to enable {CYN}Wide Screen{RES} ❓ ({DGRY}y/N{RES}): \n").strip().lower()
     widescreen = user_input in ("y", "yes")
     
     CENTER_X, CENTER_Y = SCREEN_POS.get("center_x"), SCREEN_POS.get("center_y")

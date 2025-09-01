@@ -38,7 +38,7 @@ def render_providers():
     for idx, (left_provider, left_conf) in enumerate(providers[:half], start=1):
         left_color = left_conf.color
         left_str = f"[{WHTE}{idx}{RES}] - {left_color}{left_conf.provider}{RES}\t"
-
+        
         right_index = idx - 1 + half
         if right_index < len(providers):
             right_provider, right_conf = providers[right_index]
@@ -177,7 +177,7 @@ def get_game_data_from_local_api(provider: str, games: list):
             if not gf:
                 continue
             
-            if provider == "PG":
+            if provider in [ "JILI", "PG" ]:
                 # if not g.get("value") > 60 or not (g.get("min10") < 0 or g.get("hr1") < -10):
                 if not g.get("value") >= 60 or not (g.get("hr1") < g.get("hr3") < g.get("hr6") and g.get("min10") < 0):
                 # if not g.get("value") >= 60 or not (g.get("hr1") < g.get("hr3") < g.get("hr6") and g.get("min10") < 0 and g.get("hr6") <= 20):
@@ -268,7 +268,7 @@ def play_alert(alert_queue, stop_event):
                 else:
                     # voice = VOICES["Trinoids"] if ("Bonus" in sound_file or "Trending" in sound_file) else VOICES["Samantha"]
                     voice = VOICES["Trinoids"] if "Bonus" in sound_file else VOICES["Samantha"]
-                    sound_file = sound_file.replace("Trending", "").strip()
+                    sound_file = sound_file.replace("is_trending", "").strip()
                     subprocess.run(["say", "-v", voice, "--", sound_file])
                     
             except Empty:
@@ -281,19 +281,19 @@ def play_alert(alert_queue, stop_event):
 
 if __name__ == "__main__":
     try:
+        stop_event = threading.Event()
+        alert_queue = ThQueue()
+        alert_thread = threading.Thread(target=play_alert, args=(alert_queue, stop_event), daemon=True)
+        alert_thread.start()
+        
         driver = setup_driver()
         print(f"{CLEAR}", end="")
         print(render_providers())
 
         url = next((url for url in URLS if 'helpslot' in url), None)
         provider, provider_name = providers_list()
-        html = fetch_html_via_selenium(driver, url, provider)
-        
-        stop_event = threading.Event()
-        alert_queue = ThQueue()
-        alert_thread = threading.Thread(target=play_alert, args=(alert_queue, stop_event), daemon=True)
-        alert_thread.start()
         alert_queue.put(provider_name)
+        html = fetch_html_via_selenium(driver, url, provider)
 
         last_alerts = {}
 
@@ -338,7 +338,7 @@ if __name__ == "__main__":
                     
                     alert_queue.put(
                         f"{clean_name} {game.get('bet_lvl')} {game.get('value')}" if game.get("bet_lvl") == "Bonus"
-                        else f"{clean_name} trending" if game.get("trending")
+                        else f"{clean_name} is_trending" if game.get("trending")
                         else clean_name
                     )
                     
