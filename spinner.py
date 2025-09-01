@@ -3,10 +3,66 @@
 import math, platform, threading, time, random, pyautogui, subprocess, sys
 from queue import Queue as ThQueue, Empty
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
-from config import (SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, VOICES,
+from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, VOICES,
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BGRE, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
+def render_providers():
+    print(f"\n\n\t📘 {MAG}SCATTER SLOT SPINNER{RES}\n\n")
+
+    providers = list(PROVIDERS.items())
+    half = (len(providers) + 1) // 2
+    lines = list()
+
+    for idx, (left_provider, left_conf) in enumerate(providers[:half], start=1):
+        left_color = left_conf.color
+        left_str = f"[{WHTE}{idx}{RES}] - {left_color}{left_conf.provider}{RES}\t"
+
+        right_index = idx - 1 + half
+        if right_index < len(providers):
+            right_provider, right_conf = providers[right_index]
+            right_color = right_conf.color
+            right_str = f"[{WHTE}{right_index + 1:>2}{RES}] - {right_color}{right_conf.provider}{RES}"
+        else:
+            right_str = ""
+
+        lines.append(f"\t{left_str:<50}\t{right_str}")
+    return "\n".join(lines)
+
+def providers_list():
+    providers = list(PROVIDERS.items())
+
+    while True:
+        try:
+            choice = int(input("\n\t🔔 Choose Provider: "))
+            if 1 <= choice <= len(providers):
+                provider = providers[choice - 1][0]
+                provider_name = providers[choice - 1][1].provider
+                provider_color = providers[choice - 1][1].color
+                print(f"\n\tSelected: {provider_color}{provider_name} {RES}({provider_color}{provider}{RES})\n\n")
+                return provider, provider_name
+            else:
+                print("\t⚠️  Invalid choice. Try again.")
+        except ValueError:
+            print("\t⚠️  Please enter a valid number.")
+            
+def providers_list():
+    providers = list(PROVIDERS.items())
+
+    while True:
+        try:
+            choice = int(input("\n\t🔔 Choose Provider: "))
+            if 1 <= choice <= len(providers):
+                provider = providers[choice - 1][0]
+                provider_name = providers[choice - 1][1].provider
+                provider_color = providers[choice - 1][1].color
+                print(f"\n\tSelected: {provider_color}{provider_name} {RES}({provider_color}{provider}{RES})\n\n")
+                return provider, provider_name
+            else:
+                print("\t⚠️  Invalid choice. Try again.")
+        except ValueError:
+            print("\t⚠️  Please enter a valid number.")
+            
 def spin(combo_spin: bool = False, spam_spin: bool = False):
     # while not stop_event.is_set():
     if spin_in_progress.is_set():
@@ -54,10 +110,10 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
         # print(f'\tcy >>> {cy}')
         # print(f'\tradius_x >>> {radius_x}')
         # print(f'\tradius_y >>> {radius_y}')
-        print(f'\trand_x >>> {rand_x}')
-        print(f'\trand_y >>> {rand_y}')
-        print(f'\trand_x2 >>> {rand_x2}')
-        print(f'\trand_y2 >>> {rand_y2}')
+        # print(f'\trand_x >>> {rand_x}')
+        # print(f'\trand_y >>> {rand_y}')
+        # print(f'\trand_x2 >>> {rand_x2}')
+        # print(f'\trand_y2 >>> {rand_y2}')
         
         action = []
 
@@ -66,8 +122,6 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
         timeout_delay = random.uniform(*TIMEOUT_DELAY_RANGE)
         # print(f'widescreen: {widescreen}')
         # print(f'spin_btn: {spin_btn}')
-        
-        # spin_type = "spin_hold_delay"
         
         if spin_type == "normal_spin":
             if widescreen:
@@ -792,11 +846,11 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
             else:
                 if provider in [ 'PG' ]:
                     action.extend([
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx - 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx - 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx + 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx + 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx - 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx - 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx + 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx + 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
                         # lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx - 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
                         # lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx - 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
                         # lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
@@ -1033,6 +1087,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
             
         # random.choice(init_action)()
         random.choice(action)()
+        return spin_type
         
         # now_time = time.time()
         # current_sec = int(now_time) % 60
@@ -1083,15 +1138,9 @@ def on_key_press(key):
         if key == Key.shift:
             threading.Thread(target=spin, args=(False, False,), daemon=True)
             spin(False, False)
-            # if not spin_in_progress.is_set():
-            #     spin_queue.put(("spin", False))
-            #     spin_in_progress.set() 
         if key == Key.caps_lock:
             threading.Thread(target=spin, args=(True, False,), daemon=True)
             spin(True, False)
-            # if not spin_in_progress.is_set():
-            #     spin_queue.put(("spin", True))
-            #     spin_in_progress.set()
         if key == Key.tab:
             threading.Thread(target=spin, args=(False, True,), daemon=True)
             spin(False, True)
@@ -1102,14 +1151,28 @@ def countdown_timer(seconds: int = 10):
     while not stop_event.is_set():
         now_time = time.time()
         current_sec = int(now_time) % seconds
+        time_left = seconds - current_sec
         
-        sys.stdout.write(f"\r{current_sec}")
+        blink = BLNK if current_sec % 2 == 0 else ""
+
+        timer = (
+            f"\t⏳ Spinning In: "
+            f"{BYEL}{time_left // seconds:02d}{BWHTE}{blink}:{RES}"
+            f"{BLYEL}{time_left:02d}{RES}  "
+            # f"( {LGRY}{re.sub(r'\\s*\\(.*?\\)', '', game)}{RES} "
+            f"{DGRY}| {PROVIDERS.get(provider).color}{provider}{RES} )"
+        )
+        
+        sys.stdout.write(f"\r{timer}")
         sys.stdout.flush()
         
         if current_sec % 10 == 9:
             threading.Thread(target=spin, args=(False, False,), daemon=True)
-            spin(False, False)
-        
+            chosen_spin = spin(False, False)
+            if chosen_spin == "normal_spin":
+                if random.random() < 0.1: # 10% chance to execute spin
+                    spin(*random.choice([(True, False), (False, True)]))
+            
         next_sec = math.ceil(now_time)
         sleep_time = max(0, next_sec - time.time())
         time.sleep(sleep_time)
@@ -1120,15 +1183,7 @@ def start_listeners(stop_event):
             kb_listener.join(0.1)
             
 
-if __name__ == "__main__":
-    # PG
-    provider = "PG"
-    widescreen = False
-    spin_btn = False
-
-    CENTER_X, CENTER_Y = SCREEN_POS.get("center_x"), SCREEN_POS.get("center_y")
-    LEFT_X, RIGHT_X, TOP_Y, BTM_Y = 0, SCREEN_POS.get("right_x"), 0, SCREEN_POS.get("bottom_y")
-
+if __name__ == "__main__":    
     stop_event = threading.Event()
     spin_in_progress = threading.Event()
 
@@ -1139,9 +1194,20 @@ if __name__ == "__main__":
     kb_thread = threading.Thread(target=start_listeners, args=(stop_event,), daemon=True)
     countdown_thread = threading.Thread(target=countdown_timer, daemon=True)
     # spin_thread = threading.Thread(target=spin, args=(spin_queue, stop_event, False), daemon=True)
-    # spin_thread = threading.Thread(target=spin, args=(False,), daemon=True)
 
     alert_thread.start()
+    
+    print(f"{CLEAR}", end="")
+    print(render_providers())
+    provider, provider_name = providers_list()
+    alert_queue.put(provider_name)
+    spin_btn = True if provider in [ "FC" ] else False
+    user_input = input(f"\tDo you want to enable {CYN}Wide Screen{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
+    widescreen = user_input in ("y", "yes")
+    
+    CENTER_X, CENTER_Y = SCREEN_POS.get("center_x"), SCREEN_POS.get("center_y")
+    LEFT_X, RIGHT_X, TOP_Y, BTM_Y = 0, SCREEN_POS.get("right_x"), 0, SCREEN_POS.get("bottom_y")
+    
     kb_thread.start()
     countdown_thread.start()
     # spin_thread.start()
@@ -1154,3 +1220,4 @@ if __name__ == "__main__":
         stop_event.set()
     finally:
         print(f"\n\n\t🤖❌  {LYEL}All threads shut down...{RES}")
+        

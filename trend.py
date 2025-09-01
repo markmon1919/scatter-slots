@@ -177,10 +177,11 @@ def get_game_data_from_local_api(provider: str, games: list):
             if not gf:
                 continue
             
-            # if not g.get("value") > 60 or not (g.get("min10") < 0 or g.get("hr1") < -10):
-            if not g.get("value") >= 60 or not (g.get("hr1") < g.get("hr3") < g.get("hr6") and g.get("min10") < 0):
-            # if not g.get("value") >= 60 or not (g.get("hr1") < g.get("hr3") < g.get("hr6") and g.get("min10") < 0 and g.get("hr6") <= 20):
-                continue
+            if provider == "PG":
+                # if not g.get("value") > 60 or not (g.get("min10") < 0 or g.get("hr1") < -10):
+                if not g.get("value") >= 60 or not (g.get("hr1") < g.get("hr3") < g.get("hr6") and g.get("min10") < 0):
+                # if not g.get("value") >= 60 or not (g.get("hr1") < g.get("hr3") < g.get("hr6") and g.get("min10") < 0 and g.get("hr6") <= 20):
+                    continue
             
             trending = gf.get("up") == "red" and g.get("min10", 0) < 5 and any(
                 g.get(hr, 0) < 0 for hr in ["hr1", "hr3", "hr6"]
@@ -337,7 +338,7 @@ if __name__ == "__main__":
                     
                     alert_queue.put(
                         f"{clean_name} {game.get('bet_lvl')} {game.get('value')}" if game.get("bet_lvl") == "Bonus"
-                        else f"{clean_name} Trending" if game.get("trending")
+                        else f"{clean_name} trending" if game.get("trending")
                         else clean_name
                     )
                     
