@@ -1256,12 +1256,12 @@ def countdown_timer(seconds: int = 10):
         sys.stdout.write(f"\r{timer}")
         sys.stdout.flush()
         
-        print(f"\n\tjackpot_value --> {state.jackpot_value}")
-        print(f"\tmeter_color --> {state.meter_color}")
-        print(f"\t10m --> {state.min10 {state.m10}}")
-        print(f"\t1h --> {state.hr1} {state.h1}")
-        print(f"\t3h --> {state.hr3} {state.h3}")
-        print(f"\t6h --> {state.hr6} {state.h6}")
+        # print(f"\n\tjackpot_value --> {state.jackpot_value}")
+        # print(f"\tmeter_color --> {state.meter_color}")
+        # print(f"\t10m --> {state.min10 {state.m10}}")
+        # print(f"\t1h --> {state.hr1} {state.h1}")
+        # print(f"\t3h --> {state.hr3} {state.h3}")
+        # print(f"\t6h --> {state.hr6} {state.h6}")
         
         if current_sec % 10 == 9:
             threading.Thread(target=spin, args=(False, False,), daemon=True)
