@@ -1163,7 +1163,7 @@ def on_key_press(key):
             idx = int(key.char) - 1
             if 0 <= idx < len(games):
                 selected_game = games[idx]
-                alert_queue.put(selected_game "selected")
+                alert_queue.put((selected_game "selected"))
                 print(f"\n\t\t🎮 Selected: {YEL}{selected_game.title()}{RES}")
     except AttributeError:
         pass
