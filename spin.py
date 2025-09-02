@@ -1267,10 +1267,11 @@ def countdown_timer(seconds: int = 10):
             threading.Thread(target=spin, args=(False, False,), daemon=True)
             chosen_spin = spin(False, False)
             if chosen_spin == "normal_spin":
-                if random.random() < 0.1 and any(x > 0 for x in [state.m10, state.h1, state.h3, state.h6]): # 10% chance to execute spin
+                if random.random() < 0.1 and all(x > 0 for x in [state.m10, state.h1, state.h3, state.h6]): # 10% chance to execute spin
                     spin(*random.choice([(True, False), (False, True)]))
         else: # THIS IS TEST
-            if current_sec % 2 == 0 and any(x > 0 for x in [state.m10, state.h1, state.h3, state.h6]):
+            if current_sec % 2 == 0 and all(x > 0 for x in [state.m10, state.h1, state.h3, state.h6]):
+                threading.Thread(target=spin, args=(False, False,), daemon=True)
                 chosen_spin = spin(False, False)
             
         next_sec = math.ceil(now_time)
