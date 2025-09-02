@@ -124,7 +124,7 @@ def extract_game_data(driver) -> list:
             value_text = block.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
             
-            if value < 80:
+            if value < 85:
                 continue
             
             progress_bar_elem = block.find_element(By.CSS_SELECTOR, ".progress-bar")
@@ -275,7 +275,7 @@ def enrich_game_data(games: list, provider: str = "JILI") -> list:
         value = g.get("value", 0)
         jackpot_value = g.get("jackpot_value", 0)  # use merged value as jackpot
         up = g.get("up")
-
+        
         # Determine bet level
         if value >= 95 and jackpot_value >= 87:
             bet_lvl = "Bonus"
