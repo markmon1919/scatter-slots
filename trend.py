@@ -90,7 +90,7 @@ def scroll_game_list(driver, pause_time: float = 1.0, max_tries: int = 50):
 
 def fetch_html_via_selenium(driver: webdriver.Chrome, url: str, provider: str):
     driver.get(url)
-    time.sleep(2)
+    time.sleep(1)
 
     provider_items = driver.find_elements(By.CSS_SELECTOR, ".provider-item")
 
@@ -124,8 +124,8 @@ def extract_game_data(driver) -> list:
             value_text = block.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
             
-            if value < 85:
-                continue
+            # if value < 85:
+            #     continue
             
             progress_bar_elem = block.find_element(By.CSS_SELECTOR, ".progress-bar")
             bg = progress_bar_elem.value_of_css_property("background-color").lower()
@@ -150,8 +150,10 @@ def extract_game_data(driver) -> list:
                     all_green = False
                     break
                 
-            if value >= 88 or all_green:
+            # if value >= 88 or all_green:
+            if value >= 88 or (value >= 85 and up == "red") or all_green:
                 games.append({"name": name, "jackpot_value": value, "meter_color": up, **history})
+                print(f'{WHTE}FETCH CEHCK: {RES}{games['name']}')
         except Exception:
             continue
         
@@ -205,11 +207,19 @@ def get_game_data_from_local_api(provider: str, games: list):
         # Apply filter only for analytics / further processing
         filtered_games = [
             g for g in combined_games
-            if g.get("value", 0) >= 60 and (
-                g.get("hr1", 0) < g.get("hr3", 0) < g.get("hr6", 0) and g.get("min10", 0) < 0 or                # this is good for low bet 1php
-                g.get("10min", 0) > 0 and g.get("1hr", 0) > 0 and g.get("3hrs", 0) > 0 and g.get("6hrs", 0) > 0 # all green positive is good momentum
+            if (
+                g.get("value", 0) >= 60
+                or (
+                    (g.get("hr1", 0) < g.get("hr3", 0) < g.get("hr6", 0) and g.get("min10", 0) < 0)  # low bet 1php
+                    or (
+                        g.get("1hr", 0) > 0
+                        and g.get("3hrs", 0) > 0
+                        and g.get("6hrs", 0) > 0  # all green positive momentum
+                    )
+                )
             )
         ]
+
         # print(f"\n{WHTE}Combined{RES}: {combined_games}")
         # print(f"\n{WHTE}Filtered{RES}: {filtered_games}")
         enriched = enrich_game_data(filtered_games)
@@ -255,22 +265,25 @@ def enrich_game_data(games: list, provider: str = "JILI") -> list:
     enriched = []
 
     for g in games:
-        # Determine trending status
-        trending = (g.get("up") == "red" and g.get("min10", 0) < 5 and any(
-            g.get(hr, 0) < 0 for hr in ["hr1", "hr3", "hr6"]) or
-            g.get("10min", 0) > 0 and g.get("1hr", 0) > 0 and g.get("3hrs", 0) > 0 and g.get("6hrs", 0) > 0 # all green positive is good momentum
-        )
-
         # Skip games that don't meet provider-specific thresholds
-        # if provider in ["JILI", "PG"]:
-        #     # if not g.get("value", 0) >= 60 or not(
-        #     #     g.get("hr1", 0) < g.get("hr3", 0) < g.get("hr6", 0) and g.get("min10", 0) < 0) or not(          # this is good for low bet 1php
-        #     #     g.get("10min", 0) > 0 and g.get("1hr", 0) > 0 and g.get("3hrs", 0) > 0 and g.get("6hrs", 0) > 0 # all green positive is good momentum
-        #     # ):
-        #     if not g.get("value", 0) >= 60 or not(
-        #         g.get("hr1", 0) < g.get("hr3", 0) < g.get("hr6", 0) and g.get("min10", 0) < 0
-        #     ):
-        #         continue
+        if provider in ["JILI", "PG"]:
+            if (
+                not g.get("value", 0) >= 60
+                or not (g.get("hr1", 0) < g.get("hr3", 0) < g.get("hr6", 0) and g.get("min10", 0) < 0)
+                or not (g.get("1hr", 0) > 0 and g.get("3hrs", 0) > 0 and g.get("6hrs", 0) > 0)
+            ):
+                continue
+            
+        # Determine trending status
+        trending = (
+            (g.get("up") == "red" 
+            and g.get("min10", 0) < 5 
+            and any(g.get(hr, 0) < 0 for hr in ["hr1", "hr3", "hr6"]))
+            or g.get("10min", 0) > 0 
+            and g.get("1hr", 0) > 0 
+            and g.get("3hrs", 0) > 0 
+            and g.get("6hrs", 0) > 0
+        )
 
         value = g.get("value", 0)
         jackpot_value = g.get("jackpot_value", 0)  # use merged value as jackpot
