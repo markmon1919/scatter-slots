@@ -123,12 +123,12 @@ def extract_game_data(driver) -> list:
             value_text = block.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
             
-            # if value <= 30:
-            #     continue
-            
             progress_bar_elem = block.find_element(By.CSS_SELECTOR, ".progress-bar")
             bg = progress_bar_elem.value_of_css_property("background-color").lower()
             up = "red" if "255, 0, 0" in bg else "green"
+            
+            if value < 60 and up == "red":
+                continue
             
             history = {}
             all_green = True
