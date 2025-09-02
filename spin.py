@@ -1342,12 +1342,15 @@ if __name__ == "__main__":
 
                 # Flatten helpslot_data['data'] if it exists
                 helpslot_list = helpslot_data.get('data', []) if isinstance(helpslot_data, dict) else helpslot_data
+                print('helpslot_list 1: ', helpslot_list)
                 helpslot_list = helpslot_list if isinstance(helpslot_list, list) else [helpslot_list]
+                print('helpslot_list 2: ', helpslot_list)
                 
                 api_list = api_data if isinstance(api_data, list) else [api_data]
 
                 # Build dict for API data keyed by name
                 api_dict = {d["name"]: d for d in api_list if isinstance(d, dict) and "name" in d}
+                print('api_dict: ', api_dict)
 
                 # Merge helpslot + api
                 combined_games = []
@@ -1360,6 +1363,7 @@ if __name__ == "__main__":
 
                 # Filter only entries with 'name'
                 combined_games = [g for g in combined_games if g.get("name")]
+                print('Combined: ', combined_games)
                 log_data(combined_games[0])
                 
             time.sleep(0.1)

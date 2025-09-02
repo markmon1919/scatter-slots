@@ -102,12 +102,16 @@ def fetch_html_via_selenium(driver: webdriver.Chrome, url: str, provider: str):
             if PROVIDERS.get(provider).img_url.lower() in img_url.lower():
                 driver.execute_script("arguments[0].scrollIntoView(true);", item)
                 item.click()
-                time.sleep(2)
+                time.sleep(1)
+                sort_icon = driver.find_element(By.CSS_SELECTOR, "img.sort-icon")
+                driver.execute_script("arguments[0].click();", sort_icon)
+                time.sleep(1)
                 scroll_game_list(driver)
                 break
         except Exception:
             continue
 
+    time.sleep(2)
     return driver.page_source
 
 def extract_game_data(driver) -> list:
@@ -120,7 +124,7 @@ def extract_game_data(driver) -> list:
             value_text = block.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
             
-            if value <= 80:
+            if value < 80:
                 continue
             
             progress_bar_elem = block.find_element(By.CSS_SELECTOR, ".progress-bar")
@@ -137,6 +141,10 @@ def extract_game_data(driver) -> list:
                 val_text = val_elem.text.strip()
                 val = float(val_text.replace("%", ""))
                 history[label] = val
+                
+                # Skip 10min for all_green check
+                if label == "10min":
+                    continue
                 
                 if val < 0:
                     all_green = False
@@ -265,7 +273,7 @@ def enrich_game_data(games: list, provider: str = "JILI") -> list:
         #         continue
 
         value = g.get("value", 0)
-        jackpot_value = g.get("value", 0)  # use merged value as jackpot
+        jackpot_value = g.get("jackpot_value", 0)  # use merged value as jackpot
         up = g.get("up")
 
         # Determine bet level
@@ -280,8 +288,6 @@ def enrich_game_data(games: list, provider: str = "JILI") -> list:
 
         enriched.append({
             **g,
-            "jackpot_value": jackpot_value,
-            "meter_color": up,
             "trending": trending,
             "bet_lvl": bet_lvl
         })
@@ -361,7 +367,11 @@ def save_trend_memory(game_data: list):
             "hr3": game.get("hr3", 0),
             "hr6": game.get("hr6", 0),
             "value": game.get("value", 0),
-            "meter_color": game.get("meter_color")
+            "meter_color": game.get("meter_color"),
+            "m10": game.get("10min", 0),
+            "h1": game.get("1hr", 0),
+            "h3": game.get("3hrs", 0),
+            "h6": game.get("6hrs", 0),
         })] + list(data.items()))
         
     # Keep only the latest 5 entries
@@ -388,7 +398,7 @@ if __name__ == "__main__":
         alert_queue.put(provider_name)
         
         html = fetch_html_via_selenium(driver, url, provider)
-
+        
         while True:
             games = extract_game_data(driver)
             data = get_game_data_from_local_api(provider, games) if games else None
