@@ -18,6 +18,10 @@ class AutoState:
     hr1: float = 0.0
     hr3: float = 0.0
     hr6: float = 0.0
+    m10: float = 0.0
+    h1: float = 0.0
+    h3: float = 0.0
+    h6: float = 0.0
 
 def render_providers():
     print(f"\n\n\t📘 {MAG}SCATTER SLOT SPINNER{RES}\n\n")
@@ -1199,6 +1203,10 @@ def log_data(game: list):
     state.hr1 = game.get('hr1')
     state.hr3 = game.get('hr3')
     state.hr6 = game.get('hr6')
+    state.m10 = game.get('10min')
+    state.h1 = game.get('1hr')
+    state.h3 = game.get('3hrs')
+    state.h6 = game.get('6hrs')
     
     clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
     if "Wild Ape" in clean_name and "PG" in provider:
@@ -1206,21 +1214,27 @@ def log_data(game: list):
         
     tag = "💥💥💥 " if game.get('trending') else "🔥🔥🔥 "
     signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
-    helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
     colored_value_10m = f"{RED if game.get('min10') < 0 else GRE if game.get('min10') > 0 else CYN}{' ' + str(game.get('min10')) if game.get('min10') > 0 else game.get('min10')}{RES}"
     colored_value_1h = f"{RED if game.get('hr1') < 0 else GRE if game.get('hr1') > 0 else CYN}{' ' + str(game.get('hr1')) if game.get('hr1') > 0 else game.get('hr1')}{RES}"
     colored_value_3h = f"{RED if game.get('hr3') < 0 else GRE if game.get('hr3') > 0 else CYN}{' ' + str(game.get('hr3')) if game.get('hr3') > 0 else game.get('hr3')}{RES}"
     colored_value_6h = f"{RED if game.get('hr6') < 0 else GRE if game.get('hr6') > 0 else CYN}{' ' + str(game.get('hr6')) if game.get('hr6') > 0 else game.get('hr6')}{RES}"
+    
+    helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
+    colored_value_10min = f"{RED if game.get('10min') < 0 else GRE if game.get('10min') > 0 else CYN}{' ' + str(game.get('10min')) if game.get('10min') > 0 else game.get('10min')}{RES}"
+    colored_value_1hr = f"{RED if game.get('1hr') < 0 else GRE if game.get('1hr') > 0 else CYN}{' ' + str(game.get('1hr')) if game.get('1hr') > 0 else game.get('1hr')}{RES}"
+    colored_value_3hrs = f"{RED if game.get('3hrs') < 0 else GRE if game.get('3hrs') > 0 else CYN}{' ' + str(game.get('3hrs')) if game.get('3hrs') > 0 else game.get('3hrs')}{RES}"
+    colored_value_6hrs = f"{RED if game.get('6hrs') < 0 else GRE if game.get('6hrs') > 0 else CYN}{' ' + str(game.get('6hrs')) if game.get('6hrs') > 0 else game.get('6hrs')}{RES}"
     percent = f"{LGRY}%{RES}"
     # bet_str = f"{BLNK if game.get('bet_lvl') != 'Low' else ''}💰 {BLU if game.get('bet_lvl') in [ 'Mid', 'Low' ] else BLYEL if game.get('bet_lvl') == 'Bonus' else BGRE}{game.get('bet_lvl').upper()}{RES} "
-
+    
     print(
         f"\n\t{tag} {BMAG}{clean_name} {RES}{DGRY}→ {signal} "
         f"{RED if not game.get('up') else GRE}{game.get('value')}{RES}{percent} "
         f"({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})"
     )
     print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10m}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1h}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3h}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6h}{percent}")
-
+    print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10min}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1hr}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3hrs}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6hrs}{percent} {DGRY}Helpslot{RES})")
+    
     alert_queue.put(clean_name)
         
 def countdown_timer(seconds: int = 10):
@@ -1244,10 +1258,10 @@ def countdown_timer(seconds: int = 10):
         
         print(f"\n\tjackpot_value --> {state.jackpot_value}")
         print(f"\tmeter_color --> {state.meter_color}")
-        print(f"\tmin10 --> {state.min10}")
-        print(f"\thr1 --> {state.hr1}")
-        print(f"\thr3 --> {state.hr3}")
-        print(f"\thr6 --> {state.hr6}")
+        print(f"\t10m --> {state.min10 {state.m10}}")
+        print(f"\t1h --> {state.hr1} {state.h1}")
+        print(f"\t3h --> {state.hr3} {state.h3}")
+        print(f"\t6h --> {state.hr6} {state.h6}")
         
         if current_sec % 10 == 9:
             threading.Thread(target=spin, args=(False, False,), daemon=True)
@@ -1256,7 +1270,7 @@ def countdown_timer(seconds: int = 10):
                 if random.random() < 0.1 and state.meter_color == "red": # 10% chance to execute spin
                     spin(*random.choice([(True, False), (False, True)]))
         else: # THIS IS TEST
-            if state.min10 <= -30:
+            if any(g.get(val, 0) > 0 for val in [state.m10, state.h1, state.h3, state.h6]):
                 chosen_spin = spin(False, False)
                 if chosen_spin == "normal_spin":
                     if random.random() < 0.1 and state.meter_color == "red": # 10% chance to execute spin

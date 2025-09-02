@@ -113,18 +113,37 @@ def fetch_html_via_selenium(driver: webdriver.Chrome, url: str, provider: str):
 def extract_game_data(driver) -> list:
     games = []
     game_blocks = driver.find_elements(By.CSS_SELECTOR, ".game-block")
+
     for block in game_blocks:
         try:
             name = block.find_element(By.CSS_SELECTOR, ".game-title").text.strip()
             value_text = block.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
-
+            
+            if value <= 80:
+                continue
+            
             progress_bar_elem = block.find_element(By.CSS_SELECTOR, ".progress-bar")
             bg = progress_bar_elem.value_of_css_property("background-color").lower()
             up = "red" if "255, 0, 0" in bg else "green"
             
-            if value >= 88 or (value >= 85 and up == "red"):
-                games.append({"name": name, "jackpot_value": value, "meter_color": up})
+            history = {}
+            all_green = True
+            history_tags = block.find_elements(By.CSS_SELECTOR, ".game-info-list .game-info-item")
+
+            for item in history_tags:
+                label = item.find_element(By.CSS_SELECTOR, ".game-info-label").text.strip().rstrip(":").replace(" ", "").lower()
+                val_elem = item.find_element(By.CSS_SELECTOR, ".game-info-value")
+                val_text = val_elem.text.strip()
+                val = float(val_text.replace("%", ""))
+                history[label] = val
+                
+                if val < 0:
+                    all_green = False
+                    break
+                
+            if value >= 88 or all_green:
+                games.append({"name": name, "jackpot_value": value, "meter_color": up, **history})
         except Exception:
             continue
         
@@ -133,7 +152,6 @@ def extract_game_data(driver) -> list:
         key=lambda g: g["name"], reverse=False)
     
     # print(f"\n\tHelpslot Games: \n\t{PROVIDERS.get(provider).color}{'\n\t'.join(g['name'] for g in games)}{RES}")
-    
     return games
 
 def get_game_data_from_local_api(provider: str, games: list):
@@ -180,10 +198,12 @@ def get_game_data_from_local_api(provider: str, games: list):
         filtered_games = [
             g for g in combined_games
             if g.get("value", 0) >= 60 and (
-                g.get("hr1", 0) < g.get("hr3", 0) < g.get("hr6", 0) and g.get("min10", 0) < 0
+                g.get("hr1", 0) < g.get("hr3", 0) < g.get("hr6", 0) and g.get("min10", 0) < 0 or                # this is good for low bet 1php
+                g.get("10min", 0) > 0 and g.get("1hr", 0) > 0 and g.get("3hrs", 0) > 0 and g.get("6hrs", 0) > 0 # all green positive is good momentum
             )
         ]
-        
+        # print(f"\n{WHTE}Combined{RES}: {combined_games}")
+        # print(f"\n{WHTE}Filtered{RES}: {filtered_games}")
         enriched = enrich_game_data(filtered_games)
         return enriched
     except Exception as e:
@@ -228,16 +248,21 @@ def enrich_game_data(games: list, provider: str = "JILI") -> list:
 
     for g in games:
         # Determine trending status
-        trending = g.get("up") == "red" and g.get("min10", 0) < 5 and any(
-            g.get(hr, 0) < 0 for hr in ["hr1", "hr3", "hr6"]
+        trending = (g.get("up") == "red" and g.get("min10", 0) < 5 and any(
+            g.get(hr, 0) < 0 for hr in ["hr1", "hr3", "hr6"]) or
+            g.get("10min", 0) > 0 and g.get("1hr", 0) > 0 and g.get("3hrs", 0) > 0 and g.get("6hrs", 0) > 0 # all green positive is good momentum
         )
 
         # Skip games that don't meet provider-specific thresholds
-        if provider in ["JILI", "PG"]:
-            if not g.get("value", 0) >= 60 or not (
-                g.get("hr1", 0) < g.get("hr3", 0) < g.get("hr6", 0) and g.get("min10", 0) < 0
-            ):
-                continue
+        # if provider in ["JILI", "PG"]:
+        #     # if not g.get("value", 0) >= 60 or not(
+        #     #     g.get("hr1", 0) < g.get("hr3", 0) < g.get("hr6", 0) and g.get("min10", 0) < 0) or not(          # this is good for low bet 1php
+        #     #     g.get("10min", 0) > 0 and g.get("1hr", 0) > 0 and g.get("3hrs", 0) > 0 and g.get("6hrs", 0) > 0 # all green positive is good momentum
+        #     # ):
+        #     if not g.get("value", 0) >= 60 or not(
+        #         g.get("hr1", 0) < g.get("hr3", 0) < g.get("hr6", 0) and g.get("min10", 0) < 0
+        #     ):
+        #         continue
 
         value = g.get("value", 0)
         jackpot_value = g.get("value", 0)  # use merged value as jackpot
@@ -387,12 +412,19 @@ if __name__ == "__main__":
                         clean_name = clean_name.replace("#3258", "").strip()
                         
                     tag = "💥💥💥 " if game.get('trending') else "🔥🔥🔥 "
+                    
                     signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
-                    helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
                     colored_value_10m = f"{RED if game.get('min10') < 0 else GRE if game.get('min10') > 0 else CYN}{' ' + str(game.get('min10')) if game.get('min10') > 0 else game.get('min10')}{RES}"
                     colored_value_1h = f"{RED if game.get('hr1') < 0 else GRE if game.get('hr1') > 0 else CYN}{' ' + str(game.get('hr1')) if game.get('hr1') > 0 else game.get('hr1')}{RES}"
                     colored_value_3h = f"{RED if game.get('hr3') < 0 else GRE if game.get('hr3') > 0 else CYN}{' ' + str(game.get('hr3')) if game.get('hr3') > 0 else game.get('hr3')}{RES}"
                     colored_value_6h = f"{RED if game.get('hr6') < 0 else GRE if game.get('hr6') > 0 else CYN}{' ' + str(game.get('hr6')) if game.get('hr6') > 0 else game.get('hr6')}{RES}"
+                    
+                    helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
+                    colored_value_10min = f"{RED if game.get('10min') < 0 else GRE if game.get('10min') > 0 else CYN}{' ' + str(game.get('10min')) if game.get('10min') > 0 else game.get('10min')}{RES}"
+                    colored_value_1hr = f"{RED if game.get('1hr') < 0 else GRE if game.get('1hr') > 0 else CYN}{' ' + str(game.get('1hr')) if game.get('1hr') > 0 else game.get('1hr')}{RES}"
+                    colored_value_3hrs = f"{RED if game.get('3hrs') < 0 else GRE if game.get('3hrs') > 0 else CYN}{' ' + str(game.get('3hrs')) if game.get('3hrs') > 0 else game.get('3hrs')}{RES}"
+                    colored_value_6hrs = f"{RED if game.get('6hrs') < 0 else GRE if game.get('6hrs') > 0 else CYN}{' ' + str(game.get('6hrs')) if game.get('6hrs') > 0 else game.get('6hrs')}{RES}"
+                    
                     bet_str = f"{BLNK if game.get('bet_lvl') != 'Low' else ''}💰 {BLU if game.get('bet_lvl') in [ 'Mid', 'Low' ] else BLYEL if game.get('bet_lvl') == 'Bonus' else BGRE}{game.get('bet_lvl').upper()}{RES} "
                     
                     print(
@@ -401,6 +433,7 @@ if __name__ == "__main__":
                         f"({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})"
                     )
                     print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10m}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1h}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3h}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6h}{percent}")
+                    print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10min}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1hr}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3hrs}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6hrs}{percent} {DGRY}Helpslot{RES})")
                     
                     alert_queue.put(
                         f"{clean_name} {game.get('bet_lvl')} {game.get('value')}" if game.get("bet_lvl") == "Bonus"

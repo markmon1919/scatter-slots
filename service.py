@@ -78,12 +78,14 @@ def extract_game_data(driver: webdriver.Chrome) -> list:
                 progress_bar_elem = card.find_element(By.CSS_SELECTOR, ".progress-bar")
                 bg = progress_bar_elem.value_of_css_property("background-color").lower()
                 up = "red" if "255, 0, 0" in bg else "green"
-                    
-                games.append({
-                    "name": name,
-                    "jackpot_value": value,
-                    "meter_color": up
-                })
+                
+                for item in history_tags:
+                    label = item.find_element(By.CSS_SELECTOR, ".game-info-label").text.strip().rstrip(":").replace(" ", "").lower()
+                    val_elem = item.find_element(By.CSS_SELECTOR, ".game-info-value")
+                    val_text = val_elem.text.strip()
+                    val = float(val_text.replace("%", ""))
+                    history[label] = val
+                games.append({"name": name, "jackpot_value": value, "meter_color": up, **history})
             except Exception:
                 continue
     except Exception:
