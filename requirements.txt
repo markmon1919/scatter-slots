@@ -10,5 +10,6 @@ pyinstaller
 pynput
 requests
 selenium
+shutil
 uvicorn[standard]
 webdriver-manager

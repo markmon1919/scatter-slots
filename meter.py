@@ -5,7 +5,7 @@ from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By 
+from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS)
 
@@ -168,6 +168,5 @@ def fetch_jackpot(provider: str, game: str, session_id: int = 1):
     #     }
     finally:
         # time.sleep(10) # for debug
-        driver.quit()
         atexit.register(driver.quit)
         

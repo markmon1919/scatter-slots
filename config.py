@@ -13,6 +13,7 @@ from collections import namedtuple
 LOG_LEVEL = ""#DEBUG"
 BREAKOUT_FILE = "breakout_data.json"
 DATA_FILE = "previous_data.json"
+TREND_FILE = "trend_data.json"
 
 # === Screen Dimensions ===
 SCREEN_WIDTH, SCREEN_HEIGHT = pyautogui.size()

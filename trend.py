@@ -1,13 +1,15 @@
 #!/usr/bin/env .venv/bin/python
 
-import atexit, json, os, platform, random, re, requests, shutil, subprocess, threading, time
-from queue import Queue as ThQueue, Empty
+import json, os, platform, random, re, requests, shutil, subprocess, sys, threading, time
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, PING,
-                    LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BGRE, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
+from queue import Queue as ThQueue, Empty
+from concurrent.futures import ThreadPoolExecutor
+from collections import OrderedDict
+from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, USER_AGENTS, VOICES, PING, TREND_FILE,
+                    LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BDGRY, BYEL, BGRE, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
 def setup_driver():
@@ -22,14 +24,15 @@ def setup_driver():
     options.add_argument('--blink-settings=imagesEnabled=false')  # Disable images
     options.add_argument("--disable-logging")
     options.add_argument("--log-level=3")
+    # options.add_argument("--remote-debugging-port=9222") # share driver
     # options.add_argument(f"--user-data-dir={os.getcwd()}/chrome_profile_{session_id}")
     # options.add_argument(f"--profile-directory=Profile_{game.lower()}")
-
+    
     service = Service(shutil.which("chromedriver"))
     return webdriver.Chrome(service=service, options=options)
 
 def render_providers():
-    print(f"\n\n\t📘 {MAG}SCATTER TREND CHECK{RES}\n\n")
+    print(f"\n\n\t📘 {MAG}SCATTER TREND CHECKER{RES}\n\n")
 
     providers = list(PROVIDERS.items())
     half = (len(providers) + 1) // 2
@@ -80,7 +83,7 @@ def scroll_game_list(driver, pause_time: float = 1.0, max_tries: int = 50):
         time.sleep(pause_time)
         
         new_height = driver.execute_script("return arguments[0].scrollHeight", container)
-
+        
         if new_height == last_height:
             break
         last_height = new_height
@@ -120,10 +123,8 @@ def extract_game_data(driver) -> list:
             bg = progress_bar_elem.value_of_css_property("background-color").lower()
             up = "red" if "255, 0, 0" in bg else "green"
             
-            # if value >= 0:  # TEST
-            # if "Wild Bounty Showdown" in name:
             if value >= 88 or (value >= 85 and up == "red"):
-                games.append({"name": name, "value": value, "up": up})
+                games.append({"name": name, "jackpot_value": value, "meter_color": up})
         except Exception:
             continue
         
@@ -134,8 +135,6 @@ def extract_game_data(driver) -> list:
     # print(f"\n\tHelpslot Games: \n\t{PROVIDERS.get(provider).color}{'\n\t'.join(g['name'] for g in games)}{RES}")
     
     return games
-
-from concurrent.futures import ThreadPoolExecutor
 
 def get_game_data_from_local_api(provider: str, games: list):
     user_agent = random.choice(USER_AGENTS)
@@ -156,72 +155,36 @@ def get_game_data_from_local_api(provider: str, games: list):
             print(f"❌ Server did not return JSON: {response.text}")
             return []
         
-        if provider == "PG":
+        if "PG" in provider:
             data = [g for g in data if g.get("name") != "Wild Ape#3258"]
+            
+        data_dict = {d["name"]: d for d in data}  # API data keyed by name
 
-        # Precompute for fast lookup
-        data_names = {g["name"] for g in data}
-        games_found = {g["name"]: g for g in games}
-        search_games = [name for name in games_found if name not in data_names]
+        # Find missing games
+        search_games = [g for g in games if g["name"] not in data_dict]
 
-        # Fetch missing games in parallel
+        # Now you can fetch their info
         if search_games:
             with ThreadPoolExecutor(max_workers=len(search_games)) as executor:
                 results = list(executor.map(search_game_data_from_local_api, search_games))
-            data.extend(filter(None, results))
-            
-        enriched = []
-        for g in data:
-            name = g.get("name")
-            gf = games_found.get(name)
-            if not gf:
-                continue
-            
-            if provider in [ "JILI", "PG" ]:
-                # if not g.get("value") > 60 or not (g.get("min10") < 0 or g.get("hr1") < -10):
-                if not g.get("value") >= 60 or not (g.get("hr1") < g.get("hr3") < g.get("hr6") and g.get("min10") < 0):
-                # if not g.get("value") >= 60 or not (g.get("hr1") < g.get("hr3") < g.get("hr6") and g.get("min10") < 0 and g.get("hr6") <= 20):
-                    continue
-            
-            trending = gf.get("up") == "red" and g.get("min10", 0) < 5 and any(
-                g.get(hr, 0) < 0 for hr in ["hr1", "hr3", "hr6"]
+            data.extend(filter(None, results))  # add fetched data to data list
+
+        # Rebuild data_dict including the newly fetched entries
+        data_dict = {d["name"]: d for d in data}
+
+        # Merge all games
+        combined_games = [{**g, **data_dict.get(g["name"], {})} for g in games]
+        # print(f'Combined Games: {combined_games}')
+
+        # Apply filter only for analytics / further processing
+        filtered_games = [
+            g for g in combined_games
+            if g.get("value", 0) >= 60 and (
+                g.get("hr1", 0) < g.get("hr3", 0) < g.get("hr6", 0) and g.get("min10", 0) < 0
             )
-            
-            value = g.get("value", 0)
-            gf_value = gf.get("value", 0)
-            up = gf.get("up")
-
-            if value >= 95 and gf_value >= 87: #and up == "red":
-                bet_lvl = "Bonus"
-            elif (value >= 80 and gf_value >= 80) or g.get("min10", 0) <= -60:
-                bet_lvl = "High"
-            elif (value >= 50 and not g.get("up")) or g.get("min10", 0) <= -30:
-                bet_lvl = "Mid"
-            else:
-                bet_lvl = "Low"
-
-            enriched.append({
-                **g,
-                "jackpot_value": gf_value,
-                "meter_color": up,
-                "trending": trending,
-                "bet_lvl": bet_lvl
-            })
-            
-        enriched = [g for g in enriched if not (g["bet_lvl"] in ["Mid", "Low"] and not g.get("trending"))]
-        priority = {"Bonus": 4, "High": 3, "Mid": 2, "Low": 1}
-
-        enriched.sort(
-            key=lambda g: (
-                priority[g["bet_lvl"]],
-                0 if (g["bet_lvl"] in ["Bonus", "High"] and not g.get("trending")) 
-                    or (g["bet_lvl"] in ["Mid", "Low"] and g.get("trending")) else 1,
-                g["value"],
-                g["jackpot_value"]
-            ),
-            reverse=True
-        )
+        ]
         
+        enriched = enrich_game_data(filtered_games)
         return enriched
     except Exception as e:
         print(f"❌ Exception: {e}")
@@ -256,6 +219,66 @@ def search_game_data_from_local_api(game: str):
         print(f"❌ Error calling API: {e}")
         return {"error": str(e)}, REQUEST_FROM
 
+def enrich_game_data(games: list, provider: str = "JILI") -> list:
+    """
+    Enrich a list of game dicts with jackpot_value, meter_color, trending, and bet level.
+    Filters and sorts games according to provider-specific rules.
+    """
+    enriched = []
+
+    for g in games:
+        # Determine trending status
+        trending = g.get("up") == "red" and g.get("min10", 0) < 5 and any(
+            g.get(hr, 0) < 0 for hr in ["hr1", "hr3", "hr6"]
+        )
+
+        # Skip games that don't meet provider-specific thresholds
+        if provider in ["JILI", "PG"]:
+            if not g.get("value", 0) >= 60 or not (
+                g.get("hr1", 0) < g.get("hr3", 0) < g.get("hr6", 0) and g.get("min10", 0) < 0
+            ):
+                continue
+
+        value = g.get("value", 0)
+        jackpot_value = g.get("value", 0)  # use merged value as jackpot
+        up = g.get("up")
+
+        # Determine bet level
+        if value >= 95 and jackpot_value >= 87:
+            bet_lvl = "Bonus"
+        elif (value >= 80 and jackpot_value >= 80) or g.get("min10", 0) <= -60:
+            bet_lvl = "High"
+        elif (value >= 50 and not g.get("up")) or g.get("min10", 0) <= -30:
+            bet_lvl = "Mid"
+        else:
+            bet_lvl = "Low"
+
+        enriched.append({
+            **g,
+            "jackpot_value": jackpot_value,
+            "meter_color": up,
+            "trending": trending,
+            "bet_lvl": bet_lvl
+        })
+
+    # Filter out Mid/Low if not trending
+    enriched = [g for g in enriched if not (g["bet_lvl"] in ["Mid", "Low"] and not g.get("trending"))]
+
+    # Sort by bet level, trending, value, jackpot
+    priority = {"Bonus": 4, "High": 3, "Mid": 2, "Low": 1}
+    enriched.sort(
+        key=lambda g: (
+            priority[g["bet_lvl"]],
+            0 if (g["bet_lvl"] in ["Bonus", "High"] and not g.get("trending")) 
+               or (g["bet_lvl"] in ["Mid", "Low"] and g.get("trending")) else 1,
+            g["value"],
+            g["jackpot_value"]
+        ),
+        reverse=True
+    )
+
+    return enriched
+    
 def play_alert(alert_queue, stop_event):
     if platform.system() == "Darwin":
         while not stop_event.is_set():
@@ -270,7 +293,6 @@ def play_alert(alert_queue, stop_event):
                     voice = VOICES["Trinoids"] if "Bonus" in sound_file else VOICES["Samantha"]
                     sound_file = sound_file.replace("is_trending", "").strip()
                     subprocess.run(["say", "-v", voice, "--", sound_file])
-                    
             except Empty:
                 time.sleep(0.05)
             except Exception as e:
@@ -278,9 +300,55 @@ def play_alert(alert_queue, stop_event):
     else:
         pass
 
+def load_trend_memory():
+    if os.path.exists(TREND_FILE):
+        with open(TREND_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data
+    return {}
+
+def save_trend_memory(game_data: list):
+    data = OrderedDict()
+    
+    if os.path.exists(TREND_FILE):
+        with open(TREND_FILE, "r", encoding="utf-8") as f:
+            try:
+                data = json.load(f, object_pairs_hook=OrderedDict)
+            except json.JSONDecodeError:
+                data = OrderedDict()  # fallback if file is empty/corrupted
+
+    # Ensure data is an OrderedDict
+    data = OrderedDict(data)
+
+    for game in game_data:
+        game_name = game.get("name", "").lower()
+        
+        # Remove old entry if it exists, to reinsert at the front
+        if game_name in data:
+            data.pop(game_name)
+        
+        # Insert latest data at the beginning
+        data = OrderedDict([(game_name, {
+            "jackpot_value": game.get("jackpot_value", 0),
+            "up": game.get("up"),
+            "min10": game.get("min10", 0),
+            "hr1": game.get("hr1", 0),
+            "hr3": game.get("hr3", 0),
+            "hr6": game.get("hr6", 0),
+            "value": game.get("value", 0),
+            "meter_color": game.get("meter_color")
+        })] + list(data.items()))
+        
+    # Keep only the latest 5 entries
+    while len(data) > 5:
+        data.popitem(last=True)  # remove oldest entry at the end
+
+    with open(TREND_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+        
 
 if __name__ == "__main__":
-    try:
+    try:        
         stop_event = threading.Event()
         alert_queue = ThQueue()
         alert_thread = threading.Thread(target=play_alert, args=(alert_queue, stop_event), daemon=True)
@@ -293,18 +361,17 @@ if __name__ == "__main__":
         url = next((url for url in URLS if 'helpslot' in url), None)
         provider, provider_name = providers_list()
         alert_queue.put(provider_name)
+        
         html = fetch_html_via_selenium(driver, url, provider)
 
-        last_alerts = {}
-
         while True:
-            games_found = False
             games = extract_game_data(driver)
             data = get_game_data_from_local_api(provider, games) if games else None
-            percent = f"{LGRY}%{RES}"
+            save_trend_memory(data) if data else None
             
             if data:
-                alert_cooldown = min(sum(1 for g in data if g.get("bet_lvl") == "Bonus" or (g.get("bet_lvl") in [ "High", "Mid" ] and g.get("trending"))) * 2, 10)
+                # alert_cooldown = min(sum(1 for g in data if g.get("bet_lvl") == "Bonus" or (g.get("bet_lvl") in [ "High", "Mid" ] and g.get("trending"))) * 2, 10)
+                percent = f"{LGRY}%{RES}"
                 now = time.time()
                 today = time.localtime(now)
                 
@@ -315,7 +382,6 @@ if __name__ == "__main__":
                 )
                 
                 for game in data:
-                    games_found = True   
                     clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
                     if "Wild Ape" in clean_name and "PG" in provider:
                         clean_name = clean_name.replace("#3258", "").strip()
@@ -327,7 +393,7 @@ if __name__ == "__main__":
                     colored_value_1h = f"{RED if game.get('hr1') < 0 else GRE if game.get('hr1') > 0 else CYN}{' ' + str(game.get('hr1')) if game.get('hr1') > 0 else game.get('hr1')}{RES}"
                     colored_value_3h = f"{RED if game.get('hr3') < 0 else GRE if game.get('hr3') > 0 else CYN}{' ' + str(game.get('hr3')) if game.get('hr3') > 0 else game.get('hr3')}{RES}"
                     colored_value_6h = f"{RED if game.get('hr6') < 0 else GRE if game.get('hr6') > 0 else CYN}{' ' + str(game.get('hr6')) if game.get('hr6') > 0 else game.get('hr6')}{RES}"
-                    bet_str = f"{BLNK if game.get('bet_lvl') not in 'Low' else ''}💰 {BLU if game.get('bet_lvl') in [ 'Mid', 'Low' ] else BLYEL if game.get('bet_lvl') == 'Bonus' else BGRE}{game.get('bet_lvl').upper()}{RES} "
+                    bet_str = f"{BLNK if game.get('bet_lvl') != 'Low' else ''}💰 {BLU if game.get('bet_lvl') in [ 'Mid', 'Low' ] else BLYEL if game.get('bet_lvl') == 'Bonus' else BGRE}{game.get('bet_lvl').upper()}{RES} "
                     
                     print(
                         f"\n\t{tag} {BMAG}{clean_name} {bet_str}{RES}{DGRY}→ {signal} "
@@ -350,17 +416,20 @@ if __name__ == "__main__":
                     #             else f"{clean_name} Trending" if game.get("trending")
                     #             else clean_name
                     #         )
-                                          
-            print("\n")
-            if not games_found:
-                print(f"\t🚫 {BLRED}No Trending Games Found !{RES}")
+                print("\n")
+            else:
+                text = f"\r\t🚫 {BDGRY}No Trending Games Found !{RES}"
+                if load_trend_memory():
+                    text += f"\n\t\tLast Trending Games:\n\t\t{WHTE}{'\n\t\t'.join(load_trend_memory().keys()).title()}{RES}\n"
+                    
+                print(f"\r{text}")
                 alert_queue.put("No Trending Games Found")
+                # sys.stdout.flush()
 
             time.sleep(1)
     except KeyboardInterrupt:
         print(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
         stop_event.set()
-    finally:
-        driver.quit()
-        atexit.register(driver.quit)
         
+    driver.quit()
+    

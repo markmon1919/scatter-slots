@@ -1,11 +1,23 @@
 #!/usr/bin/env .venv/bin/python
 
-import math, platform, threading, time, random, pyautogui, subprocess, sys
+import math, platform, threading, time, random, re, requests, pyautogui, subprocess, sys
+from dataclasses import dataclass, field
+from trend import load_trend_memory, search_game_data_from_local_api, enrich_game_data
 from queue import Queue as ThQueue, Empty
+from concurrent.futures import ThreadPoolExecutor, wait
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
-from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, VOICES,
+from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, API_URL, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, VOICES,
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BGRE, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
+
+@dataclass
+class AutoState:
+    jackpot_value: str = None
+    meter_color: str = None
+    min10: float = 0.0
+    hr1: float = 0.0
+    hr3: float = 0.0
+    hr6: float = 0.0
 
 def render_providers():
     print(f"\n\n\t📘 {MAG}SCATTER SLOT SPINNER{RES}\n\n")
@@ -13,7 +25,7 @@ def render_providers():
     providers = list(PROVIDERS.items())
     half = (len(providers) + 1) // 2
     lines = list()
-
+    
     for idx, (left_provider, left_conf) in enumerate(providers[:half], start=1):
         left_color = left_conf.color
         left_str = f"[{WHTE}{idx}{RES}] - {left_color}{left_conf.provider}{RES}\t"
@@ -39,7 +51,7 @@ def providers_list():
                 provider = providers[choice - 1][0]
                 provider_name = providers[choice - 1][1].provider
                 provider_color = providers[choice - 1][1].color
-                print(f"\n\tSelected: {provider_color}{provider_name} {RES}({provider_color}{provider}{RES})\n\n")
+                print(f"\n\tSelected: {provider_color}{provider_name} {RES}({provider_color}{provider}{RES})")
                 return provider, provider_name
             else:
                 print("\t⚠️  Invalid choice. Try again.")
@@ -122,6 +134,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
         timeout_delay = random.uniform(*TIMEOUT_DELAY_RANGE)
         # print(f'widescreen: {widescreen}')
         # print(f'spin_btn: {spin_btn}')
+        # spin_type = "normal_spin"
         
         if spin_type == "normal_spin":
             if widescreen:
@@ -1101,11 +1114,12 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
         # spin_in_progress.clear()
     finally:
         spin_in_progress.clear()
-        print(f"\tHold Delay: {hold_delay:.2f}")
-        print(f"\tSpin Delay: {spin_delay:.2f}")
-        print(f"\tTimeout Delay: {timeout_delay:.2f}")
-        print(f"\tCombo Spin: {combo_spin}")
+        # print(f"\n\tHold Delay: {hold_delay:.2f}")
+        # print(f"\tSpin Delay: {spin_delay:.2f}")
+        # print(f"\tTimeout Delay: {timeout_delay:.2f}")
+        # print(f"\tCombo Spin: {combo_spin}")
         print(f"\n\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {RES}>\n")
+        # sys.stdout.flush()
         alert_queue.put(f"{spin_type}")
     # except Empty:
     #     continue
@@ -1134,6 +1148,7 @@ def on_key_press(key):
     try:
         pyautogui.PAUSE = 0
         pyautogui.FAILSAFE = False
+        global games, selected_game
         # if hasattr(key, "char") and key.char == "s":
         if key == Key.shift:
             threading.Thread(target=spin, args=(False, False,), daemon=True)
@@ -1144,8 +1159,68 @@ def on_key_press(key):
         if key == Key.tab:
             threading.Thread(target=spin, args=(False, True,), daemon=True)
             spin(False, True)
+        if key.char.isdigit():
+            idx = int(key.char) - 1
+            if 0 <= idx < len(games):
+                selected_game = games[idx]
+                print(f"\n\t\t🎮 Selected: {YEL}{selected_game.title()}{RES}")
     except AttributeError:
-        print(f"Error: SPECIAL KEY: {key}")
+        pass
+        # print(f"\n\tError: SPECIAL KEY: {key}")
+        
+def integrate_game(game: str, url: str, provider: str):
+    api_server = API_URL[0]
+    
+    try:
+        response = requests.get(
+            f"{api_server}/search",
+            params={
+                "url": url,
+                "game": game,
+                "provider": provider
+            }
+        )
+        
+        if response.status_code == 200:
+            try:
+                json_data = response.json()
+                return json_data
+            except ValueError:
+                print(f"❌ Server did not return JSON: {response.text}")
+                json_data = {"error": "Invalid JSON response"}
+    except Exception as e:
+        print(f"❌ Error calling API: {e}")
+        
+def log_data(game: list):
+    state.jackpot_value = game.get('jackpot_value')
+    state.meter_color = game.get('meter_color')
+    state.min10 = game.get('min10')
+    state.hr1 = game.get('hr1')
+    state.hr3 = game.get('hr3')
+    state.hr6 = game.get('hr6')
+    
+    clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
+    if "Wild Ape" in clean_name and "PG" in provider:
+        clean_name = clean_name.replace("#3258", "").strip()
+        
+    tag = "💥💥💥 " if game.get('trending') else "🔥🔥🔥 "
+    signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
+    helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
+    colored_value_10m = f"{RED if game.get('min10') < 0 else GRE if game.get('min10') > 0 else CYN}{' ' + str(game.get('min10')) if game.get('min10') > 0 else game.get('min10')}{RES}"
+    colored_value_1h = f"{RED if game.get('hr1') < 0 else GRE if game.get('hr1') > 0 else CYN}{' ' + str(game.get('hr1')) if game.get('hr1') > 0 else game.get('hr1')}{RES}"
+    colored_value_3h = f"{RED if game.get('hr3') < 0 else GRE if game.get('hr3') > 0 else CYN}{' ' + str(game.get('hr3')) if game.get('hr3') > 0 else game.get('hr3')}{RES}"
+    colored_value_6h = f"{RED if game.get('hr6') < 0 else GRE if game.get('hr6') > 0 else CYN}{' ' + str(game.get('hr6')) if game.get('hr6') > 0 else game.get('hr6')}{RES}"
+    percent = f"{LGRY}%{RES}"
+    # bet_str = f"{BLNK if game.get('bet_lvl') != 'Low' else ''}💰 {BLU if game.get('bet_lvl') in [ 'Mid', 'Low' ] else BLYEL if game.get('bet_lvl') == 'Bonus' else BGRE}{game.get('bet_lvl').upper()}{RES} "
+
+    print(
+        f"\n\t{tag} {BMAG}{clean_name} {RES}{DGRY}→ {signal} "
+        f"{RED if not game.get('up') else GRE}{game.get('value')}{RES}{percent} "
+        f"({helpslot_signal} {RED if game.get('meter_color') == 'red' else GRE}{game.get('jackpot_value')}{RES}{percent} {DGRY}Helpslot{RES})"
+    )
+    print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10m}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1h}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3h}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6h}{percent}")
+
+    alert_queue.put(clean_name)
         
 def countdown_timer(seconds: int = 10):
     while not stop_event.is_set():
@@ -1166,12 +1241,25 @@ def countdown_timer(seconds: int = 10):
         sys.stdout.write(f"\r{timer}")
         sys.stdout.flush()
         
+        print(f"\n\tjackpot_value --> {state.jackpot_value}")
+        print(f"\tmeter_color --> {state.meter_color}")
+        print(f"\tmin10 --> {state.min10}")
+        print(f"\thr1 --> {state.hr1}")
+        print(f"\thr3 --> {state.hr3}")
+        print(f"\thr6 --> {state.hr6}")
+        
         if current_sec % 10 == 9:
             threading.Thread(target=spin, args=(False, False,), daemon=True)
             chosen_spin = spin(False, False)
             if chosen_spin == "normal_spin":
-                if random.random() < 0.1: # 10% chance to execute spin
+                if random.random() < 0.1 and state.meter_color == "red": # 10% chance to execute spin
                     spin(*random.choice([(True, False), (False, True)]))
+        else: # THIS IS TEST
+            if state.min10 <= -30:
+                chosen_spin = spin(False, False)
+                if chosen_spin == "normal_spin":
+                    if random.random() < 0.1 and state.meter_color == "red": # 10% chance to execute spin
+                        spin(*random.choice([(True, False), (False, True)]))
             
         next_sec = math.ceil(now_time)
         sleep_time = max(0, next_sec - time.time())
@@ -1183,17 +1271,16 @@ def start_listeners(stop_event):
             kb_listener.join(0.1)
             
 
-if __name__ == "__main__":    
+if __name__ == "__main__":
+    state = AutoState()
     stop_event = threading.Event()
     spin_in_progress = threading.Event()
-
+    
     alert_queue = ThQueue()
-    # spin_queue = ThQueue()
     
     alert_thread = threading.Thread(target=play_alert, args=(alert_queue, stop_event,), daemon=True)
     kb_thread = threading.Thread(target=start_listeners, args=(stop_event,), daemon=True)
     countdown_thread = threading.Thread(target=countdown_timer, daemon=True)
-    # spin_thread = threading.Thread(target=spin, args=(spin_queue, stop_event, False), daemon=True)
 
     alert_thread.start()
     
@@ -1210,10 +1297,59 @@ if __name__ == "__main__":
     
     kb_thread.start()
     countdown_thread.start()
-    # spin_thread.start()
-
+    
+    games = []
+    prev_games = []
+    selected_game = None
+    url = next((url for url in URLS if 'helpslot' in url), None)
+    
     try:
         while not stop_event.is_set():
+            games = list(load_trend_memory().keys()) or []
+            # Detect new game list
+            if games != prev_games:
+                prev_games = games.copy()
+                selected_game = None  # reset selection
+
+                if games:
+                    print(f"\n\n\tPress number [{WHTE}1-{len(games)}{RES}] to integrate game data:\n")
+                    for i, game in enumerate(games, start=1):
+                        if "Wild Ape" in game:
+                            game = game.replace("#3258", "").strip()
+                        print(f"\t[{WHTE}{i}{RES}] - {PROVIDERS.get(provider).color}{game.title()}{RES}")
+                    print("\n")
+
+            if selected_game:
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    future1 = executor.submit(integrate_game, selected_game, url, provider)
+                    future2 = executor.submit(search_game_data_from_local_api, selected_game)
+                    wait([future1, future2])
+
+                helpslot_data = future1.result() or {}
+                api_data = future2.result() or {}
+
+                # Flatten helpslot_data['data'] if it exists
+                helpslot_list = helpslot_data.get('data', []) if isinstance(helpslot_data, dict) else helpslot_data
+                helpslot_list = helpslot_list if isinstance(helpslot_list, list) else [helpslot_list]
+                
+                api_list = api_data if isinstance(api_data, list) else [api_data]
+
+                # Build dict for API data keyed by name
+                api_dict = {d["name"]: d for d in api_list if isinstance(d, dict) and "name" in d}
+
+                # Merge helpslot + api
+                combined_games = []
+                for g in helpslot_list:
+                    name = g.get("name")
+                    if not name:
+                        continue
+                    merged = {**api_dict.get(name, {}), **g}  # helpslot overrides api
+                    combined_games.append(merged)
+
+                # Filter only entries with 'name'
+                combined_games = [g for g in combined_games if g.get("name")]
+                log_data(combined_games[0])
+                
             time.sleep(0.1)
     except KeyboardInterrupt:
         print(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
