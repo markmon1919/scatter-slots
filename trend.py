@@ -102,10 +102,9 @@ def fetch_html_via_selenium(driver: webdriver.Chrome, url: str, provider: str):
             if PROVIDERS.get(provider).img_url.lower() in img_url.lower():
                 driver.execute_script("arguments[0].scrollIntoView(true);", item)
                 item.click()
-                time.sleep(1)
-                sort_icon = driver.find_element(By.CSS_SELECTOR, "img.sort-icon")
-                driver.execute_script("arguments[0].click();", sort_icon)
-                time.sleep(1)
+                time.sleep(2)
+                # driver.find_element(By.CSS_SELECTOR, ".sort-wrap .sort-icon").click()
+                # time.sleep(1)
                 scroll_game_list(driver)
                 break
         except Exception:
@@ -124,7 +123,7 @@ def extract_game_data(driver) -> list:
             value_text = block.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
             
-            # if value < 85:
+            # if value <= 30:
             #     continue
             
             progress_bar_elem = block.find_element(By.CSS_SELECTOR, ".progress-bar")
@@ -134,7 +133,7 @@ def extract_game_data(driver) -> list:
             history = {}
             all_green = True
             history_tags = block.find_elements(By.CSS_SELECTOR, ".game-info-list .game-info-item")
-
+            
             for item in history_tags:
                 label = item.find_element(By.CSS_SELECTOR, ".game-info-label").text.strip().rstrip(":").replace(" ", "").lower()
                 val_elem = item.find_element(By.CSS_SELECTOR, ".game-info-value")
