@@ -12,6 +12,8 @@ from config import (PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, API_URL, SCREEN_POS
 
 @dataclass
 class AutoState:
+    manual_select: bool = True
+    game_name: str = None
     jackpot_value: str = None
     meter_color: str = None
     min10: float = 0.0
@@ -22,6 +24,8 @@ class AutoState:
     h1: float = 0.0
     h3: float = 0.0
     h6: float = 0.0
+    trending: bool = False
+    bet_lvl: str = None
 
 def render_providers():
     print(f"\n\n\t📘 {MAG}SCATTER SLOT SPINNER{RES}\n\n")
@@ -92,7 +96,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
         # spin_in_progress, combo_spin = spin_queue.get(timeout=1)
         spin_types = [ "normal_spin", "spin_hold", "spin_delay", "spin_hold_delay", "turbo_spin", "board_spin", "board_spin_hold", "board_spin_delay", "board_spin_hold_delay", "board_spin_turbo", "spin_slide", "auto_spin" ]
         
-        if not combo_spin and provider in [ 'PG' ]:
+        if not combo_spin and "PG" in provider:
             spin_types = [s for s in spin_types if not s.startswith("board")]
 
         if combo_spin:
@@ -767,7 +771,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
                     lambda: (pyautogui.keyDown('space'), pyautogui.click(x=rand_x, y=rand_y, button='right'))
                 ])
             else:
-                if provider in [ 'PG' ]:
+                if "PG" in provider:
                     action.extend([
                         lambda: pyautogui.doubleClick(x=cx, y=BTM_Y - 105, button='left'),
                         # lambda: pyautogui.doubleClick(x=cx, y=BTM_Y - 105, button='right'),
@@ -861,18 +865,18 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
                     lambda: (pyautogui.click(x=cx + 380, y=cy + 325, button='right'), pyautogui.click(x=cx + 380, y=cy + 325,button='right'))
                 ])
             else:
-                if provider in [ 'PG' ]:
+                if "PG" in provider:
                     action.extend([
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx - 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx - 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx + 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx + 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        # lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx - 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        # lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx - 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        # lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        # lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx + 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
-                        # lambda: (pyautogui.click(x=cx + 205, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx + 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'))
+                        lambda: (pyautogui.click(x=cx + 195, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx - 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 195, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx - 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 195, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 195, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx + 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 195, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx + 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(1.5), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        # lambda: (pyautogui.click(x=cx + 195, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx - 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        # lambda: (pyautogui.click(x=cx + 195, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx - 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        # lambda: (pyautogui.click(x=cx + 195, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        # lambda: (pyautogui.click(x=cx + 195, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx + 100, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
+                        # lambda: (pyautogui.click(x=cx + 195, y=BTM_Y - 105, button='right'), time.sleep(0.3), pyautogui.click(x=cx + 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.9), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'))
                     ])
                 else:
                     action.extend([
@@ -1124,7 +1128,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
         # print(f"\tCombo Spin: {combo_spin}")
         print(f"\n\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {RES}>\n")
         # sys.stdout.flush()
-        alert_queue.put(f"{spin_type}")
+        alert_queue.put(spin_type)
     # except Empty:
     #     continue
 
@@ -1138,9 +1142,11 @@ def play_alert(alert_queue, stop_event):
                 if sound_file == "ping":
                     subprocess.run(["afplay", PING])
                 else:
-                    voice = VOICES["Samantha"]
+                    voice = (
+                        VOICES["Karen"] if state.trending or state.bet_lvl == "Bonus" else
+                        VOICES["Samantha"]
+                    )
                     subprocess.run(["say", "-v", voice, "--", sound_file])
-                    
             except Empty:
                 time.sleep(0.05)
             except Exception as e:
@@ -1196,18 +1202,7 @@ def integrate_game(game: str, url: str, provider: str):
     except Exception as e:
         print(f"❌ Error calling API: {e}")
         
-def log_data(game: list):
-    state.jackpot_value = game.get('jackpot_value')
-    state.meter_color = game.get('meter_color')
-    state.min10 = game.get('min10')
-    state.hr1 = game.get('hr1')
-    state.hr3 = game.get('hr3')
-    state.hr6 = game.get('hr6')
-    state.m10 = game.get('10min')
-    state.h1 = game.get('1hr')
-    state.h3 = game.get('3hrs')
-    state.h6 = game.get('6hrs')
-    
+def log_data(game: list):    
     clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
     if "Wild Ape" in clean_name and "PG" in provider:
         clean_name = clean_name.replace("#3258", "").strip()
@@ -1235,7 +1230,7 @@ def log_data(game: list):
     print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10m}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1h}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3h}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6h}{percent}")
     print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10min}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1hr}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3hrs}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6hrs}{percent} {DGRY}Helpslot{RES})")
     
-    alert_queue.put(clean_name)
+    # alert_queue.put(clean_name) if state.game_name is None else None
         
 def countdown_timer(seconds: int = 10):
     while not stop_event.is_set():
@@ -1262,17 +1257,37 @@ def countdown_timer(seconds: int = 10):
         # print(f"\t1h --> {state.hr1} {state.h1}")
         # print(f"\t3h --> {state.hr3} {state.h3}")
         # print(f"\t6h --> {state.hr6} {state.h6}")
-        
         if current_sec % 10 == 9:
-            threading.Thread(target=spin, args=(False, False,), daemon=True)
-            chosen_spin = spin(False, False)
-            if chosen_spin == "normal_spin":
-                if random.random() < 0.1 and all(x > 0 for x in [state.m10, state.h1, state.h3, state.h6]): # 10% chance to execute spin
-                    spin(*random.choice([(True, False), (False, True)]))
-        else: # THIS IS TEST
-            if current_sec % 2 == 0 and all(x > 0 for x in [state.m10, state.h1, state.h3, state.h6]):
+            if state.trending or state.manual_select:
                 threading.Thread(target=spin, args=(False, False,), daemon=True)
                 chosen_spin = spin(False, False)
+                if chosen_spin == "normal_spin" and random.random() < 0.1:
+                    spin(*random.choice([(True, False), (False, True)]))
+                # if chosen_spin == "normal_spin" and state.bet_lvl in [ "Bonus", "High" ] and random.random() < 0.5:
+                #     spin(*random.choice([(True, False), (False, True)]))
+                # if chosen_spin in [ "combo_spin", "spam_spin", "turbo_spin" ]:
+                #     time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+        # else: # THIS IS TEST                
+        #     if state.trending and state.bet_lvl in [ "Bonus", "High" ] and random.random() < 0.1:
+        #     # if current_sec % 10 == 3 and current_sec % 10 != 9 and random.random() < 0.1:
+        #         # if state.trending and state.bet_lvl in [ "Bonus", "High" ]:
+        #         threading.Thread(target=spin, args=(False, False,), daemon=True)
+        #         chosen_spin = spin(False, False)
+        #         if chosen_spin in [ "combo_spin", "spam_spin", "turbo_spin" ]:
+        #             time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+        #     else:
+        #         if current_sec % 10 == 3 and state.game_name is not None:
+        #             alert_queue.put((f"{state.game_name} {f"trending {state.bet_lvl}" if state.trending else 'no longer trending'}"))
+                
+            # if current_sec % 10 == 0 and state.game_name is not None:
+            #     alert_queue.put((f"{state.game_name} {"trending" if state.trending else 'no longer trending'}"))
+            # if state.game_name is not None:
+            #     alert_queue.put((f"{state.game_name} {"trending" if state.trending else 'not trending'}"))
+
+                # chosen_spin = spin(False, False)
+                # if chosen_spin == "normal_spin":
+                #     if random.random() < 0.1:
+                #         spin(*random.choice([(True, False), (False, True)]))
             
         next_sec = math.ceil(now_time)
         sleep_time = max(0, next_sec - time.time())
@@ -1301,7 +1316,7 @@ if __name__ == "__main__":
     print(render_providers())
     provider, provider_name = providers_list()
     alert_queue.put(provider_name)
-    spin_btn = True if provider in [ "FC" ] else False
+    spin_btn = True if "FC" in provider else False
     user_input = input(f"\tDo you want to enable {CYN}Wide Screen{RES} ❓ ({DGRY}y/N{RES}): \n").strip().lower()
     widescreen = user_input in ("y", "yes")
     
@@ -1318,13 +1333,17 @@ if __name__ == "__main__":
     
     try:
         while not stop_event.is_set():
-            games = list(load_trend_memory().keys()) or []
+            # games = sorted(load_trend_memory().keys(), key=str.lower)            
+            games = list(load_trend_memory().keys())
+            if not games:
+                state.manual_select = True # should not run trend.py
             # Detect new game list
-            if games != prev_games:
+            if games != prev_games and not state.trending:
                 prev_games = games.copy()
+                # state.trending = False
                 selected_game = None  # reset selection
-
-                if games:
+                
+                if games and state.game_name is None:
                     print(f"\n\n\tPress number [{WHTE}1-{len(games)}{RES}] to integrate game data:\n")
                     for i, game in enumerate(games, start=1):
                         if "Wild Ape" in game:
@@ -1333,41 +1352,62 @@ if __name__ == "__main__":
                     print("\n")
 
             if selected_game:
-                with ThreadPoolExecutor(max_workers=2) as executor:
-                    future1 = executor.submit(integrate_game, selected_game, url, provider)
-                    future2 = executor.submit(search_game_data_from_local_api, selected_game)
-                    wait([future1, future2])
+                if selected_game in games:
+                    state.game_name = selected_game
+                    game = load_trend_memory()
+                    # state.jackpot_value = game.get('jackpot_value')
+                    # state.meter_color = game.get('meter_color')
+                    state.min10 = game.get('min10')
+                    # state.hr1 = game.get('hr1')
+                    # state.hr3 = game.get('hr3')
+                    # state.hr6 = game.get('hr6')
+                    state.m10 = game.get('10min')
+                    state.h1 = game.get('1hr')
+                    state.h3 = game.get('3hrs')
+                    state.h6 = game.get('6hrs')
+                    # state.trending = game.get(state.game_name)["trending"]
+                    state.bet_lvl = game.get(state.game_name)["bet_lvl"]
+                    state.game_name = selected_game
+                    state.trending = True
+                else:
+                    state.game_name = None
+                    state.trending = False
+                    
+                # with ThreadPoolExecutor(max_workers=2) as executor:
+                #     future1 = executor.submit(integrate_game, selected_game, url, provider)
+                #     future2 = executor.submit(search_game_data_from_local_api, selected_game)
+                #     wait([future1, future2])
 
-                helpslot_data = future1.result() or {}
-                api_data = future2.result() or {}
+                # helpslot_data = future1.result() or {}
+                # api_data = future2.result() or {}
 
-                # Flatten helpslot_data['data'] if it exists
-                helpslot_list = helpslot_data.get('data', []) if isinstance(helpslot_data, dict) else helpslot_data
-                print('helpslot_list 1: ', helpslot_list)
-                helpslot_list = helpslot_list if isinstance(helpslot_list, list) else [helpslot_list]
-                print('helpslot_list 2: ', helpslot_list)
+                # # Flatten helpslot_data['data'] if it exists
+                # helpslot_list = helpslot_data.get('data', []) if isinstance(helpslot_data, dict) else helpslot_data
+                # print('helpslot_list 1: ', helpslot_list)
+                # helpslot_list = helpslot_list if isinstance(helpslot_list, list) else [helpslot_list]
+                # print('helpslot_list 2: ', helpslot_list)
                 
-                api_list = api_data if isinstance(api_data, list) else [api_data]
+                # api_list = api_data if isinstance(api_data, list) else [api_data]
 
-                # Build dict for API data keyed by name
-                api_dict = {d["name"]: d for d in api_list if isinstance(d, dict) and "name" in d}
-                print('api_dict: ', api_dict)
+                # # Build dict for API data keyed by name
+                # api_dict = {d["name"]: d for d in api_list if isinstance(d, dict) and "name" in d}
+                # print('api_dict: ', api_dict)
 
-                # Merge helpslot + api
-                combined_games = []
-                for g in helpslot_list:
-                    name = g.get("name")
-                    if not name:
-                        continue
-                    merged = {**api_dict.get(name, {}), **g}  # helpslot overrides api
-                    combined_games.append(merged)
+                # # Merge helpslot + api
+                # combined_games = []
+                # for g in helpslot_list:
+                #     name = g.get("name")
+                #     if not name:
+                #         continue
+                #     merged = {**api_dict.get(name, {}), **g}  # helpslot overrides api
+                #     combined_games.append(merged)
 
-                # Filter only entries with 'name'
-                combined_games = [g for g in combined_games if g.get("name")]
-                print('Combined: ', combined_games)
-                log_data(combined_games[0])
+                # # Filter only entries with 'name'
+                # combined_games = [g for g in combined_games if g.get("name")]
+                # print('Combined: ', combined_games)
+                # log_data(combined_games[0])
                 
-            time.sleep(0.1)
+            time.sleep(1)
     except KeyboardInterrupt:
         print(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
         stop_event.set()

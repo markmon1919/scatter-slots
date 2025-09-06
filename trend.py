@@ -17,7 +17,7 @@ def setup_driver():
     if platform.system() != "Darwin" or os.getenv("IS_DOCKER") == "1":
         options.binary_location = "/opt/google/chrome/chrome"
         options.add_argument('--disable-dev-shm-usage')
-
+        
     options.add_argument('--headless=new')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-gpu')
@@ -70,7 +70,7 @@ def providers_list():
         except ValueError:
             print("\t⚠️  Please enter a valid number.")
     
-def scroll_game_list(driver, pause_time: float = 1.0, max_tries: int = 50):
+def scroll_game_list(driver, pause_time: float = 1.0, max_tries: int = 20):
     """Scroll the .scroll-view.with-provider element until all games are loaded."""
     container = driver.find_element(By.CSS_SELECTOR, ".scroll-view.with-provider")
 
@@ -90,7 +90,7 @@ def scroll_game_list(driver, pause_time: float = 1.0, max_tries: int = 50):
 
 def fetch_html_via_selenium(driver: webdriver.Chrome, url: str, provider: str):
     driver.get(url)
-    time.sleep(1)
+    time.sleep(2)
 
     provider_items = driver.find_elements(By.CSS_SELECTOR, ".provider-item")
 
@@ -102,79 +102,84 @@ def fetch_html_via_selenium(driver: webdriver.Chrome, url: str, provider: str):
             if PROVIDERS.get(provider).img_url.lower() in img_url.lower():
                 driver.execute_script("arguments[0].scrollIntoView(true);", item)
                 item.click()
-                time.sleep(2)
+                time.sleep(1)
+                # driver.execute_script("arguments[0].scrollIntoView(true);", item)
                 # driver.find_element(By.CSS_SELECTOR, ".sort-wrap .sort-icon").click()
                 # time.sleep(1)
-                scroll_game_list(driver)
+                # scroll_game_list(driver)
                 break
         except Exception:
             continue
 
     time.sleep(2)
+    scroll_game_list(driver)
     return driver.page_source
 
 def extract_game_data(driver) -> list:
-    games = []
+    filtered_games = []
+    # all_games = []
     game_blocks = driver.find_elements(By.CSS_SELECTOR, ".game-block")
 
     for block in game_blocks:
         try:
             name = block.find_element(By.CSS_SELECTOR, ".game-title").text.strip()
+            # if name:
+            #     all_games.append(name)
+            if "PG" in provider:
+                if "Wild Ape#3258" in name:
+                    continue
+                if "Heist Stakes" in name:
+                    name = name.replace("Heist", "Heist of")
             value_text = block.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
+            
+            # if value < 80:
+            if value < 50:
+                # print(f'{RED}Skipped{RES}: {name}, {value}, {up}')
+                continue
             
             progress_bar_elem = block.find_element(By.CSS_SELECTOR, ".progress-bar")
             bg = progress_bar_elem.value_of_css_property("background-color").lower()
             up = "red" if "255, 0, 0" in bg else "green"
             
-            if value < 60 and up == "red":
+            if value < 80 and up == "green":
                 continue
             
             history = {}
-            all_green = True
             history_tags = block.find_elements(By.CSS_SELECTOR, ".game-info-list .game-info-item")
             
             for item in history_tags:
                 label = item.find_element(By.CSS_SELECTOR, ".game-info-label").text.strip().rstrip(":").replace(" ", "").lower()
-                val_elem = item.find_element(By.CSS_SELECTOR, ".game-info-value")
-                val_text = val_elem.text.strip()
-                val = float(val_text.replace("%", ""))
-                history[label] = val
+                period_elem = item.find_element(By.CSS_SELECTOR, ".game-info-value")
+                period_text = period_elem.text.strip()
+                period = float(period_text.replace("%", ""))
+                history[label] = period
                 
-                # Skip 10min for all_green check
-                if label == "10min":
-                    continue
-                
-                if val < 0:
-                    all_green = False
-                    break
-                
-            # if value >= 88 or all_green:
-            if value >= 88 or (value >= 85 and up == "red") or all_green:
-                games.append({"name": name, "jackpot_value": value, "meter_color": up, **history})
-                print(f'{WHTE}FETCH CEHCK: {RES}{games['name']}')
+            filtered_games.append({"name": name, "jackpot_value": value, "meter_color": up, **history})
+            # print(f'{BLYEL}Final{RES}: {name}, {value}, {up}')
         except Exception:
             continue
         
-    games = sorted([{
-        "name": " ".join(w.capitalize() if w.lower() != "of" else w.lower() for w in g["name"].split()), **{k: v for k, v in g.items() if k != "name"}} for g in games],
-        key=lambda g: g["name"], reverse=False)
+    if filtered_games:
+        filtered_games.sort(key=lambda g: g["name"], reverse=False)
     
-    # print(f"\n\tHelpslot Games: \n\t{PROVIDERS.get(provider).color}{'\n\t'.join(g['name'] for g in games)}{RES}")
-    return games
+        # all_games.sort(reverse=False)
+        # print(f"\n\tAll Games: \n\t{PROVIDERS.get(provider).color}{'\n\t'.join(g for g in all_games)}{RES}")
+    
+        return filtered_games
+    return None
 
 def get_game_data_from_local_api(provider: str, games: list):
     user_agent = random.choice(USER_AGENTS)
     REQUEST_FROM = random.choice(["H5", "H6"])
     URL = next((url for url in URLS if 'helpslot' in url), None)
     HEADERS = {"Accept": "application/json", "User-Agent": user_agent}
-
+    
     try:
         response = requests.get(f"{URL}/api/games?manuf={provider}&requestFrom={REQUEST_FROM}", headers=HEADERS)
         if response.status_code != 200:
             print(f"❌ Error {response.status_code}: {response.text}")
             return []
-
         try:
             json_data = response.json()
             data = json_data.get("data", [])
@@ -183,51 +188,166 @@ def get_game_data_from_local_api(provider: str, games: list):
             return []
         
         if "PG" in provider:
-            data = [g for g in data if g.get("name") != "Wild Ape#3258"]
-            
+            data = [g for g in data if g.get("value") > 50 and g.get("name") != "Wild Ape#3258"]
+            # data = [g for g in data if all([g.get("min10") < 0, g.get("hr1") < 0]) and g.get("name") != "Wild Ape#3258"]
+        else:
+            data = [g for g in data if g.get("value") > 50 and g.get("name")]
+        
+        # print(f'\n{DGRY}Data{RES}: {WHTE}{data}{RES}')
+        # print(f'\n{DGRY}Games{RES}: {WHTE}{games}{RES}')
+        # data_dict = {d["name"]: d for d in data}  # API data keyed by name
         data_dict = {d["name"]: d for d in data}  # API data keyed by name
-
+        # print(f"\n{WHTE}Before >> {RES}Data Dict: {data_dict}")
+        # games_found = {g["name"]: g for g in games}
+        # search_games = [name for name in games_found if name not in data_names]
         # Find missing games
-        search_games = [g for g in games if g["name"] not in data_dict]
-
-        # Now you can fetch their info
+        # print(f"\n{WHTE}Games Found Loop{RES}:")
+        # games_found = {g["name"]: g for g in games}
+        # for i in games_found:
+        #     print(f"Get Name (i): {BLU}{i}{RES}")
+            # ❌ Exception: string indices must be integers, not 'str'
+            # print(f"Get Data_Dict.get(i[name]): {RED}{data_dict.get(i["name"])}{RES}")
+        
+        # print(f"\n{WHTE}Games Found Loop{RES}:")
+        search_games = []
+        games_found = [g for g in games if g["name"] in data_dict]
+        if games_found:
+            # print(f"\n\t{LRED}Games Found{RES}\n")
+            data = [{**g, **data_dict.get(g["name"])} for g in games_found]
+            data_dict = {d["name"]: d for d in data}
+            # print(f"\n{MAG}{data_dict}{RES}")
+            # for i in games_found:
+            #     print(f"{WHTE}Games Found{RES}: {BLU}{i}{RES}")
+        # Precompute for fast lookup
+        # games_found = {g["name"]: g for g in games}
+            search_games = [name for name in games if name not in games_found]
+        else:
+            # print(f"\n{LRED}Not Games Found{RES}")
+            # search_games = [name for name in games]
+            search_games = [name for name in games]
+        #     if search_games:
+        #         data = [{**g, **data_dict.get(g["name"])} for g in games_found]
+        #         data_dict = {d["name"]: d for d in data}
+        
+        # for i in search_games:
+        #     print(f"{WHTE}Search Games{RES}: {RED}{i}{RES}")
+    
+        # print(f"\n{WHTE}Search Games: {RES}{search_games}")
+    # Fetch missing games in parallel
         if search_games:
+            # search_game = [g["name"] for g in search_games]
             with ThreadPoolExecutor(max_workers=len(search_games)) as executor:
-                results = list(executor.map(search_game_data_from_local_api, search_games))
-            data.extend(filter(None, results))  # add fetched data to data list
+                # futures = [executor.submit(search_game_data_from_local_api, search["name"]) for search in search_games]
+                futures = [executor.submit(search_game_data_from_local_api, search["name"]) for search in search_games]
+                # wait(futures)
+                # Collect results
+                results = [f.result() for f in futures]
+                # results = list(executor.map(search_game_data_from_local_api, search_games))
+                
+                # print(f"\n{WHTE}Results Loop{RES}: {RES}")
+                # for i in results:
+                #     print(f"{WHTE}Results{RES}: {LYEL}{i}{RES}")
+            # data.extend(filter(None, results))
+            # data.extend(filter(None, games_found))
+            # games_found = [g for g in games if g["name"] in data_dict]
+            results_dict = {r['name']: r for r in results}
+            # for i in results_dict:
+            #     if "Rooster Rumble" in i:
+            #         print(f"{WHTE}Results Dict{RES}: {LYEL}{i}{RES}")
+            data = [{**g, **results_dict[g['name']]} for g in search_games if g['name'] in results_dict]
+            # for i in search_merge:
+            #     if "Rooster Rumble" in i:
+            #         print(f"{WHTE}Search Merge{RES}: {LYEL}{i}{RES}")
+            # enriched = enrich_game_data(search_merge)
+            # return enriched
+                # if not games_found:
+                #     print(f"\n{LRED}Not Games Found{RES}")
+                #     data = [g for g in games if g["name"] in results_dict]
+                #     # data_dict = {d["name"]: d for d in data}
+                # else:
+                # print(f"\n{LRED}Games Found{RES}")
+                # data = [{**g, **data_dict.get(g["name"])} for g in results_dict]
+                # data.extend(filter(None, search_merge))
+                # data.extend(filter(None, games_found))
+            # data_dict = {d["name"]: d for d in data}
+            # print(f"\n{WHTE}Games Found Loop{RES}:")
+            # print(f"\n{WHTE}Refactor Loop{RES}: {MAG}{data}{RES}")
+        # games_found = [g for g in games if g["name"] in data_dict]
+        # print(f"\n{CYN}Games Found List: {RES} {games_found}")
+        # for i in games_found:
+        #     print(f"Get Name (i): {BLU}{i}{RES}")
+        #     print(f"Get Data_Dict.get(i[name]): {RED}{data_dict.get(i["name"])}{RES}")
+        # data.extend(filter(None, games_found))
+            
+        # if games_found:
+        #     data = [{**g, **data_dict.get(g["name"])} for g in games_found]
+        #     print(f'\n{MAG}Refactor Data{RES}: {data}')
+        #     data_dict = {d["name"]: d for d in data}
+            
+        # search_games = [g for g in games if g["name"] not in data_dict]
+        # print(f"\n{WHTE}Search Games List{RES}: {search_games}")
+        # # for i in search_games:
+        # #     print(f"Get Name (i): {BLU}{i}{RES}")
+        # #     print(f"Get Data_Dict.get(i[name]): {RED}{data_dict.get(i["name"])}{RES}") # Always None
+        
+        # # # search_games = [g for g in games_found if g["name"] not in data_dict]
+        # # # print(f"\nSearch Games: {search_games}")
 
-        # Rebuild data_dict including the newly fetched entries
-        data_dict = {d["name"]: d for d in data}
-
+        # # # Now you can fetch their info
+        # if search_games:
+        #     search_game = {s["name"]: s for s in search_games}
+        #     with ThreadPoolExecutor(max_workers=len(search_games)) as executor:
+        #         # {s["name"]: s for s in search_games}
+        #         # results = list(executor.map(search_game_data_from_local_api, search_games))
+        #         results = list(executor.map(search_game_data_from_local_api, search_games))
+        #         # print(f"\nResults: {results}")
+        #         # print(f"\n{WHTE}Results Loop{RES}:")
+        #         # for i in results:
+        #         #     print(f"{YEL}{i}{RES}")
+        #         print(f'\n{LBLU}Results List{RES}: {results}')
+        #     search_refactor = [{**g, **results} for g in search_games]
+        #     print(f'\n{MAG}Search Refactor Data{RES}: {search_refactor}')
+            # data.extend(search_refactor)
+            # data_dict = {d["name"]: d for d in data}
+            
+            # data.extend(filter(None, results))  # add fetched data to data list
+            # search_merge = [{**g, **results} for g in search_games]
+            # data.extend(search_merge)
+            # data_dict = {d["name"]: d for d in data}  # API data keyed by name
+            
+            # data_dict = {d["name"]: d for d in data} # Rebuild data_dict including the newly fetched entries
+            
+        # data.extend(filter(None, search_games))
+        # print(f"\n{WHTE}After >> Data List{RES}: {LGRE}{data}{RES}")
+        # for i in data:
+        #     print(f"Get Name (i): {BLU}{i}{RES}")
+        #     print(f"Get Data_Dict.get(i[name]): {RED}{data_dict.get(i["name"])}{RES}")
         # Merge all games
-        combined_games = [{**g, **data_dict.get(g["name"], {})} for g in games]
-        # print(f'Combined Games: {combined_games}')
-
-        # Apply filter only for analytics / further processing
-        filtered_games = [
-            g for g in combined_games
-            if (
-                g.get("value", 0) >= 60
-                or (
-                    (g.get("hr1", 0) < g.get("hr3", 0) < g.get("hr6", 0) and g.get("min10", 0) < 0)  # low bet 1php
-                    or (
-                        g.get("1hr", 0) > 0
-                        and g.get("3hrs", 0) > 0
-                        and g.get("6hrs", 0) > 0  # all green positive momentum
-                    )
-                )
-            )
-        ]
-
-        # print(f"\n{WHTE}Combined{RES}: {combined_games}")
-        # print(f"\n{WHTE}Filtered{RES}: {filtered_games}")
-        enriched = enrich_game_data(filtered_games)
-        return enriched
+        # print(f"Data: {data}")
+        # print(f"\n{WHTE}After >> {RES}Data Dict: {data_dict}")
+        # print(f"\nGames: {games}")
+        # combined_games = [{**g, **data_dict.get(g["name"])} for g in games]
+        # print(f"\n{WHTE}Combined Games List{RES}: {LCYN}{combined_games}{RES}")
+        # print(f"\n{WHTE}Games Loop{RES}:")
+        # for i in games:
+        #     print(f"Get Name (i): {BLU}{i}{RES}")
+        #     print(f"Get Data_Dict.get(i[name]): {RED}{data_dict.get(i["name"])}{RES}")
+        # print(f"\n{WHTE}Combined Games Loop{RES}:")
+        # for i in combined_games:
+        #     print(f"Get Name (i): {BLU}{i}{RES}")
+        #     print(f"Get Data_Dict.get(i[name]): {RED}{data_dict.get(i["name"])}{RES}")
+        if data:
+            enriched = enrich_game_data(data)
+            return enriched
+        return None
+        # enriched = enrich_game_data(data)
+        # return enriched
     except Exception as e:
         print(f"❌ Exception: {e}")
         return []
     
 def search_game_data_from_local_api(game: str):
+    # print(f'{WHTE}GAME STRING: {RES}{game}')
     user_agent = random.choice(USER_AGENTS)
     REQUEST_FROM = random.choice(["H5", "H6"])
     URL = next((url for url in URLS if 'helpslot' in url), None)
@@ -255,6 +375,27 @@ def search_game_data_from_local_api(game: str):
     except Exception as e:
         print(f"❌ Error calling API: {e}")
         return {"error": str(e)}, REQUEST_FROM
+    
+def make_object(obj: dict):
+    helpslot = {
+        "jackpot": obj.get("jackpot_value", 0),
+        "meter": obj.get("meter_color"),
+        "10m": obj.get("min10", 0),
+        "1h": obj.get("hr1", 0),
+        "3h": obj.get("hr3", 0),
+        "6h": obj.get("hr6", 0)
+    }
+
+    api = {
+        "jackpot": obj.get("value", 0),
+        "meter": "green" if obj.get("up") is True else "red" if obj.get("up") is False else None,
+        "10m": obj.get("10min", 0),
+        "1h": obj.get("1hr", 0),
+        "3h": obj.get("3hrs", 0),
+        "6h": obj.get("6hrs", 0)
+    }
+    
+    return helpslot, api
 
 def enrich_game_data(games: list, provider: str = "JILI") -> list:
     """
@@ -264,40 +405,41 @@ def enrich_game_data(games: list, provider: str = "JILI") -> list:
     enriched = []
 
     for g in games:
+        helpslot, api = make_object(g)
         # Skip games that don't meet provider-specific thresholds
         if provider in ["JILI", "PG"]:
-            if (
-                not g.get("value", 0) >= 60
-                or not (g.get("hr1", 0) < g.get("hr3", 0) < g.get("hr6", 0) and g.get("min10", 0) < 0)
-                or not (g.get("1hr", 0) > 0 and g.get("3hrs", 0) > 0 and g.get("6hrs", 0) > 0)
-            ):
+            if any([
+                # not api["jackpot"] > 60,
+                not all((helpslot["10m"] < 5, helpslot["1h"] < helpslot["3h"] < helpslot["6h"])),
+                not all(api[period] > 0 for period in ["1h", "3h", "6h"])
+            ]):
                 continue
             
         # Determine trending status
-        trending = (
-            (g.get("up") == "red" 
-            and g.get("min10", 0) < 5 
-            and any(g.get(hr, 0) < 0 for hr in ["hr1", "hr3", "hr6"]))
-            or g.get("10min", 0) > 0 
-            and g.get("1hr", 0) > 0 
-            and g.get("3hrs", 0) > 0 
-            and g.get("6hrs", 0) > 0
-        )
-
-        value = g.get("value", 0)
-        jackpot_value = g.get("jackpot_value", 0)  # use merged value as jackpot
-        up = g.get("up")
+        trending = all([
+            # any(data["meter"] == "red" for data in (helpslot, api)) and
+            any([
+                # helpslot["10m"] < 5 and helpslot["1h"] < helpslot["3h"] < helpslot["6h"],
+                all((helpslot["10m"] < 5, helpslot["1h"] < helpslot["3h"] < helpslot["6h"])),
+                # all(api[period] > 0 for period in ["1h", "3h", "6h"])
+            ])
+            # any(data["meter"] == "red" for data in (helpslot, api)),
+            # helpslot["10m"] < 5 and helpslot["1h"] < helpslot["3h"] < helpslot["6h"],
+            # all(api[period] > 0 for period in ["1h", "3h", "6h"])
+        ])
         
         # Determine bet level
-        if value >= 95 and jackpot_value >= 87:
-            bet_lvl = "Bonus"
-        elif (value >= 80 and jackpot_value >= 80) or g.get("min10", 0) <= -60:
+        if api["jackpot"] > 95 and helpslot["jackpot"] > 87:
+            bet_lvl = "Bonus" 
+        elif all(data["jackpot"] > 80 for data in (helpslot, api)) or api["10m"] < -60:
             bet_lvl = "High"
-        elif (value >= 50 and not g.get("up")) or g.get("min10", 0) <= -30:
+        # elif (any(data["jackpot"] > 50 for data in (helpslot, api))
+        #     and any(data["meter"] == "red" for data in (helpslot, api))) or api["10m"] < -30:
+        elif all([api["jackpot"] > 50, any(data["meter"] == "red" for data in (helpslot, api))]) or g.get("min10", 0) < -30:
             bet_lvl = "Mid"
         else:
             bet_lvl = "Low"
-
+            
         enriched.append({
             **g,
             "trending": trending,
@@ -305,21 +447,24 @@ def enrich_game_data(games: list, provider: str = "JILI") -> list:
         })
 
     # Filter out Mid/Low if not trending
-    enriched = [g for g in enriched if not (g["bet_lvl"] in ["Mid", "Low"] and not g.get("trending"))]
-
+    # enriched = [g for g in enriched if not ("Low" in g["bet_lvl"] or not g.get("trending"))]
+    enriched = [g for g in enriched if g.get("trending") and not "Low" in g["bet_lvl"]]
+    # enriched = [g for g in enriched]
+            
     # Sort by bet level, trending, value, jackpot
     priority = {"Bonus": 4, "High": 3, "Mid": 2, "Low": 1}
     enriched.sort(
         key=lambda g: (
             priority[g["bet_lvl"]],
-            0 if (g["bet_lvl"] in ["Bonus", "High"] and not g.get("trending")) 
+            0 if (g["bet_lvl"] in ["Bonus", "High"] and not g.get("trending"))
                or (g["bet_lvl"] in ["Mid", "Low"] and g.get("trending")) else 1,
-            g["value"],
-            g["jackpot_value"]
+            g["jackpot_value"],
+            g["value"]
         ),
         reverse=True
     )
-
+    
+    save_trend_memory(enriched)
     return enriched
     
 def play_alert(alert_queue, stop_event):
@@ -362,65 +507,75 @@ def save_trend_memory(game_data: list):
 
     # Ensure data is an OrderedDict
     data = OrderedDict(data)
-
+    
     for game in game_data:
-        game_name = game.get("name", "").lower()
-        
+        game_name = game.get("name").lower()        
         # Remove old entry if it exists, to reinsert at the front
         if game_name in data:
             data.pop(game_name)
         
         # Insert latest data at the beginning
-        data = OrderedDict([(game_name, {
-            "jackpot_value": game.get("jackpot_value", 0),
-            "up": game.get("up"),
-            "min10": game.get("min10", 0),
-            "hr1": game.get("hr1", 0),
-            "hr3": game.get("hr3", 0),
-            "hr6": game.get("hr6", 0),
-            "value": game.get("value", 0),
-            "meter_color": game.get("meter_color"),
-            "m10": game.get("10min", 0),
-            "h1": game.get("1hr", 0),
-            "h3": game.get("3hrs", 0),
-            "h6": game.get("6hrs", 0),
-        })] + list(data.items()))
+        data = OrderedDict([(game_name, game)] + list(data.items()))
         
     # Keep only the latest 5 entries
-    while len(data) > 5:
-        data.popitem(last=True)  # remove oldest entry at the end
+    # while len(data) > 5:
+    #     data.popitem(last=True)  # remove oldest entry at the end
 
     with open(TREND_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
         
-
+    # data = OrderedDict()
+    # for game in game_data:
+    #     game_name = game.get("name").lower()
+    #     data = OrderedDict([(game_name, game)] + list(data.items()))
+        
+    # with open(TREND_FILE, "w", encoding="utf-8") as f:
+    #     json.dump(data, f, ensure_ascii=False, indent=2)
+        
+    # data = OrderedDict()
+    
+    # for game in game_data:
+    #     game_name = game.get("name", "").lower()
+    #     if not game_name:
+    #         continue
+    #     # data = OrderedDict([(game_name, game)] + list(data.items()))
+    #     data[game_name] = game
+        
+    # # data = sorted(data.items(), key=lambda x: x[0])
+        
+    # with open(TREND_FILE, "w", encoding="utf-8") as f:
+    #     json.dump(data, f, ensure_ascii=False, indent=2)
+        
 if __name__ == "__main__":
-    try:        
+    try:
         stop_event = threading.Event()
         alert_queue = ThQueue()
         alert_thread = threading.Thread(target=play_alert, args=(alert_queue, stop_event), daemon=True)
         alert_thread.start()
         
-        driver = setup_driver()
         print(f"{CLEAR}", end="")
         print(render_providers())
 
         url = next((url for url in URLS if 'helpslot' in url), None)
         provider, provider_name = providers_list()
         alert_queue.put(provider_name)
-        
-        html = fetch_html_via_selenium(driver, url, provider)
+       
+        driver = setup_driver() 
+        fetch_html_via_selenium(driver, url, provider)
+        last_alerts = {}
         
         while True:
             games = extract_game_data(driver)
+            # print(f"\n\tFiltered Games: \n\t{PROVIDERS.get(provider).color}{'\n\t'.join(g['name'] for g in games)}{RES}")
             data = get_game_data_from_local_api(provider, games) if games else None
-            save_trend_memory(data) if data else None
+            # save_trend_memory(data) if data else None
             
             if data:
-                # alert_cooldown = min(sum(1 for g in data if g.get("bet_lvl") == "Bonus" or (g.get("bet_lvl") in [ "High", "Mid" ] and g.get("trending"))) * 2, 10)
+                games = []
+                prev_games = []
                 percent = f"{LGRY}%{RES}"
                 now = time.time()
-                today = time.localtime(now)
+                today = time.localtime(now)    
                 
                 print(
                     f"\n\t\t\t\t⏰  {BYEL}{time.strftime('%I', today)}{BWHTE}:{BYEL}{time.strftime('%M', today)}"
@@ -429,23 +584,24 @@ if __name__ == "__main__":
                 )
                 
                 for game in data:
+                    helpslot, api = make_object(game)
                     clean_name = re.sub(r"\s*\(.*?\)", "", game.get('name'))
-                    if "Wild Ape" in clean_name and "PG" in provider:
-                        clean_name = clean_name.replace("#3258", "").strip()
+                    if "Wild Ape#3258" in clean_name and "PG" in provider:
+                        clean_name = clean_name.replace("#3258", "X10000").strip()
                         
                     tag = "💥💥💥 " if game.get('trending') else "🔥🔥🔥 "
                     
-                    signal = f"{LRED}⬇{RES}" if not game.get('up') else f"{LGRE}⬆{RES}"
-                    colored_value_10m = f"{RED if game.get('min10') < 0 else GRE if game.get('min10') > 0 else CYN}{' ' + str(game.get('min10')) if game.get('min10') > 0 else game.get('min10')}{RES}"
-                    colored_value_1h = f"{RED if game.get('hr1') < 0 else GRE if game.get('hr1') > 0 else CYN}{' ' + str(game.get('hr1')) if game.get('hr1') > 0 else game.get('hr1')}{RES}"
-                    colored_value_3h = f"{RED if game.get('hr3') < 0 else GRE if game.get('hr3') > 0 else CYN}{' ' + str(game.get('hr3')) if game.get('hr3') > 0 else game.get('hr3')}{RES}"
-                    colored_value_6h = f"{RED if game.get('hr6') < 0 else GRE if game.get('hr6') > 0 else CYN}{' ' + str(game.get('hr6')) if game.get('hr6') > 0 else game.get('hr6')}{RES}"
+                    signal = f"{LRED}⬇{RES}" if api["meter"] == "red" else f"{LGRE}⬆{RES}"
+                    colored_value_10m = f"{RED if api["10m"] < 0 else GRE if api["10m"] > 0 else CYN}{' ' + str(api["10m"]) if api["10m"] > 0 else api["10m"]}{RES}"
+                    colored_value_1h = f"{RED if api["1h"] < 0 else GRE if api["1h"] > 0 else CYN}{' ' + str(api["1h"]) if api["1h"] > 0 else api["1h"]}{RES}"
+                    colored_value_3h = f"{RED if api["3h"] < 0 else GRE if api["3h"] > 0 else CYN}{' ' + str(api["3h"]) if api["3h"] > 0 else api["3h"]}{RES}"
+                    colored_value_6h = f"{RED if api["6h"] < 0 else GRE if api["6h"] > 0 else CYN}{' ' + str(api["6h"]) if api["6h"] > 0 else api["6h"]}{RES}"
                     
-                    helpslot_signal = f"{LRED}⬇{RES}" if game.get('meter_color') == "red" else f"{LGRE}⬆{RES}"
-                    colored_value_10min = f"{RED if game.get('10min') < 0 else GRE if game.get('10min') > 0 else CYN}{' ' + str(game.get('10min')) if game.get('10min') > 0 else game.get('10min')}{RES}"
-                    colored_value_1hr = f"{RED if game.get('1hr') < 0 else GRE if game.get('1hr') > 0 else CYN}{' ' + str(game.get('1hr')) if game.get('1hr') > 0 else game.get('1hr')}{RES}"
-                    colored_value_3hrs = f"{RED if game.get('3hrs') < 0 else GRE if game.get('3hrs') > 0 else CYN}{' ' + str(game.get('3hrs')) if game.get('3hrs') > 0 else game.get('3hrs')}{RES}"
-                    colored_value_6hrs = f"{RED if game.get('6hrs') < 0 else GRE if game.get('6hrs') > 0 else CYN}{' ' + str(game.get('6hrs')) if game.get('6hrs') > 0 else game.get('6hrs')}{RES}"
+                    helpslot_signal = f"{LRED}⬇{RES}" if helpslot["meter"] == "red" else f"{LGRE}⬆{RES}"
+                    colored_value_10min = f"{RED if helpslot["10m"] < 0 else GRE if helpslot["10m"] > 0 else CYN}{' ' + str(helpslot["10m"]) if helpslot["10m"] > 0 else helpslot["10m"]}{RES}"
+                    colored_value_1hr = f"{RED if helpslot["1h"] < 0 else GRE if helpslot["1h"] > 0 else CYN}{' ' + str(helpslot["1h"]) if helpslot["1h"] > 0 else helpslot["1h"]}{RES}"
+                    colored_value_3hrs = f"{RED if helpslot["3h"] < 0 else GRE if helpslot["3h"] > 0 else CYN}{' ' + str(helpslot["3h"]) if helpslot["3h"] > 0 else helpslot["3h"]}{RES}"
+                    colored_value_6hrs = f"{RED if helpslot["6h"] < 0 else GRE if helpslot["6h"] > 0 else CYN}{' ' + str(helpslot["6h"]) if helpslot["6h"] > 0 else helpslot["6h"]}{RES}"
                     
                     bet_str = f"{BLNK if game.get('bet_lvl') != 'Low' else ''}💰 {BLU if game.get('bet_lvl') in [ 'Mid', 'Low' ] else BLYEL if game.get('bet_lvl') == 'Bonus' else BGRE}{game.get('bet_lvl').upper()}{RES} "
                     
@@ -457,25 +613,38 @@ if __name__ == "__main__":
                     print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10m}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1h}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3h}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6h}{percent}")
                     print(f"\t\t{CYN}⏱{RES} {LYEL}10m{RES}:{colored_value_10min}{percent}  {CYN}⏱{RES} {LYEL}1h{RES}:{colored_value_1hr}{percent}  {CYN}⏱{RES} {LYEL}3h{RES}:{colored_value_3hrs}{percent}  {CYN}⏱{RES} {LYEL}6h{RES}:{colored_value_6hrs}{percent} {DGRY}Helpslot{RES})")
                     
-                    alert_queue.put(
-                        f"{clean_name} {game.get('bet_lvl')} {game.get('value')}" if game.get("bet_lvl") == "Bonus"
-                        else f"{clean_name} is_trending" if game.get("trending")
-                        else clean_name
-                    )
-                    
+                    games = list(load_trend_memory().keys())
+                    if games != prev_games:
+                        prev_games = games.copy()
+                        
+                    if game.get('bet_lvl') == 'Bonus' or (game.get('bet_lvl') == 'High' and game.get('trending')):
+                        if game.get("name", "").lower() in games:
+                            alert_queue.put(
+                                f"{clean_name} {game.get('bet_lvl')} {game.get('value')}" if game.get("bet_lvl") == "Bonus"
+                                else f"{clean_name} is_trending" if game.get("trending")
+                                else clean_name
+                            )
+                        else:
+                            break
                     # if clean_name not in last_alerts or now - last_alerts[clean_name] > alert_cooldown:
-                    #     last_alerts[clean_name] = now
-                    #     if game.get('bet_lvl') == 'Bonus' or (game.get('bet_lvl') in [ 'High', 'Mid' ] and game.get('trending')):
-                    #         alert_queue.put(
-                    #             f"{clean_name} {game.get('bet_lvl')} {game.get('value')}" if game.get("bet_lvl") == "Bonus"
-                    #             else f"{clean_name} Trending" if game.get("trending")
-                    #             else clean_name
-                    #         )
+                    #     if game.get('bet_lvl') == 'Bonus' or (game.get('bet_lvl') == 'High' and game.get('trending')):
+                    #         last_alerts[clean_name] = now
+                        # if game.get("name", "").lower() in list(load_trend_memory().keys()):
+                        #     if game.get('bet_lvl') == 'Bonus' or (game.get('bet_lvl') in [ 'High', 'Mid' ] and game.get('trending')):
+                        #         alert_queue.put(
+                        #             f"{clean_name} {game.get('bet_lvl')} {game.get('value')}" if game.get("bet_lvl") == "Bonus"
+                        #             else f"{clean_name} is_trending" if game.get("trending")
+                        #             else clean_name
+                        #         )
                 print("\n")
             else:
+                if os.path.exists(TREND_FILE):
+                    os.remove(TREND_FILE)
+                    
                 text = f"\r\t🚫 {BDGRY}No Trending Games Found !{RES}"
-                if load_trend_memory():
-                    text += f"\n\t\tLast Trending Games:\n\t\t{WHTE}{'\n\t\t'.join(load_trend_memory().keys()).title()}{RES}\n"
+                
+                # if load_trend_memory():
+                #     text += f"\n\t\tLast Trending Games:\n\t\t{WHTE}{'\n\t\t'.join(load_trend_memory().keys()).title()}{RES}\n"
                     
                 print(f"\r{text}")
                 alert_queue.put("No Trending Games Found")
