@@ -75,6 +75,8 @@ class AutoState:
     major_pullback_next: bool = False
     helpslot_jackpot: float = 0.00
     helpslot_meter: str = None
+    extreme_pull: bool = False
+    intense_pull: bool = False
 
 
 @dataclass
@@ -885,6 +887,9 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
         signal = f"{LRED}＋{RES}" if bear_score > state.prev_bear_score else f"{LGRE}－{RES}" if bear_score < state.prev_bear_score else f"{LCYN}＝{RES}"
         state.bear_score_inc = True if bear_score > state.prev_bear_score else False
         state.prev_bear_score = bear_score
+        state.extreme_pull = False
+        state.intense_pull = False
+
         logger.info(f"\n\t🐻 Bear Score: {DGRY}[ {BWHTE}{bear_score} {DGRY}]{signal}")
 
         if bear_score >= 2:
@@ -900,8 +905,10 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
 
         if pull_score >= 8 and bet_level == "max":
             trend_strength = "💥💥💥  Extreme Pull"
+            state.extreme_pull = True
         elif pull_score >= 7 and bet_level in [ "max", "high" ]:
             trend_strength = "🔥🔥  Intense Pull"
+            state.intense_pull = True
         elif pull_score >= 6 and bet_level in [ "max", "high" ]:
             trend_strength = "☄️  Very Strong Pull"
         elif pull_score >= 5:
@@ -1153,6 +1160,8 @@ def countdown_timer(seconds: int = 10):
                 (
                     state.new_jackpot_val > 98
                     or state.major_pullback_next
+                    or state.extreme_pull
+                    or state.intense_pull
                     or state.new_10m <= -30
                     or state.is_reversal_potential
                     or state.is_reversal
@@ -1173,7 +1182,7 @@ def countdown_timer(seconds: int = 10):
                     spin(*random.choice([(True, False), (False, True)]))
         else:
             if current_sec % 10 == 7:
-                alert_queue.put("ping")
+                alert_queue.put("ping") 
 
 
                 # if chosen_spin == "normal_spin" and state.bet_lvl in [ "Bonus", "High" ] and random.random() < 0.5:
