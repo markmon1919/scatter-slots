@@ -81,10 +81,10 @@ async def poller_loop():
                         user_agent = random.choice(USER_AGENTS)
                         poll_url = f"{url}/api/games"
 
-                        if "Wild Ape" in name and "PG" in provider:
-                            name = f"{name.replace('x10000', '#3258')}" if "x10000" in name else f"{name}#3258"
-                        elif "Fortune Gems" in name or "Super Ace" in name:
-                            name = name.split("(", 1)[0].strip()
+                        # if "Wild Ape" in name and "PG" in provider:
+                        #     name = f"{name.replace('x10000', '#3258')}" if "x10000" in name else f"{name}#3258"
+                        # elif "Fortune Gems" in name or "Super Ace" in name:
+                        #     name = name.split("(", 1)[0].strip()
 
                         params = {
                             "name": name,
@@ -201,10 +201,10 @@ async def get_latest_game(
     name: str = Query(..., description="Game name"),
     requestFrom: str = Query(..., description="Source: H5 or H6")
 ):
-    if "Wild Ape" in name:
-        name = f"{name.replace('x10000', '#3258')}" if "x10000" in name else f"{name}#3258"
-    elif "Fortune Gems" in name or "Super Ace" in name:
-        name = name.split("(", 1)[0].strip()
+    # if "Wild Ape" in name:
+    #     name = f"{name.replace('x10000', '#3258')}" if "x10000" in name else f"{name}#3258"
+    # elif "Fortune Gems" in name or "Super Ace" in name:
+    #     name = name.split("(", 1)[0].strip()
 
     key = (name, requestFrom)
 

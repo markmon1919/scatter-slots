@@ -78,6 +78,9 @@ def extract_game_data(driver: webdriver.Chrome) -> list:
                 progress_bar_elem = card.find_element(By.CSS_SELECTOR, ".progress-bar")
                 bg = progress_bar_elem.value_of_css_property("background-color").lower()
                 up = "red" if "255, 0, 0" in bg else "green"
+
+                history = {}
+                history_tags = card.find_elements(By.CSS_SELECTOR, ".game-info-list .game-info-item")
                 
                 for item in history_tags:
                     label = item.find_element(By.CSS_SELECTOR, ".game-info-label").text.strip().rstrip(":").replace(" ", "").lower()
