@@ -409,7 +409,7 @@ def enrich_game_data(games: list, provider: str = "JILI") -> list:
         # Skip games that don't meet provider-specific thresholds
         if provider in ["JILI", "PG"]:
             if any([
-                # not api["jackpot"] > 60,
+                # not all((data["jackpot"]> 80 for data in (helpslot, api))),
                 not all((helpslot["10m"] < 5, helpslot["1h"] < helpslot["3h"] < helpslot["6h"])),
                 not all(api[period] > 0 for period in ["1h", "3h", "6h"])
             ]):

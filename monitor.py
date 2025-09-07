@@ -73,6 +73,8 @@ class AutoState:
     new_data: bool = False
     major_pullback: bool = False
     major_pullback_next: bool = False
+    helpslot_jackpot: float = 0.00
+    helpslot_meter: str = None
 
 
 @dataclass
@@ -173,10 +175,14 @@ def fetch_game_data(driver: webdriver.Chrome, game: str, fetch_queue: ThQueue) -
             # name = card.find_element(By.CSS_SELECTOR, ".game-title").text.strip()
             value_text = card.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
+            
+            state.helpslot_jackpot = value
 
             progress_bar_elem = card.find_element(By.CSS_SELECTOR, ".progress-bar")
             bg = progress_bar_elem.value_of_css_property("background-color").lower()
             up = "red" if "255, 0, 0" in bg else "green"
+
+            state.helpslot_meter = up
 
             history = {}
             history_tags = card.find_elements(By.CSS_SELECTOR, ".game-info-list .game-info-item")
@@ -479,6 +485,7 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
         helpslot_jackpot = pct(helpslot_data.get('jackpot_value'))
         helpslot_jackpot_bar = get_jackpot_bar(helpslot_jackpot, helpslot_data.get('meter_color'))
         # helpslot_signal = f"{LRED}⬇{RES}" if helpslot_data.get('meter_color') == "red" else f"{LGRE}⬆{RES}" if helpslot_data.get('meter_color') == "green" else f"{LCYN}◉{RES}"
+
         bet_value = f"{LRED}HIGH{RES}" if helpslot_jackpot >= 80 else f"{LGRE}LOW{RES}" if helpslot_jackpot <= 20 else f"{LYEL}MID{RES}"
         
         history_10m = pct(helpslot_data.get('10min', 'None'))
@@ -1141,7 +1148,25 @@ def countdown_timer(seconds: int = 10):
 
         # NEW
         if state.auto_mode:
-            if current_sec % 10 == 9:
+            # if current_sec % 10 == 9:
+            if (
+                (
+                    state.new_jackpot_val > 98
+                    or state.major_pullback_next
+                    or state.new_10m <= -30
+                    or state.is_reversal_potential
+                    or state.is_reversal
+                    or state.neutralize
+                    or state.is_high_breakout
+                    or state.is_high_delta_breakout
+                )
+                and (
+                    any([
+                        state.helpslot_jackpot >= 80,
+                        state.helpslot_jackpot >= 50 and state.helpslot_meter == "green"
+                    ])
+                )
+            ):
                 threading.Thread(target=spin, args=(False, False,), daemon=True)
                 chosen_spin = spin(False, False)
                 if chosen_spin == "normal_spin" and random.random() < 0.1:
