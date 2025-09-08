@@ -138,43 +138,47 @@ def setup_driver():
 # -------------------------
 # Fetch HTML via Selenium
 # -------------------------
-def fetch_html(driver: webdriver.Chrome, url: str, game: str = None, provider: str = "JILI"):
+def fetch_html(driver: webdriver.Chrome, url: str, game: str, provider: str):
     driver.get(url)
     time.sleep(1)
     
-    if game:
-        try:
-            search_box = driver.find_element(By.ID, "van-search-1-input")
-            driver.execute_script("arguments[0].value = '';", search_box)
-            search_box.send_keys(game)
-            time.sleep(1)
-        except Exception:
-            pass
+    try:
+        search_box = driver.find_element(By.ID, "van-search-1-input")
+        # driver.execute_script("arguments[0].value = '';", search_box) # use only if loop multiple games
+        search_box.send_keys(game)
+        time.sleep(1)
         
-    provider_items = driver.find_elements(By.CSS_SELECTOR, ".provider-item")
-    for item in provider_items:
-        try:
-            img_elem = item.find_element(By.CSS_SELECTOR, ".provider-icon img")
-            img_url = img_elem.get_attribute("src")
-            
-            if PROVIDERS.get(provider).img_url in img_url.lower():
-                item.click()
-                break
-        except Exception:
-            continue
-    
+        if provider == "JILI":
+            search_btn = driver.find_element(By.CLASS_NAME, "van-search__action")
+            search_btn.click()
+            time.sleep(1)
+        else:
+            provider_items = driver.find_elements(By.CSS_SELECTOR, ".provider-item")
+            for item in provider_items:
+                try:
+                    img_elem = item.find_element(By.CSS_SELECTOR, ".provider-icon img")
+                    img_url = img_elem.get_attribute("src")
+                    
+                    if PROVIDERS.get(provider).img_url in img_url.lower():
+                        item.click()
+                        break
+                except Exception:
+                    continue
+    except Exception:
+        pass
+        
     time.sleep(1)
     return driver.page_source
 
 def fetch_game_data(driver: webdriver.Chrome, game: str, fetch_queue: ThQueue) -> list:
-    # games = []
     while not stop_event.is_set():
-        # try:
-            # game_cards = driver.find_elements(By.CSS_SELECTOR, ".game-block")
-            # for card in game_cards:
         card = driver.find_element(By.CSS_SELECTOR, ".game-block")
+        
         try:
-            # name = card.find_element(By.CSS_SELECTOR, ".game-title").text.strip()
+            name = card.find_element(By.CSS_SELECTOR, ".game-title").text.strip()
+            if name != game:
+                return None
+                
             value_text = card.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
             
