@@ -142,8 +142,8 @@ def extract_game_data(driver) -> list:
             bg = progress_bar_elem.value_of_css_property("background-color").lower()
             up = "red" if "255, 0, 0" in bg else "green"
             
-            if value < 80 and up == "green":
-                continue
+            # if value < 80 and up == "green":
+            #     continue
             
             history = {}
             history_tags = block.find_elements(By.CSS_SELECTOR, ".game-info-list .game-info-item")
