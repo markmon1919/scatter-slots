@@ -69,6 +69,8 @@ class AutoState:
     elapsed: int = 0
     last_time: int = 0
     new_10m: float = 0.0
+    new_1h: float = 0.0
+    new_3h: float = 0.0
     new_jackpot_val: float = 0.0
     jackpot_signal: str = None
     new_data: bool = False
@@ -493,6 +495,9 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
             alert_queue.put(f"API Major Pullback")
     state.new_jackpot_val = current_jackpot
     state.new_10m = pct(current['history'].get('10m'))
+    state.new_1h = pct(current['history'].get('1h'))
+    state.new_3h = pct(current['history'].get('3h'))
+    state.new_6h = pct(current['history'].get('6h'))
     state.neutralize = False
     is_low_breakout = False
     is_low_breakout_delta = False
@@ -1224,24 +1229,37 @@ def countdown_timer(seconds: int = 10):
                 # if chosen_spin == "normal_spin" and random.random() < 0.1:
                 #     spin(*random.choice([(True, False), (False, True)]))
                 # # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
-                
-                
-            init_conditions = {
-                "major_pullback_helpslot": state.major_pullback_helpslot,
-                "helpslot_jackpot": state.helpslot_jackpot >= 80,
-                "last_pull_delta": state.last_pull_delta <= -30,
-                # "new_jackpot_val": state.new_jackpot_val >= 50,
-                # "new_10m": state.new_10m <= -30,
-                "major_pullback": state.major_pullback,
-                # "major_pullback_next": state.major_pullback_next,
-                "extreme_pull": state.extreme_pull,
-                "intense_pull": state.intense_pull,
-                "is_reversal_potential": state.is_reversal_potential,
-                "is_reversal": state.is_reversal,
-                "neutralize": state.neutralize,
-                "is_high_breakout": state.is_high_breakout,
-                "is_high_delta_breakout": state.is_high_delta_breakout
-            }
+            
+            if "JILI" in provider and game == "Fortune Gems":
+                init_conditions = {
+                    "helpslot_jackpot": state.helpslot_jackpot >= 88,
+                    "helpslot_jackpot_color": state.helpslot_jackpot >= 80 and state.helpslot_meter == "red",
+                    "major_pullback_helpslot": state.major_pullback_helpslot,
+                    "major_pullback": state.major_pullback,
+                    "last_pull_delta": state.last_pull_delta <= -60,
+                    "new_10m": state.new_10m <= -60,
+                    "bearish": state.new_10m <= -30 and state.new_10m < state.new_1h < state.new_3h,
+                    "extreme_pull": state.extreme_pull,
+                    "is_high_breakout": state.is_high_breakout,
+                    "is_high_delta_breakout": state.is_high_delta_breakout
+                }
+            else:
+                init_conditions = {
+                    "major_pullback_helpslot": state.major_pullback_helpslot,
+                    "helpslot_jackpot": state.helpslot_jackpot >= 80,
+                    "last_pull_delta": state.last_pull_delta <= -30,
+                    # "new_jackpot_val": state.new_jackpot_val >= 50,
+                    # "new_10m": state.new_10m <= -30,
+                    "major_pullback": state.major_pullback,
+                    # "major_pullback_next": state.major_pullback_next,
+                    "extreme_pull": state.extreme_pull,
+                    "intense_pull": state.intense_pull,
+                    "is_reversal_potential": state.is_reversal_potential,
+                    "is_reversal": state.is_reversal,
+                    "neutralize": state.neutralize,
+                    "is_high_breakout": state.is_high_breakout,
+                    "is_high_delta_breakout": state.is_high_delta_breakout
+                }
             
             # logger.info(f"\n\t{WHTE}--- INIT CONDITIONS ---{RES}")
             # for key, is_triggered in init_conditions.items():
@@ -3867,7 +3885,8 @@ def on_key_press(key):
         status = "ENABLED" if state.auto_mode else "DISABLED"
         # play_alert(say=f"auto mode {status}")
         alert_queue.put(f"auto mode {status}")
-        logger.info(f"Auto Mode: {status}")
+        color = LBLU if status == "ENABLED" else LRED
+        logger.info(f"\n\tAuto Mode: {color}{status}{RES}")
 
 #     if key == Key.down:
 #         state.hotkeys = not state.hotkeys
