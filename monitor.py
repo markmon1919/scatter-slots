@@ -1324,7 +1324,6 @@ def countdown_timer(seconds: int = 10):
             triggered_sub = [name for name, value in sub_conditions.items() if value]
             
             if triggered_init and triggered_sub:
-                alert_queue.put("ping")
                 threading.Thread(target=spin, args=(False, False,), daemon=True)
                 chosen_spin = spin(False, False)
                 if chosen_spin == "normal_spin" and random.random() < 0.1:
@@ -2725,7 +2724,8 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
         # print(f"\tSpin Delay: {spin_delay:.2f}")
         # print(f"\tTimeout Delay: {timeout_delay:.2f}")
         # print(f"\tCombo Spin: {combo_spin}")
-        # print(f"\n\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {RES}>\n")
+        print(f"\n\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {RES}>\n")
+        alert_queue.put("ping")
         # sys.stdout.flush()
         # alert_queue.put(spin_type)
     # except Empty:
