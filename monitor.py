@@ -1233,9 +1233,9 @@ def countdown_timer(seconds: int = 10):
             if "JILI" in provider and game == "Fortune Gems":
                 init_conditions = {
                     "major_pullback_helpslot": state.major_pullback_helpslot,
+                    "major_pullback": state.major_pullback,
                     "helpslot_jackpot": state.helpslot_jackpot >= 88,
                     "helpslot_jackpot_color": state.helpslot_jackpot >= 80 and state.helpslot_meter == "red",
-                    "major_pullback": state.major_pullback,
                     "last_pull_delta": state.last_pull_delta <= -60,
                     "new_10m": state.new_10m <= -60,
                     "bearish": state.new_10m <= -30 and state.new_10m < state.new_1h < state.new_3h,
@@ -1247,17 +1247,19 @@ def countdown_timer(seconds: int = 10):
             else:
                 init_conditions = {
                     "major_pullback_helpslot": state.major_pullback_helpslot,
-                    "helpslot_jackpot": state.helpslot_jackpot >= 80,
-                    "last_pull_delta": state.last_pull_delta <= -30,
-                    "bearish": state.new_10m <= -30 and state.new_10m < state.new_1h < state.new_3h,
                     "major_pullback": state.major_pullback,
+                    "helpslot_jackpot": state.helpslot_jackpot >= 88,
+                    "helpslot_jackpot_color": state.helpslot_jackpot >= 80 and state.helpslot_meter == "red",
+                    "last_pull_delta": state.last_pull_delta <= -60,
+                    "new_10m": state.new_10m <= -60,
+                    "bearish": state.new_10m <= -30 and state.new_10m < state.new_1h < state.new_3h,
                     "extreme_pull": state.extreme_pull,
                     "intense_pull": state.intense_pull,
+                    "is_high_breakout": state.is_high_breakout,
+                    "is_high_delta_breakout": state.is_high_delta_breakout,
                     "is_reversal_potential": state.is_reversal_potential,
                     "is_reversal": state.is_reversal,
-                    "neutralize": state.neutralize,
-                    "is_high_breakout": state.is_high_breakout,
-                    "is_high_delta_breakout": state.is_high_delta_breakout
+                    "neutralize": state.neutralize
                 }
             
             # logger.info(f"\n\t{WHTE}--- INIT CONDITIONS ---{RES}")
