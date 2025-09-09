@@ -481,9 +481,11 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
     #     colored_helpslot_data_history_6h = f"{YEL}6h {color_6h}{history_6h}{RES}"
     # else:
     #     colored_helpslot_data_history_6h = f"{YEL}6h {DGRY}No History{RES}"
-        
+    
     current_jackpot = pct(current['jackpot_meter'])
     jackpot_bar = get_jackpot_bar(current_jackpot, current['color'])
+    state.new_jackpot_val = current_jackpot
+    state.new_10m = pct(current['history'].get('10m'))
     state.neutralize = False
     is_low_breakout = False
     is_low_breakout_delta = False
@@ -1108,8 +1110,8 @@ def countdown_timer(seconds: int = 10):
         # logger.info(f"\r{timer}---Last Time Sec:{[last_time_sec]}")
         sys.stdout.write(f"\r{timer}")
         sys.stdout.flush()
-
-        last_time_sec = round(state.last_time % seconds)
+        
+        # last_time_sec = round(state.last_time % seconds)
 
         # logger.info(f'\n\tNew Data {current_sec}: {LBLU if not state.new_data else LRED}{state.new_data}{RES}')
 
@@ -1173,35 +1175,174 @@ def countdown_timer(seconds: int = 10):
         # NEW
         if state.auto_mode:
             # if current_sec % 10 == 9:
-            if (
-                (
-                    state.new_jackpot_val >= 50
-                    or state.major_pullback_next
-                    or state.extreme_pull
-                    or state.intense_pull
-                    or state.new_10m <= -30
-                    or state.is_reversal_potential
-                    or state.is_reversal
-                    or state.neutralize
-                    or state.is_high_breakout
-                    or state.is_high_delta_breakout
-                )
-                and ( 
-                    any([
-                        # state.helpslot_jackpot >= 80,
-                        state.helpslot_meter == "green" and state.helpslot_10m < 0 and state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h,
-                        state.helpslot_meter == "red" and state.helpslot_10m > 0 and state.helpslot_10m > state.helpslot_1h > state.helpslot_3h > state.helpslot_6h,
-                        # state.helpslot_jackpot >= 50 and state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h
-                        # 10 < state.helpslot_jackpot < 50 and state.helpslot_meter == "red"
-                        # ADD MORE CONDITION IF BIG PULL (like extreme and intense) then helpslot meter is red <<<<
-                    ])
-                )
-            ):
+            # if (
+            #     (
+            #         state.new_jackpot_val >= 50
+            #         or state.last_pull_delta <= -30
+            #         or state.new_10m <= -30
+            #         or state.major_pullback
+            #         or state.major_pullback_next
+            #         or state.extreme_pull
+            #         or state.intense_pull
+            #         or state.is_reversal_potential
+            #         or state.is_reversal
+            #         or state.neutralize
+            #         or state.is_high_breakout
+            #         or state.is_high_delta_breakout
+            #     )
+            #     and ( 
+            #         any([
+            #             # state.helpslot_meter == "green" and state.helpslot_10m < 0 and state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h,
+            #             # state.helpslot_meter == "red" and state.helpslot_10m > 0 and state.helpslot_10m > state.helpslot_1h > state.helpslot_3h > state.helpslot_6h,
+
+            #             state.helpslot_meter == "green" and state.helpslot_10m <= 5 and state.helpslot_10m < state.helpslot_1h < state.helpslot_3h,
+            #             state.helpslot_meter == "red" and state.helpslot_10m >= 0 and state.helpslot_10m > state.helpslot_1h > state.helpslot_3h,
+            #             state.helpslot_jackpot >= 80,
+            #             # state.helpslot_jackpot >= 50 and state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h
+            #             # 10 < state.helpslot_jackpot < 50 and state.helpslot_meter == "red"
+            #             # ADD MORE CONDITION IF BIG PULL (like extreme and intense) then helpslot meter is red <<<<
+            #         ])
+            #     )
+            # ):
+            
+                # threading.Thread(target=spin, args=(False, False,), daemon=True)
+                # chosen_spin = spin(False, False)
+                # if chosen_spin == "normal_spin" and random.random() < 0.1:
+                #     spin(*random.choice([(True, False), (False, True)]))
+                # # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+                
+                
+            init_conditions = {
+                "helpslot_jackpot": state.helpslot_jackpot >= 85,
+                "last_pull_delta": state.last_pull_delta <= -30,
+                # "new_jackpot_val": state.new_jackpot_val >= 50,
+                # "new_10m": state.new_10m <= -30,
+                "major_pullback": state.major_pullback,
+                "major_pullback_next": state.major_pullback_next,
+                "extreme_pull": state.extreme_pull,
+                "intense_pull": state.intense_pull,
+                "is_reversal_potential": state.is_reversal_potential,
+                "is_reversal": state.is_reversal,
+                "neutralize": state.neutralize,
+                "is_high_breakout": state.is_high_breakout,
+                "is_high_delta_breakout": state.is_high_delta_breakout
+            }
+            
+            # logger.info(f"\n\t{WHTE}--- INIT CONDITIONS ---{RES}")
+            # for key, is_triggered in init_conditions.items():
+            #     value = getattr(state, key)
+            #     color = LRED if is_triggered else LCYN
+            #     mark = " ✔" if is_triggered else ""
+                
+            #     # alert_queue.put(key) if is_triggered else None
+            #     logger.info(f"\t{color}{key}{RES} >> {value}{mark}") if is_triggered else None
+            
+            sub_conditions = {
+                "green_meter": (
+                    state.helpslot_meter == "green" and
+                    state.helpslot_10m <= 0 and
+                    state.helpslot_10m > state.helpslot_1h > state.helpslot_3h
+                    # state.helpslot_10m > state.helpslot_1h > state.helpslot_3h > state.helpslot_6h
+                ),
+                "red_meter": (
+                    state.helpslot_meter == "red" and
+                    state.helpslot_10m >= 0 and
+                    state.helpslot_10m < state.helpslot_1h < state.helpslot_3h
+                    # state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h
+                ),
+                # "jackpot_helpslot_high": state.helpslot_jackpot >= 80
+                "jackpot_high": state.new_jackpot_val >= 50
+            }
+            
+            # logger.info(f"\n\t{WHTE}--- SUB CONDITIONS ---{RES}")
+            # for key, is_triggered in sub_conditions.items():
+            #     # Extract condition-specific values for logging
+            #     if key == "green_meter":
+            #         value = (
+            #             f"meter={state.helpslot_meter}, "
+            #             f"10m={state.helpslot_10m}, "
+            #             f"1h={state.helpslot_1h}, "
+            #             f"1h={state.helpslot_3h}, "
+            #             f"3h={state.helpslot_6h}"
+            #         )
+            #     elif key == "red_meter":
+            #         value = (
+            #             f"meter={state.helpslot_meter}, "
+            #             f"10m={state.helpslot_10m}, "
+            #             f"1h={state.helpslot_1h}, "
+            #             f"1h={state.helpslot_3h}, "
+            #             f"3h={state.helpslot_6h}"
+            #         )
+            #     elif key == "jackpot_helpslot_high":
+            #         value = f"{state.helpslot_jackpot}"
+            #     else:
+            #         value = "N/A"
+
+            #     color = LRED if is_triggered else LCYN
+            #     mark = " ✔" if is_triggered else ""
+                
+            #     # alert_queue.put(key) if is_triggered else None
+            #     logger.info(f"\t{color}{key}{RES} >> {value}{mark}") if is_triggered else None
+
+
+            # Get which individual conditions are caught
+            triggered_init = [name for name, value in init_conditions.items() if value]
+            triggered_sub = [name for name, value in sub_conditions.items() if value]
+            
+            if triggered_init and triggered_sub:
+                alert_queue.put("ping")
                 threading.Thread(target=spin, args=(False, False,), daemon=True)
                 chosen_spin = spin(False, False)
                 if chosen_spin == "normal_spin" and random.random() < 0.1:
                     spin(*random.choice([(True, False), (False, True)]))
                 # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+                
+                logger.info(f"\n\t{WHTE}--- INIT CONDITIONS ---{RES}")
+                for key, val in init_conditions.items():
+                    is_triggered = val
+                    color = LRED if is_triggered else LCYN
+                    mark = " ✔" if is_triggered else ""
+                    if is_triggered:
+                        value = getattr(state, key)
+                        alert_queue.put(key)
+                        logger.info(f"\t{color}{key}{RES} >> {value}{mark}")
+                    
+                logger.info(f"\n\t{WHTE}--- SUB CONDITIONS ---{RES}")
+                for key in sub_conditions:
+                    is_triggered = sub_conditions[key]
+
+                    # Collect values depending on the condition
+                    if key in {"green_meter", "red_meter"}:
+                        value = (
+                            f"meter={state.helpslot_meter}, "
+                            f"10m={state.helpslot_10m}, "
+                            f"1h={state.helpslot_1h}, "
+                            f"3h={state.helpslot_3h}, "
+                            f"6h={state.helpslot_6h}"
+                        )
+                    elif key == "jackpot_high":
+                        value = state.new_jackpot_val
+                    else:
+                        value = "N/A"
+
+                    color = LRED if is_triggered else LCYN
+                    mark = " ✔" if is_triggered else ""
+
+                    if is_triggered:
+                        alert_queue.put(key)
+                        logger.info(f"\t{color}{key}{RES} >> {value}{mark}")
+                
+                # Optional: Detect if only a **single** condition caused it
+                # if len(triggered_init) == 1 and len(triggered_sub) == 1:
+                #     logger.info(f"\tOnly ONE trigger AND ONE helpslot condition caused the entry.")
+                # elif len(triggered_init) == 1:
+                #     logger.info(f"\tOnly ONE trigger condition caused the entry.")
+                # elif len(triggered_sub) == 1:
+                #     logger.info(f"\tOnly ONE helpslot condition caused the entry.")
+                # else:
+                #     logger.info("\nℹ️ Multiple conditions from each group contributed.")
+
+
         else:
             if current_sec % 10 == 7:
                 alert_queue.put("ping")
@@ -1510,7 +1651,7 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
 def spin(combo_spin: bool = False, spam_spin: bool = False):
     # while not stop_event.is_set():
     if spin_in_progress.is_set():
-        print("\t⚠️ Spin still in action, skipping")
+        logger.info("\t⚠️ Spin still in action, skipping")
         return
     
     spin_in_progress.set()
@@ -2550,7 +2691,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
         # print(f"\tSpin Delay: {spin_delay:.2f}")
         # print(f"\tTimeout Delay: {timeout_delay:.2f}")
         # print(f"\tCombo Spin: {combo_spin}")
-        print(f"\n\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {RES}>\n")
+        # print(f"\n\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {RES}>\n")
         # sys.stdout.flush()
         alert_queue.put(spin_type)
     # except Empty:
@@ -3668,7 +3809,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     last_min10 = min10
                     # state.non_stop = False
                     state.new_data = True
-                    state.new_jackpot_val = data.get("value")
+                    # state.new_jackpot_val = data.get("value")
                     state.major_pullback = False
                     if data.get("value") > 95:
                         alert_queue.put(f"Jackpot {data.get("value")}")
@@ -3677,7 +3818,6 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     if state.major_pullback_next:
                         state.major_pullback = True
                         state.major_pullback_next = False
-                    state.new_10m = data.get("min10")
                     state.jackpot_signal = ("bearish" if data.get("value") < state.prev_jackpot_val else "bullish" if data.get("value") > state.prev_jackpot_val else "neutral") if state.prev_jackpot_val != 0.0 else "neutral"
                     # signal = f"{LRED}⬇{RES}" if current_jackpot < prev_jackpot else f"{LGRE}⬆{RES}" if current_jackpot > prev_jackpot else f"{LCYN}◉{RES}"
                     # state.last_time = round(data.get('last_updated'))
