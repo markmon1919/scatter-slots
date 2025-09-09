@@ -2724,7 +2724,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
         # print(f"\tSpin Delay: {spin_delay:.2f}")
         # print(f"\tTimeout Delay: {timeout_delay:.2f}")
         # print(f"\tCombo Spin: {combo_spin}")
-        print(f"\n\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {RES}>\n")
+        logger.info(f"\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {RES}>")
         alert_queue.put("ping")
         # sys.stdout.flush()
         # alert_queue.put(spin_type)
