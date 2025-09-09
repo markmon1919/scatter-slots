@@ -132,7 +132,7 @@ GAME_CONFIGS = {
     "Diamond Party": GameConfig(False, True, True, None, False, True, "JILI"),
     "DiamondParty": GameConfig(False, True, True, None, False, True, "JILI"),
     "Dragon Treasure": GameConfig(False, True, True, None, False, True, "JILI"),
-    "Egypt's Glow": GameConfig(False, True, True, None, False, False, "JILI"),
+    "Egypt's Glow": GameConfig(False, True, True, None, False, True, "JILI"),
     "Elf Bingo": GameConfig(False, True, True, None, False, True, "JILI"),
     "European Roulette": GameConfig(False, True, True, None, False, True, "JILI"),
     "Fa Fa Fa": GameConfig(False, True, True, None, False, True, "JILI"),

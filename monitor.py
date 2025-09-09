@@ -72,13 +72,13 @@ class AutoState:
     jackpot_signal: str = None
     new_data: bool = False
     major_pullback: bool = False
-    major_pullback_next: bool = False
     helpslot_jackpot: float = 0.00
     helpslot_meter: str = None
     helpslot_10m: float = 0.0
     helpslot_1h: float = 0.0
     helpslot_3h: float = 0.0
     helpslot_6h: float = 0.0
+    major_pullback_helpslot: bool = False
     extreme_pull: bool = False
     intense_pull: bool = False
 
@@ -484,6 +484,12 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
     
     current_jackpot = pct(current['jackpot_meter'])
     jackpot_bar = get_jackpot_bar(current_jackpot, current['color'])
+    state.major_pullback = False
+    if current_jackpot >= 99:
+        alert_queue.put(f"API Jackpot {current_jackpot}")
+        if current['color'] == "red":
+            state.major_pullback = True
+            alert_queue.put(f"API Major Pullback")
     state.new_jackpot_val = current_jackpot
     state.new_10m = pct(current['history'].get('10m'))
     state.neutralize = False
@@ -504,6 +510,13 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
 
     if helpslot_data and "jackpot_value" in helpslot_data:
         helpslot_jackpot = pct(helpslot_data.get('jackpot_value'))
+        state.major_pullback_helpslot = False
+        if helpslot_jackpot >= 88:
+            alert_queue.put(f"Helpslot Jackpot {helpslot_jackpot}")
+            if pct(helpslot_data.get('10min')) >= 0:
+                state.major_pullback_helpslot = True
+                alert_queue.put(f"Helpslot Major Pullback")
+        
         helpslot_jackpot_bar = get_jackpot_bar(helpslot_jackpot, helpslot_data.get('meter_color'))
         # helpslot_signal = f"{LRED}⬇{RES}" if helpslot_data.get('meter_color') == "red" else f"{LGRE}⬆{RES}" if helpslot_data.get('meter_color') == "green" else f"{LCYN}◉{RES}"
 
@@ -1213,12 +1226,13 @@ def countdown_timer(seconds: int = 10):
                 
                 
             init_conditions = {
-                "helpslot_jackpot": state.helpslot_jackpot >= 85,
+                "major_pullback_helpslot": state.major_pullback_helpslot,
+                "helpslot_jackpot": state.helpslot_jackpot >= 80,
                 "last_pull_delta": state.last_pull_delta <= -30,
                 # "new_jackpot_val": state.new_jackpot_val >= 50,
                 # "new_10m": state.new_10m <= -30,
                 "major_pullback": state.major_pullback,
-                "major_pullback_next": state.major_pullback_next,
+                # "major_pullback_next": state.major_pullback_next,
                 "extreme_pull": state.extreme_pull,
                 "intense_pull": state.intense_pull,
                 "is_reversal_potential": state.is_reversal_potential,
@@ -1297,40 +1311,40 @@ def countdown_timer(seconds: int = 10):
                     spin(*random.choice([(True, False), (False, True)]))
                 # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
                 
-                logger.info(f"\n\t{WHTE}--- INIT CONDITIONS ---{RES}")
-                for key, val in init_conditions.items():
-                    is_triggered = val
-                    color = LRED if is_triggered else LCYN
-                    mark = " ✔" if is_triggered else ""
-                    if is_triggered:
-                        value = getattr(state, key)
-                        alert_queue.put(key)
-                        logger.info(f"\t{color}{key}{RES} >> {value}{mark}")
+                # logger.info(f"\n\t{WHTE}--- INIT CONDITIONS ---{RES}")
+                # for key, val in init_conditions.items():
+                #     is_triggered = val
+                #     color = LRED if is_triggered else LCYN
+                #     mark = " ✔" if is_triggered else ""
+                #     if is_triggered:
+                #         value = getattr(state, key)
+                #         # alert_queue.put(key)
+                #         logger.info(f"\t{color}{key}{RES} >> {value}{mark}")
                     
-                logger.info(f"\n\t{WHTE}--- SUB CONDITIONS ---{RES}")
-                for key in sub_conditions:
-                    is_triggered = sub_conditions[key]
+                # logger.info(f"\n\t{WHTE}--- SUB CONDITIONS ---{RES}")
+                # for key in sub_conditions:
+                #     is_triggered = sub_conditions[key]
 
-                    # Collect values depending on the condition
-                    if key in {"green_meter", "red_meter"}:
-                        value = (
-                            f"meter={state.helpslot_meter}, "
-                            f"10m={state.helpslot_10m}, "
-                            f"1h={state.helpslot_1h}, "
-                            f"3h={state.helpslot_3h}, "
-                            f"6h={state.helpslot_6h}"
-                        )
-                    elif key == "jackpot_high":
-                        value = state.new_jackpot_val
-                    else:
-                        value = "N/A"
+                #     # Collect values depending on the condition
+                #     if key in {"green_meter", "red_meter"}:
+                #         value = (
+                #             f"meter={state.helpslot_meter}, "
+                #             f"10m={state.helpslot_10m}, "
+                #             f"1h={state.helpslot_1h}, "
+                #             f"3h={state.helpslot_3h}, "
+                #             f"6h={state.helpslot_6h}"
+                #         )
+                #     elif key == "jackpot_high":
+                #         value = state.new_jackpot_val
+                #     else:
+                #         value = "N/A"
 
-                    color = LRED if is_triggered else LCYN
-                    mark = " ✔" if is_triggered else ""
+                #     color = LRED if is_triggered else LCYN
+                #     mark = " ✔" if is_triggered else ""
 
-                    if is_triggered:
-                        alert_queue.put(key)
-                        logger.info(f"\t{color}{key}{RES} >> {value}{mark}")
+                #     if is_triggered:
+                #         # alert_queue.put(key)
+                #         logger.info(f"\t{color}{key}{RES} >> {value}{mark}")
                 
                 # Optional: Detect if only a **single** condition caused it
                 # if len(triggered_init) == 1 and len(triggered_sub) == 1:
@@ -2667,7 +2681,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
                 ])
 
         if not action:
-            print(f"\t⚠️ No available spin actions for {spin_type}")
+            logger.info(f"\t⚠️ No available spin actions for {spin_type}")
             return
             # continue
             
@@ -2693,7 +2707,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
         # print(f"\tCombo Spin: {combo_spin}")
         # print(f"\n\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {RES}>\n")
         # sys.stdout.flush()
-        alert_queue.put(spin_type)
+        # alert_queue.put(spin_type)
     # except Empty:
     #     continue
 
@@ -3810,14 +3824,14 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                     # state.non_stop = False
                     state.new_data = True
                     # state.new_jackpot_val = data.get("value")
-                    state.major_pullback = False
-                    if data.get("value") > 95:
-                        alert_queue.put(f"Jackpot {data.get("value")}")
-                        if data.get("value") == 100:
-                            state.major_pullback_next = True
-                    if state.major_pullback_next:
-                        state.major_pullback = True
-                        state.major_pullback_next = False
+                    # state.major_pullback = False
+                    # if data.get("value") > 95:
+                    #     alert_queue.put(f"Jackpot {data.get("value")}")
+                    #     if data.get("value") == 100:
+                    #         state.major_pullback_next = True
+                    # if state.major_pullback_next:
+                    #     state.major_pullback = True
+                    #     state.major_pullback_next = False
                     state.jackpot_signal = ("bearish" if data.get("value") < state.prev_jackpot_val else "bullish" if data.get("value") > state.prev_jackpot_val else "neutral") if state.prev_jackpot_val != 0.0 else "neutral"
                     # signal = f"{LRED}⬇{RES}" if current_jackpot < prev_jackpot else f"{LGRE}⬆{RES}" if current_jackpot > prev_jackpot else f"{LCYN}◉{RES}"
                     # state.last_time = round(data.get('last_updated'))
