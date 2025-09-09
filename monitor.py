@@ -11,7 +11,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from config import (LOG_LEVEL, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, BREAKOUT_FILE, DATA_FILE, HELPSLOT_DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, 
+from trend import load_trend_memory
+from config import (LOG_LEVEL, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, TREND_FILE, BREAKOUT_FILE, DATA_FILE, HELPSLOT_DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, 
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
@@ -3850,12 +3851,17 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
             logger.info(f"🤖❌  {e}")
 
         time.sleep(0.5)
+        
+def start_listeners(stop_event):
+    with KeyboardListener(on_press=on_key_press) as kb_listener:
+        while not stop_event.is_set():
+            kb_listener.join(0.1)
 
 def on_key_press(key):
     if key == Key.esc:
-        state.running = False
+        # state.running = False
         os._exit(0)
-
+        
     if key == Key.shift:
         state.auto_mode = not state.auto_mode
         status = "ENABLED" if state.auto_mode else "DISABLED"
@@ -4148,28 +4154,41 @@ def game_selector():
     
 def render_games(provider: str, blink_idx: int=None, blink_on: bool=True):
     # logger.info(f"\n\n\t📘 {MAG}SCATTER JACKPOT MONITOR{RES}\n\n")
-
-    # games = list(GAME_CONFIGS.items())
+    
     games = [(g, cfg) for g, cfg in GAME_CONFIGS.items() if cfg.provider == provider]
     half = (len(games) + 1) // 2
     lines = list()
+    
+    trending_games = []
+    if os.path.exists(TREND_FILE):
+        trending_games = [g for g in load_trend_memory().keys()]
 
     for idx, (left_game, left_conf) in enumerate(games[:half], start=1):
+        is_blinking = False
         left_color = PROVIDERS.get(left_conf.provider).color
-        left_text = " " * len(left_game) if blink_idx == idx and not blink_on else left_game
-        left_str = f"[{WHTE}{idx}{RES}] - {left_color}{left_text}{RES}\t"
-
+        left_str = f"[{WHTE}{idx}{RES}] - {left_color}{left_game}{RES}"
+        
+        if left_game.lower() in trending_games:
+            left_str = f"[{WHTE}{idx}{RES}] - {left_color}{BLNK}{left_game}{RES}"
+            is_blinking = True
+                
         right_index = idx - 1 + half
         if right_index < len(games):
             right_game, right_conf = games[right_index]
             right_color = PROVIDERS.get(right_conf.provider).color
-            right_text = " " * len(right_game) if blink_idx == right_index + 1 and not blink_on else right_game
-            right_str = f"[{WHTE}{right_index + 1:>2}{RES}] - {right_color}{right_text}{RES}"
-        else:
-            right_str = ""
+            right_str = f"[{WHTE}{right_index + 1:>2}{RES}] - {right_color}{right_game}{RES}"
+        # else:
+        #     right_str = "\t"
+        if right_game.lower() in trending_games:
+            right_str = f"[{WHTE}{right_index + 1:>2}{RES}] - {right_color}{BLNK}{right_game}{RES}"
 
-        lines.append(f"\t{left_str:<50}\t{right_str}")
+        if is_blinking:
+            lines.append(f"\t{left_str:<50}\t\t\t{right_str}")
+        else:
+            lines.append(f"\t{left_str:<50}\t\t{right_str}")
+
     return "\n".join(lines)
+
 
 def games_list(provider: str):
     # games = list(GAME_CONFIGS.items())
@@ -4428,6 +4447,7 @@ if __name__ == "__main__":
     # countdown_thread = threading.Thread(target=countdown_timer, args=(countdown_queue, 60,), daemon=True)
     countdown_thread = threading.Thread(target=countdown_timer, daemon=True)
     fetch_thread = threading.Thread(target=fetch_game_data, args=(driver, game, fetch_queue,), daemon=True)
+    kb_thread = threading.Thread(target=start_listeners, args=(stop_event,), daemon=True)
     monitor_thread = threading.Thread(target=monitor_game_info, args=(game, provider, url, data_queue,), daemon=True)
     # spin_thread = threading.Thread(target=spin, daemon=True)
     # threading.Thread(target=keyboard, args=(settings,), daemon=True).start()
@@ -4436,6 +4456,7 @@ if __name__ == "__main__":
     bet_thread.start()
     countdown_thread.start()
     fetch_thread.start()
+    kb_thread.start()
     monitor_thread.start()
     # spin_thread.start()
 
@@ -4454,8 +4475,6 @@ if __name__ == "__main__":
                 try:
                     msg = countdown_queue.get_nowait()
                     logger.info(f"\n✅ {msg}")
-                    # with KeyboardListener(on_press=on_key_press) as kb_listener:
-                    #     kb_listener.join()
                 except Empty:
                     pass
                 

@@ -237,7 +237,7 @@ GAME_CONFIGS = {
     "Super E-Sabong": GameConfig(False, True, True, None, False, True, "JILI"),
     "Super Rich": GameConfig(False, True, True, None, False, True, "JILI"),
     "Sweet Land": GameConfig(False, True, True, None, False, True, "JILI"),
-    "TWIN WINS": GameConfig(False, True, True, None, False, True, "JILI"),
+    "Twin Wins": GameConfig(False, True, True, None, False, True, "JILI"),
     "The Pig House": GameConfig(False, True, True, None, False, True, "JILI"),
     "Thor X": GameConfig(False, True, True, None, False, True, "JILI"),
     "Treasure Quest": GameConfig(False, True, True, None, False, True, "JILI"),

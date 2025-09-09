@@ -83,3 +83,4 @@ dist/*
 
 # Others
 chrome_profile*
+**/*.csv*

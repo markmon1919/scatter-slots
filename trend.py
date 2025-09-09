@@ -555,6 +555,9 @@ if __name__ == "__main__":
         alert_thread = threading.Thread(target=play_alert, args=(alert_queue, stop_event), daemon=True)
         alert_thread.start()
         
+        if os.path.exists(TREND_FILE):
+            os.remove(TREND_FILE)
+        
         print(f"{CLEAR}", end="")
         print(render_providers())
 
@@ -639,10 +642,7 @@ if __name__ == "__main__":
                         #             else clean_name
                         #         )
                 print("\n")
-            else:
-                # if os.path.exists(TREND_FILE):
-                #     os.remove(TREND_FILE)
-                    
+            else:                    
                 text = f"\n\t🚫 {BDGRY}No Trending Games Found !{RES}"
                 
                 # if load_trend_memory():
