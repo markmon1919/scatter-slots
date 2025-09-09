@@ -68,6 +68,7 @@ class AutoState:
     non_stop: bool = False
     elapsed: int = 0
     last_time: int = 0
+    current_color: str = None
     new_10m: float = 0.0
     new_1h: float = 0.0
     new_3h: float = 0.0
@@ -493,6 +494,7 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
         if current['color'] == "red":
             state.major_pullback = True
             alert_queue.put(f"API Major Pullback")
+    state.current_color = current['color']
     state.new_jackpot_val = current_jackpot
     state.new_10m = pct(current['history'].get('10m'))
     state.new_1h = pct(current['history'].get('1h'))
@@ -1120,6 +1122,7 @@ def countdown_timer(seconds: int = 10):
             f"{BLYEL}{time_left:02d}{RES}  "
             f"( {LGRY}{re.sub(r'\\s*\\(.*?\\)', '', game)}{RES} "
             f"{DGRY}| {PROVIDERS.get(provider).color}{provider}{RES} )"
+            f"<{BLNK}🌀{RES} {RED}Spinning... {RES}>" if spin_in_progress.is_set() else None
         )
 
         # sys.stdout.write("\r" + " " * 80 + "\r")
@@ -1271,22 +1274,40 @@ def countdown_timer(seconds: int = 10):
             #     # alert_queue.put(key) if is_triggered else None
             #     logger.info(f"\t{color}{key}{RES} >> {value}{mark}") if is_triggered else None
             
-            sub_conditions = {
-                "green_meter": (
-                    state.helpslot_meter == "green" and
-                    state.helpslot_10m <= 0 and
-                    state.helpslot_10m > state.helpslot_1h > state.helpslot_3h
-                    # state.helpslot_10m > state.helpslot_1h > state.helpslot_3h > state.helpslot_6h
-                ),
-                "red_meter": (
-                    state.helpslot_meter == "red" and
-                    state.helpslot_10m >= 0 and
-                    state.helpslot_10m < state.helpslot_1h < state.helpslot_3h
-                    # state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h
-                ),
-                # "jackpot_helpslot_high": state.helpslot_jackpot >= 80
-                "jackpot_high": state.new_jackpot_val >= 50
-            }
+            if "JILI" in provider and game == "Fortune Gems":
+                sub_conditions = {
+                    "green_meter": (
+                        state.helpslot_meter == "green" and
+                        state.helpslot_10m <= 0 and
+                        state.helpslot_10m > state.helpslot_1h > state.helpslot_3h
+                        # state.helpslot_10m > state.helpslot_1h > state.helpslot_3h > state.helpslot_6h
+                    ),
+                    "red_meter": (
+                        state.helpslot_meter == "red" and
+                        state.helpslot_10m >= 0 and
+                        state.helpslot_10m < state.helpslot_1h < state.helpslot_3h
+                        # state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h
+                    ),
+                    # "jackpot_helpslot_high": state.helpslot_jackpot >= 80
+                    "jackpot_high": state.new_jackpot_val >= 50 and state.current_color == "red"
+                }
+            else:
+                sub_conditions = {
+                    "green_meter": (
+                        state.helpslot_meter == "green" and
+                        state.helpslot_10m <= 0 and
+                        state.helpslot_10m > state.helpslot_1h > state.helpslot_3h
+                        # state.helpslot_10m > state.helpslot_1h > state.helpslot_3h > state.helpslot_6h
+                    ),
+                    "red_meter": (
+                        state.helpslot_meter == "red" and
+                        state.helpslot_10m >= 0 and
+                        state.helpslot_10m < state.helpslot_1h < state.helpslot_3h
+                        # state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h
+                    ),
+                    # "jackpot_helpslot_high": state.helpslot_jackpot >= 80
+                    "jackpot_high": state.new_jackpot_val >= 50
+                }
             
             # logger.info(f"\n\t{WHTE}--- SUB CONDITIONS ---{RES}")
             # for key, is_triggered in sub_conditions.items():
@@ -2724,7 +2745,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
         # print(f"\tSpin Delay: {spin_delay:.2f}")
         # print(f"\tTimeout Delay: {timeout_delay:.2f}")
         # print(f"\tCombo Spin: {combo_spin}")
-        logger.info(f"\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {RES}>")
+        # logger.info(f"\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {RES}>")
         alert_queue.put("ping")
         # sys.stdout.flush()
         # alert_queue.put(spin_type)
