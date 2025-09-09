@@ -519,9 +519,9 @@ def save_trend_memory(game_data: list):
         # Insert latest data at the beginning
         data = OrderedDict([(game_name, game)] + list(data.items()))
         
-    # Keep only the latest 5 entries
-    # while len(data) > 5:
-    #     data.popitem(last=True)  # remove oldest entry at the end
+    # Keep only the latest 10 entries
+    while len(data) > 10:
+        data.popitem(last=True)  # remove oldest entry at the end
 
     with open(TREND_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
