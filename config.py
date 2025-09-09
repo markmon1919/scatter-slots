@@ -168,7 +168,7 @@ GAME_CONFIGS = {
     "Hilo": GameConfig(False, True, True, None, False, True, "JILI"),
     "Hot Chilli": GameConfig(False, True, True, None, False, True, "JILI"),
     "Hyper Burst": GameConfig(False, True, True, None, False, True, "JILI"),
-    "JILI CAISHEN": GameConfig(False, True, True, None, False, True, "JILI"),
+    "Jili Caishen": GameConfig(False, True, True, None, False, True, "JILI"),
     "Jackpot Bingo": GameConfig(False, True, True, None, False, True, "JILI"),
     "Jackpot Joker": GameConfig(False, True, True, None, False, True, "JILI"),
     "Jhandi Munda": GameConfig(False, True, True, None, False, True, "JILI"),

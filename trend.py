@@ -640,8 +640,8 @@ if __name__ == "__main__":
                         #         )
                 print("\n")
             else:
-                if os.path.exists(TREND_FILE):
-                    os.remove(TREND_FILE)
+                # if os.path.exists(TREND_FILE):
+                #     os.remove(TREND_FILE)
                     
                 text = f"\n\t🚫 {BDGRY}No Trending Games Found !{RES}"
                 
