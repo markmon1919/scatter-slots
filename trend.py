@@ -133,17 +133,17 @@ def extract_game_data(driver) -> list:
             value_text = block.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
             
-            # if value < 80:
-            if value < 50:
-                # print(f'{RED}Skipped{RES}: {name}, {value}, {up}')
+            if value < 85:
+            # if value < 75:
+            #     # print(f'{RED}Skipped{RES}: {name}, {value}, {up}')
                 continue
             
             progress_bar_elem = block.find_element(By.CSS_SELECTOR, ".progress-bar")
             bg = progress_bar_elem.value_of_css_property("background-color").lower()
             up = "red" if "255, 0, 0" in bg else "green"
             
-            # if value < 80 and up == "green":
-            #     continue
+            if up == "red":
+                continue
             
             history = {}
             history_tags = block.find_elements(By.CSS_SELECTOR, ".game-info-list .game-info-item")
@@ -188,10 +188,10 @@ def get_game_data_from_local_api(provider: str, games: list):
             return []
         
         if "PG" in provider:
-            data = [g for g in data if g.get("value") > 50 and g.get("name") != "Wild Ape#3258"]
+            data = [g for g in data if g.get("value") >= 80 and g.get("up") and g.get("name") != "Wild Ape#3258"]
             # data = [g for g in data if all([g.get("min10") < 0, g.get("hr1") < 0]) and g.get("name") != "Wild Ape#3258"]
         else:
-            data = [g for g in data if g.get("value") > 50 and g.get("name")]
+            data = [g for g in data if g.get("value") >= 80 and g.get("up") and g.get("name")]
         
         # print(f'\n{DGRY}Data{RES}: {WHTE}{data}{RES}')
         # print(f'\n{DGRY}Games{RES}: {WHTE}{games}{RES}')
@@ -241,7 +241,7 @@ def get_game_data_from_local_api(provider: str, games: list):
                 futures = [executor.submit(search_game_data_from_local_api, search["name"]) for search in search_games]
                 # wait(futures)
                 # Collect results
-                results = [f.result() for f in futures]
+                results = [f.result() for f in futures if f.result() is not None]
                 # results = list(executor.map(search_game_data_from_local_api, search_games))
                 
                 # print(f"\n{WHTE}Results Loop{RES}: {RES}")
@@ -367,8 +367,10 @@ def search_game_data_from_local_api(game: str):
             try:
                 json_data = response.json()
                 data = json_data.get("data", [])
-                game_data = data[0] if data else {}
-                return game_data
+                game_data = data[0] if data else None
+
+                if game_data and game_data.get("value") >= 80:
+                    return game_data
             except ValueError:
                 print(f"❌ Server did not return JSON: {response.text}")
                 json_data = {"error": "Invalid JSON response"}
@@ -407,20 +409,20 @@ def enrich_game_data(games: list, provider: str = "JILI") -> list:
     for g in games:
         helpslot, api = make_object(g)
         # Skip games that don't meet provider-specific thresholds
-        if provider in ["JILI", "PG"]:
-            if any([
-                # not all((data["jackpot"]> 80 for data in (helpslot, api))),
-                not all((helpslot["10m"] < 5, helpslot["1h"] < helpslot["3h"] < helpslot["6h"])),
-                not all(api[period] > 0 for period in ["1h", "3h", "6h"])
-            ]):
-                continue
+        # if provider in ["JILI", "PG"]:
+        #     if any([
+        #         not all((data["jackpot"] >= 50 for data in (helpslot, api))),
+        #         # not all((helpslot["10m"] < 5, helpslot["1h"] < helpslot["3h"] < helpslot["6h"])),
+        #         # not all(api[period] > 0 for period in ["1h", "3h", "6h"])
+        #     ]):
+        #         continue
             
         # Determine trending status
         trending = all([
             # any(data["meter"] == "red" for data in (helpslot, api)) and
             any([
                 # helpslot["10m"] < 5 and helpslot["1h"] < helpslot["3h"] < helpslot["6h"],
-                all((helpslot["10m"] < 5, helpslot["1h"] < helpslot["3h"] < helpslot["6h"])),
+                all((helpslot["10m"] <= 0, helpslot["10m"] < helpslot["1h"] < helpslot["3h"])),
                 # all(api[period] > 0 for period in ["1h", "3h", "6h"])
             ])
             # any(data["meter"] == "red" for data in (helpslot, api)),
@@ -448,7 +450,7 @@ def enrich_game_data(games: list, provider: str = "JILI") -> list:
 
     # Filter out Mid/Low if not trending
     # enriched = [g for g in enriched if not ("Low" in g["bet_lvl"] or not g.get("trending"))]
-    enriched = [g for g in enriched if g.get("trending") and not "Low" in g["bet_lvl"]]
+    enriched = [g for g in enriched]
     # enriched = [g for g in enriched]
             
     # Sort by bet level, trending, value, jackpot
@@ -566,7 +568,7 @@ if __name__ == "__main__":
         
         while True:
             games = extract_game_data(driver)
-            # print(f"\n\tFiltered Games: \n\t{PROVIDERS.get(provider).color}{'\n\t'.join(g['name'] for g in games)}{RES}")
+            print(f"\n\tFiltered Games: \n\t{PROVIDERS.get(provider).color}{'\n\t'.join(g['name'] for g in games)}{RES}")
             data = get_game_data_from_local_api(provider, games) if games else None
             # save_trend_memory(data) if data else None
             
@@ -641,7 +643,7 @@ if __name__ == "__main__":
                 if os.path.exists(TREND_FILE):
                     os.remove(TREND_FILE)
                     
-                text = f"\r\t🚫 {BDGRY}No Trending Games Found !{RES}"
+                text = f"\n\t🚫 {BDGRY}No Trending Games Found !{RES}"
                 
                 # if load_trend_memory():
                 #     text += f"\n\t\tLast Trending Games:\n\t\t{WHTE}{'\n\t\t'.join(load_trend_memory().keys()).title()}{RES}\n"
