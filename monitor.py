@@ -3884,8 +3884,8 @@ def on_key_press(key):
         status = "ENABLED" if state.auto_mode else "DISABLED"
         # play_alert(say=f"auto mode {status}")
         alert_queue.put(f"auto mode {status}")
-        color = LBLU if status == "ENABLED" else LRED
-        logger.info(f"\n\tAuto Mode: {color}{status}{RES}")
+        color = BLMAG if status == "ENABLED" else BLRED
+        logger.info(f"\t\t{WHTE}Auto Mode{RES}: {color}{status}{RES}")
 
 #     if key == Key.down:
 #         state.hotkeys = not state.hotkeys
