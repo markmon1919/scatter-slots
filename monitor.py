@@ -75,6 +75,10 @@ class AutoState:
     major_pullback_next: bool = False
     helpslot_jackpot: float = 0.00
     helpslot_meter: str = None
+    helpslot_10m: float = 0.0
+    helpslot_1h: float = 0.0
+    helpslot_3h: float = 0.0
+    helpslot_6h: float = 0.0
     extreme_pull: bool = False
     intense_pull: bool = False
 
@@ -199,6 +203,15 @@ def fetch_game_data(driver: webdriver.Chrome, game: str, fetch_queue: ThQueue) -
                 period_text = period_elem.text.strip()
                 period = float(period_text.replace("%", ""))
                 history[label] = period
+                
+                if label == "10min":
+                    state.helpslot_10m = period
+                if label == "1hr":
+                    state.helpslot_1h = period
+                if label == "3hrs":
+                    state.helpslot_3h = period
+                if label == "6hrs":
+                    state.helpslot_6h = period
                 
             game_data = {
                 "name": game, 
@@ -1162,7 +1175,7 @@ def countdown_timer(seconds: int = 10):
             # if current_sec % 10 == 9:
             if (
                 (
-                    state.new_jackpot_val > 98
+                    state.new_jackpot_val >= 50
                     or state.major_pullback_next
                     or state.extreme_pull
                     or state.intense_pull
@@ -1173,10 +1186,14 @@ def countdown_timer(seconds: int = 10):
                     or state.is_high_breakout
                     or state.is_high_delta_breakout
                 )
-                and (
+                and ( 
                     any([
-                        state.helpslot_jackpot >= 80,
-                        state.helpslot_jackpot >= 50 and state.helpslot_meter == "green"
+                        # state.helpslot_jackpot >= 80,
+                        state.helpslot_meter == "green" and state.helpslot_10m < 0 and state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h,
+                        state.helpslot_meter == "red" and state.helpslot_10m > 0 and state.helpslot_10m > state.helpslot_1h > state.helpslot_3h > state.helpslot_6h,
+                        # state.helpslot_jackpot >= 50 and state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h
+                        # 10 < state.helpslot_jackpot < 50 and state.helpslot_meter == "red"
+                        # ADD MORE CONDITION IF BIG PULL (like extreme and intense) then helpslot meter is red <<<<
                     ])
                 )
             ):
@@ -1184,9 +1201,10 @@ def countdown_timer(seconds: int = 10):
                 chosen_spin = spin(False, False)
                 if chosen_spin == "normal_spin" and random.random() < 0.1:
                     spin(*random.choice([(True, False), (False, True)]))
+                # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
         else:
             if current_sec % 10 == 7:
-                alert_queue.put("ping") 
+                alert_queue.put("ping")
 
 
                 # if chosen_spin == "normal_spin" and state.bet_lvl in [ "Bonus", "High" ] and random.random() < 0.5:
