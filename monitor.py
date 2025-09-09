@@ -1232,14 +1232,15 @@ def countdown_timer(seconds: int = 10):
             
             if "JILI" in provider and game == "Fortune Gems":
                 init_conditions = {
+                    "major_pullback_helpslot": state.major_pullback_helpslot,
                     "helpslot_jackpot": state.helpslot_jackpot >= 88,
                     "helpslot_jackpot_color": state.helpslot_jackpot >= 80 and state.helpslot_meter == "red",
-                    "major_pullback_helpslot": state.major_pullback_helpslot,
                     "major_pullback": state.major_pullback,
                     "last_pull_delta": state.last_pull_delta <= -60,
                     "new_10m": state.new_10m <= -60,
                     "bearish": state.new_10m <= -30 and state.new_10m < state.new_1h < state.new_3h,
                     "extreme_pull": state.extreme_pull,
+                    "intense_pull": state.intense_pull,
                     "is_high_breakout": state.is_high_breakout,
                     "is_high_delta_breakout": state.is_high_delta_breakout
                 }
@@ -1248,10 +1249,8 @@ def countdown_timer(seconds: int = 10):
                     "major_pullback_helpslot": state.major_pullback_helpslot,
                     "helpslot_jackpot": state.helpslot_jackpot >= 80,
                     "last_pull_delta": state.last_pull_delta <= -30,
-                    # "new_jackpot_val": state.new_jackpot_val >= 50,
-                    # "new_10m": state.new_10m <= -30,
+                    "bearish": state.new_10m <= -30 and state.new_10m < state.new_1h < state.new_3h,
                     "major_pullback": state.major_pullback,
-                    # "major_pullback_next": state.major_pullback_next,
                     "extreme_pull": state.extreme_pull,
                     "intense_pull": state.intense_pull,
                     "is_reversal_potential": state.is_reversal_potential,
