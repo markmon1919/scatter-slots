@@ -69,22 +69,22 @@ class AutoState:
     elapsed: int = 0
     last_time: int = 0
     current_color: str = None
-    current_jackpot_delta: float = 0.0
-    new_10m: float = 0.0
-    new_1h: float = 0.0
-    new_3h: float = 0.0
+    api_jackpot_delta: float = 0.0
+    api_10m: float = 0.0
+    api_1h: float = 0.0
+    api_3h: float = 0.0
     new_jackpot_val: float = 0.0
     jackpot_signal: str = None
-    new_data: bool = False
-    major_pullback: bool = False
+    # new_data: bool = False
+    api_major_pullback: bool = False
     helpslot_jackpot: float = 0.00
     helpslot_meter: str = None
     helpslot_jackpot_delta: float = 0.0
     helpslot_10m: float = 0.0
     helpslot_1h: float = 0.0
     helpslot_3h: float = 0.0
-    helpslot_6h: float = 0.0
-    major_pullback_helpslot: bool = False
+    # helpslot_6h: float = 0.0
+    helpslot_major_pullback: bool = False
     extreme_pull: bool = False
     intense_pull: bool = False
 
@@ -191,6 +191,10 @@ def fetch_game_data(driver: webdriver.Chrome, game: str, fetch_queue: ThQueue) -
                 
             value_text = card.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
+            
+            if state.helpslot_jackpot == value:
+                logger.info(f"\t{RED}Skipped{RES}:  {name} {state.helpslot_jackpot} -- {value}")
+                return None
             
             state.helpslot_jackpot = value
 
@@ -490,18 +494,18 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
     
     current_jackpot = pct(current['jackpot_meter'])
     jackpot_bar = get_jackpot_bar(current_jackpot, current['color'])
-    state.major_pullback = False
+    state.api_major_pullback = False
     if current_jackpot >= 99:
         alert_queue.put(f"API Jackpot {current_jackpot}")
-        if state.current_jackpot_delta < 0:
+        if state.api_jackpot_delta < 0:
         # if current['color'] == "red" or current_jackpot == 100:
-            state.major_pullback = True
+            state.api_major_pullback = True
             alert_queue.put(f"API Major Pullback")
     state.current_color = current['color']
     state.new_jackpot_val = current_jackpot
-    state.new_10m = pct(current['history'].get('10m'))
-    state.new_1h = pct(current['history'].get('1h'))
-    state.new_3h = pct(current['history'].get('3h'))
+    state.api_10m = pct(current['history'].get('10m'))
+    state.api_1h = pct(current['history'].get('1h'))
+    state.api_3h = pct(current['history'].get('3h'))
     state.new_6h = pct(current['history'].get('6h'))
     state.neutralize = False
     is_low_breakout = False
@@ -521,11 +525,11 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
 
     if helpslot_data and "jackpot_value" in helpslot_data:
         helpslot_jackpot = pct(helpslot_data.get('jackpot_value'))
-        state.major_pullback_helpslot = False
+        state.helpslot_major_pullback = False
         if helpslot_jackpot >= 88:
             alert_queue.put(f"Helpslot Jackpot {helpslot_jackpot}")
             if pct(helpslot_data.get('10min')) >= 0:
-                state.major_pullback_helpslot = True
+                state.helpslot_major_pullback = True
                 alert_queue.put(f"Helpslot Major Pullback")
         
         helpslot_jackpot_bar = get_jackpot_bar(helpslot_jackpot, helpslot_data.get('meter_color'))
@@ -645,7 +649,7 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
         prev_jackpot = pct(prev['jackpot_meter'])
         state.prev_jackpot_val = prev_jackpot
         delta = round(current_jackpot - prev_jackpot, 2)
-        state.current_jackpot_delta = delta
+        state.api_jackpot_delta = delta
         colored_delta = f"{RED if delta < 0 else GRE}{pct(delta)}{RES}"
         sign = f"{GRE}+{RES}" if delta > 0 else ""
         signal = f"{LRED}⬇{RES}" if current_jackpot < prev_jackpot else f"{LGRE}⬆{RES}" if current_jackpot > prev_jackpot else f"{LCYN}◉{RES}"
@@ -1150,8 +1154,8 @@ def countdown_timer(seconds: int = 10):
         #     # spin_type = random.choice(chose_spin)
         #     # spin_queue.put((None, chose_spin[0], None, False))
         #     # if current_sec % 10 >= 8 and state.new_jackpot_val == 100:
-        #     if state.major_pullback:
-        #     # if current_sec % 10 >= 8 and state.major_pullback:
+        #     if state.api_major_pullback:
+        #     # if current_sec % 10 >= 8 and state.api_major_pullback:
         #         spin_queue.put((None, "quick_spin", None, False))
 
         # if state.new_jackpot_val >= 40 and state.curr_color == 'red' and state.bet_lvl is not None and state.bear_score_inc and state.pull_score_inc:
@@ -1208,9 +1212,9 @@ def countdown_timer(seconds: int = 10):
             #     (
             #         state.new_jackpot_val >= 50
             #         or state.last_pull_delta <= -30
-            #         or state.new_10m <= -30
-            #         or state.major_pullback
-            #         or state.major_pullback_next
+            #         or state.api_10m <= -30
+            #         or state.api_major_pullback
+            #         or state.api_major_pullback_next
             #         or state.extreme_pull
             #         or state.intense_pull
             #         or state.is_reversal_potential
@@ -1242,13 +1246,13 @@ def countdown_timer(seconds: int = 10):
             
             if "JILI" in provider and game == "Fortune Gems":
                 init_conditions = {
-                    "major_pullback_helpslot": state.major_pullback_helpslot,
-                    "major_pullback": state.major_pullback,
+                    "helpslot_major_pullback": state.helpslot_major_pullback,
+                    "api_major_pullback": state.api_major_pullback,
                     "helpslot_jackpot": state.helpslot_jackpot >= 89,
                     "helpslot_jackpot_color": state.helpslot_jackpot >= 80 and state.helpslot_meter == "red",
                     "last_pull_delta": state.last_pull_delta <= -60,
-                    "new_10m": state.new_10m <= -60,
-                    "bearish": state.new_10m <= -30 and state.new_10m < state.new_1h < state.new_3h,
+                    "api_10m": state.api_10m <= -60,
+                    "bearish": state.api_10m <= -30 and state.api_10m < state.api_1h < state.api_3h,
                     "extreme_pull": state.extreme_pull,
                     "intense_pull": state.intense_pull,
                     "is_high_breakout": state.is_high_breakout,
@@ -1256,13 +1260,13 @@ def countdown_timer(seconds: int = 10):
                 }
             else:
                 init_conditions = {
-                    "major_pullback_helpslot": state.major_pullback_helpslot,
-                    "major_pullback": state.major_pullback,
+                    "helpslot_major_pullback": state.helpslot_major_pullback,
+                    "api_major_pullback": state.api_major_pullback,
                     "helpslot_jackpot": state.helpslot_jackpot >= 80,
                     "helpslot_jackpot_color": state.helpslot_jackpot >= 80 and state.helpslot_meter == "red",
                     "last_pull_delta": state.last_pull_delta <= -60,
-                    "new_10m": state.new_10m <= -60,
-                    "bearish": state.new_10m <= -30 and state.new_10m < state.new_1h < state.new_3h,
+                    "api_10m": state.api_10m <= -60,
+                    "bearish": state.api_10m <= -30 and state.api_10m < state.api_1h < state.api_3h,
                     "extreme_pull": state.extreme_pull,
                     "intense_pull": state.intense_pull,
                     "is_high_breakout": state.is_high_breakout,
@@ -1570,16 +1574,16 @@ def countdown_timer(seconds: int = 10):
     #     #         and state.auto_mode
     #     #         and state.prev_pull_delta != 0.0
     #     #     ):
-    #     #         get_delta = round(state.new_10m - state.prev_10m, 2)
+    #     #         get_delta = round(state.api_10m - state.prev_10m, 2)
     #     #         state.non_stop = (
     #     #             state.new_jackpot_val < state.prev_jackpot_val
-    #     #             and state.new_10m < state.prev_10m
+    #     #             and state.api_10m < state.prev_10m
     #     #             and get_delta < state.prev_pull_delta
     #     #         ) or state.is_low_breakout or state.is_low_delta_breakout or state.is_reversal or state.bet_lvl in ["max", "high"]
 
     #     #         if (
     #     #             get_delta <= -30
-    #     #             and state.new_10m <= -30
+    #     #             and state.api_10m <= -30
     #     #             and state.curr_color == 'red'
     #     #         ):
     #     #             alert_queue.put("non stop spin")
@@ -3868,21 +3872,21 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
 
             if data and "error" not in data:
                 min10 = data.get("min10")
-                state.new_data = False
+                # state.new_data = False
                 if min10 != last_min10:
                     last_min10 = min10
                     # state.non_stop = False
-                    state.new_data = True
+                    # state.new_data = True
                     # state.new_jackpot_val = data.get("value")
-                    # state.major_pullback = False
+                    # state.api_major_pullback = False
                     # if data.get("value") > 95:
                     #     alert_queue.put(f"Jackpot {data.get("value")}")
                     #     if data.get("value") == 100:
-                    #         state.major_pullback_next = True
-                    # if state.major_pullback_next:
-                    #     state.major_pullback = True
-                    #     state.major_pullback_next = False
-                    state.jackpot_signal = ("bearish" if data.get("value") < state.prev_jackpot_val else "bullish" if data.get("value") > state.prev_jackpot_val else "neutral") if state.prev_jackpot_val != 0.0 else "neutral"
+                    #         state.api_major_pullback_next = True
+                    # if state.api_major_pullback_next:
+                    #     state.api_major_pullback = True
+                    #     state.api_major_pullback_next = False
+                    # state.jackpot_signal = ("bearish" if data.get("value") < state.prev_jackpot_val else "bullish" if data.get("value") > state.prev_jackpot_val else "neutral") if state.prev_jackpot_val != 0.0 else "neutral"
                     # signal = f"{LRED}⬇{RES}" if current_jackpot < prev_jackpot else f"{LGRE}⬆{RES}" if current_jackpot > prev_jackpot else f"{LCYN}◉{RES}"
                     # state.last_time = round(data.get('last_updated'))
                     state.last_time = int(data.get('last_updated'))
