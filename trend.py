@@ -571,7 +571,7 @@ if __name__ == "__main__":
         
         while True:
             games = extract_game_data(driver)
-            print(f"\n\tFiltered Games: \n\t{PROVIDERS.get(provider).color}{'\n\t'.join(g['name'] for g in games)}{RES}")
+            # print(f"\n\tFiltered Games: \n\t{PROVIDERS.get(provider).color}{'\n\t'.join(g['name'] for g in games)}{RES}")
             data = get_game_data_from_local_api(provider, games) if games else None
             # save_trend_memory(data) if data else None
             
