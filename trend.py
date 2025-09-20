@@ -133,7 +133,7 @@ def extract_game_data(driver) -> list:
             value_text = block.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
             
-            if value < 85:
+            if value < 50:
             # if value < 75:
             #     # print(f'{RED}Skipped{RES}: {name}, {value}, {up}')
                 continue
@@ -188,10 +188,10 @@ def get_game_data_from_local_api(provider: str, games: list):
             return []
         
         if "PG" in provider:
-            data = [g for g in data if g.get("value") >= 80 and g.get("up") and g.get("name") != "Wild Ape#3258"]
+            data = [g for g in data if g.get("value") >= 90 and g.get("up") and g.get("name") != "Wild Ape#3258"]
             # data = [g for g in data if all([g.get("min10") < 0, g.get("hr1") < 0]) and g.get("name") != "Wild Ape#3258"]
         else:
-            data = [g for g in data if g.get("value") >= 80 and g.get("up") and g.get("name")]
+            data = [g for g in data if g.get("value") >= 90 and g.get("up") and g.get("name")]
         
         # print(f'\n{DGRY}Data{RES}: {WHTE}{data}{RES}')
         # print(f'\n{DGRY}Games{RES}: {WHTE}{games}{RES}')
@@ -369,7 +369,7 @@ def search_game_data_from_local_api(game: str):
                 data = json_data.get("data", [])
                 game_data = data[0] if data else None
 
-                if game_data and game_data.get("value") >= 80:
+                if game_data and game_data.get("value") >= 90:
                     return game_data
             except ValueError:
                 print(f"❌ Server did not return JSON: {response.text}")

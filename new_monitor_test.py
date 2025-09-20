@@ -27,6 +27,7 @@ class AutoState:
     provider: str = None
 
     auto_mode: bool = False
+    fast_mode: bool = False
     dual_slots: bool = False
     split_screen: bool = False
     left_slot: bool = False
@@ -54,10 +55,12 @@ class AutoState:
     extra_bet: bool = False
     last_spin: str = None
     last_trend: str = None
-    last_pull_delta: float = 0.0
+    # last_pull_delta: float = 0.0
+    pull_delta: float = 0.0
     prev_pull_delta: float = 0.0
     prev_pull_score: int = 0
     prev_bear_score: int = 0
+    pull_score: int = 0
     bear_score_inc: bool = False
     pull_score_inc: bool = False
     curr_color: str = None
@@ -73,24 +76,18 @@ class AutoState:
     api_10m: float = 0.0
     api_1h: float = 0.0
     api_3h: float = 0.0
-    api_bearish: bool = False
-    api_jackpot: float = 0.0
+    new_jackpot_val: float = 0.0
     jackpot_signal: str = None
-    new_data: bool = False
-    api_major_reset: bool = False
+    # new_data: bool = False
     api_major_pullback: bool = False
-    helpslot_major_pullback: bool = False
-    helpslot_major_reversal: bool = False
     helpslot_jackpot: float = 0.00
     helpslot_meter: str = None
     helpslot_jackpot_delta: float = 0.0
     helpslot_10m: float = 0.0
     helpslot_1h: float = 0.0
     helpslot_3h: float = 0.0
-    helpslot_6h: float = 0.0
+    # helpslot_6h: float = 0.0
     helpslot_major_pullback: bool = False
-    helpslot_green_meter: bool = False
-    helpslot_red_meter: bool = False
     extreme_pull: bool = False
     intense_pull: bool = False
 
@@ -113,9 +110,10 @@ def get_sleep_times(auto_play_menu: bool=False):
         'd': 0.001  # 400 cps
     }
 
-def configure_game(game: str, api_server: str, breakout: dict, auto_mode: bool=False, dual_slots: bool=False, split_screen: bool=False, left_slot: bool=False, right_slot: bool=False):#, forever_spin: bool=False):
+def configure_game(game: str, api_server: str, breakout: dict, auto_mode: bool=False, fast_mode: bool=False, dual_slots: bool=False, split_screen: bool=False, left_slot: bool=False, right_slot: bool=False):#, forever_spin: bool=False):
     state.breakout = breakout
     state.auto_mode = auto_mode
+    state.fast_mode = fast_mode
     state.dual_slots = dual_slots
     state.split_screen = split_screen
     state.left_slot = left_slot
@@ -194,27 +192,16 @@ def fetch_game_data(driver: webdriver.Chrome, game: str, fetch_queue: ThQueue) -
             name = card.find_element(By.CSS_SELECTOR, ".game-title").text.strip()
             if name != game:
                 return None
-                 
+                
             value_text = card.find_element(By.CSS_SELECTOR, ".progress-value").text.strip()
             value = float(value_text.replace("%", ""))
             
+            # if state.helpslot_jackpot == value:
+            #     logger.info(f"\t{RED}Skipped{RES}:  {name} {state.helpslot_jackpot} -- {value}")
+            #     return None
+            
             if state.helpslot_jackpot != value:
-                state.helpslot_jackpot_delta = round(state.helpslot_jackpot - value, 2)
                 state.helpslot_jackpot = value
-                state.helpslot_major_pullback = False
-                state.helpslot_major_reversal = False
-                
-                if value >= 88:
-                    # alert_in_progress.clear()
-                    # alert_queue.put(f"Helpslot Jackpot {value}")
-                    if value == 90 or state.helpslot_10m > -1 or state.helpslot_jackpot_delta < 1:
-                        state.helpslot_major_pullback = True
-                        # alert_in_progress.clear()
-                        # alert_queue.put(f"Helpslot Major Pullback")
-                    if state.api_major_pullback:
-                        state.helpslot_major_reversal = True
-                        # alert_in_progress.clear()
-                        # alert_queue.put(f"Helpslot Major Reversal")
 
                 progress_bar_elem = card.find_element(By.CSS_SELECTOR, ".progress-bar")
                 bg = progress_bar_elem.value_of_css_property("background-color").lower()
@@ -250,10 +237,10 @@ def fetch_game_data(driver: webdriver.Chrome, game: str, fetch_queue: ThQueue) -
                 fetch_queue.put(game_data)
         except Exception as e:
             logger.info(f"🤖❌  {e}")
-                    # except Exception:
-                    #     continue
-            # except Exception:
-            #     pass
+                # except Exception:
+                #     continue
+        # except Exception:
+        #     pass
         time.sleep(0.5)
 
     # return game
@@ -414,7 +401,8 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
     )
 
     slot_text = f"{BLGRE}Slot{RES}: {slot_mode_colored}"
-    mode_text = f"{BLGRE}Mode{RES}: {BLCYN if auto_mode else CYN}{'auto' if auto_mode else 'manual'}{RES}"
+    auto_mode_text = f"{BLGRE}Mode{RES}: {BLCYN if auto_mode else CYN}{'auto' if auto_mode else 'manual'}{RES}"
+    fast_mode_text = f"{BLGRE}Fast Mode{RES}: {BLCYN if fast_mode else CYN}{'ON' if auto_mode else 'OFF'}{RES}"
 
     def visible_length(s):
         return len(re.sub(r"\x1b\[[0-9;]*m", "", s))
@@ -438,7 +426,8 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
         f"♦️  {border}  ♠️",
         center_text(title_text, content_width),
         slot_line,
-        center_text(mode_text, content_width - 1),
+        center_text(auto_mode_text, content_width - 1),
+        center_text(fast_mode_text, content_width - 1),
         f"♣️  {border}  ♥️",
     ]
 
@@ -512,19 +501,11 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
     
     current_jackpot = pct(current['jackpot_meter'])
     jackpot_bar = get_jackpot_bar(current_jackpot, current['color'])
-    # state.api_major_pullback = False
-    # if current_jackpot >= 99:
-    #     alert_queue.put(f"API Jackpot {current_jackpot}")
-    #     if state.api_jackpot_delta < 0:
-    #     # if current['color'] == "red" or current_jackpot == 100:
-    #         state.api_major_pullback = True
-    #         alert_queue.put(f"API Major Pullback")
-    state.current_color = current['color']
-    # state.api_jackpot = current_jackpot
-    # state.api_10m = pct(current['history'].get('10m'))
-    # state.api_1h = pct(current['history'].get('1h'))
-    # state.api_3h = pct(current['history'].get('3h'))
-    # state.api_6h = pct(current['history'].get('6h'))
+    
+    state.extreme_pull = False
+    state.intense_pull = False
+    state.is_reversal = False
+    state.is_reversal_potential = False
     state.neutralize = False
     is_low_breakout = False
     is_low_breakout_delta = False
@@ -534,6 +515,20 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
     state.is_low_delta_breakout = False
     state.is_high_breakout = False
     state.is_high_delta_breakout = False
+    state.api_major_pullback = False
+    
+    if current_jackpot >= 99:
+        # alert_queue.put(f"API Jackpot {current_jackpot}")
+        if state.api_jackpot_delta < 0:
+        # if current['color'] == "red" or current_jackpot == 100:
+            state.api_major_pullback = True
+            alert_queue.put(f"API Major Pullback")
+    state.current_color = current['color']
+    state.new_jackpot_val = current_jackpot
+    state.api_10m = pct(current['history'].get('10m'))
+    state.api_1h = pct(current['history'].get('1h'))
+    state.api_3h = pct(current['history'].get('3h'))
+    state.new_6h = pct(current['history'].get('6h'))
     lowest_low = state.breakout["lowest_low"]
     lowest_low_delta = state.breakout["lowest_low_delta"]
     highest_high = state.breakout["highest_high"]
@@ -543,12 +538,12 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
 
     if helpslot_data and "jackpot_value" in helpslot_data:
         helpslot_jackpot = pct(helpslot_data.get('jackpot_value'))
-        # state.helpslot_major_pullback = False
-        # if helpslot_jackpot >= 88:
-        #     alert_queue.put(f"Helpslot Jackpot {helpslot_jackpot}")
-        #     if pct(helpslot_data.get('10min')) >= 0:
-        #         state.helpslot_major_pullback = True
-        #         alert_queue.put(f"Helpslot Major Pullback")
+        state.helpslot_major_pullback = False
+        if helpslot_jackpot >= 88:
+            # alert_queue.put(f"Helpslot Jackpot {helpslot_jackpot}")
+            if pct(helpslot_data.get('10min')) >= 0:
+                state.helpslot_major_pullback = True
+                # alert_queue.put(f"Helpslot Major Pullback")
         
         helpslot_jackpot_bar = get_jackpot_bar(helpslot_jackpot, helpslot_data.get('meter_color'))
         # helpslot_signal = f"{LRED}⬇{RES}" if helpslot_data.get('meter_color') == "red" else f"{LGRE}⬆{RES}" if helpslot_data.get('meter_color') == "green" else f"{LCYN}◉{RES}"
@@ -586,7 +581,7 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
         prev_helpslot_jackpot = pct(prev_helpslot.get('jackpot_value'))
         # state.prev_jackpot_val = prev_jackpot
         helpslot_jackpot_delta = round(helpslot_jackpot - prev_helpslot_jackpot, 2)
-        # state.helpslot_jackpot_delta = helpslot_jackpot_delta
+        state.helpslot_jackpot_delta = helpslot_jackpot_delta
         helpslot_colored_delta = f"{RED if helpslot_jackpot_delta < 0 else GRE}{pct(helpslot_jackpot_delta)}{RES}"
         helpslot_sign = f"{GRE}+{RES}" if helpslot_jackpot_delta > 0 else ""
         # signal = f"{LRED}⬇{RES}" if helpslot_jackpot < prev_helpslot_jackpot else f"{LGRE}⬆{RES}" if helpslot_jackpot > prev_helpslot_jackpot else f"{LCYN}◉{RES}"
@@ -667,7 +662,7 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
         prev_jackpot = pct(prev['jackpot_meter'])
         state.prev_jackpot_val = prev_jackpot
         delta = round(current_jackpot - prev_jackpot, 2)
-        # state.api_jackpot_delta = delta
+        state.api_jackpot_delta = delta
         colored_delta = f"{RED if delta < 0 else GRE}{pct(delta)}{RES}"
         sign = f"{GRE}+{RES}" if delta > 0 else ""
         signal = f"{LRED}⬇{RES}" if current_jackpot < prev_jackpot else f"{LGRE}⬆{RES}" if current_jackpot > prev_jackpot else f"{LCYN}◉{RES}"
@@ -756,8 +751,8 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
                     h10, h1 = pct(new_num_10m), pct(new_num)
                     ph10, ph1 = pct(old_num_10m), pct(old_num)
 
-                    old_delta_10m = state.last_pull_delta
-                    state.last_pull_delta = new_delta_10m
+                    old_delta_10m = state.pull_delta
+                    state.pull_delta = new_delta_10m
                     new_delta_10m_1h = h10 - h1
                     old_delta_10m_1h = ph10 - ph1
 
@@ -771,8 +766,6 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
                     score = 0
                     trend = list()
                     reversal = False
-                    state.is_reversal = False
-                    state.is_reversal_potential = False
 
                     # ✅ 1. Check for directional reversal: Strong signal
                     # optimize to add prev value h1 > 0 and h1 < ph1
@@ -780,7 +773,6 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
                         trend.append("Reversal Potential")
                         state.is_reversal_potential = True 
                         score += 2
-                        state.is_reversal_potential = True
                     elif ph10 < 0 and h10 > 0 and h1 < 0 and current['color'] == 'red':
                         trend.append("Reversal Potential")
                         score -= 2
@@ -867,6 +859,20 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
                         'pull_score': score,
                         'pull_trend': trend
                     }
+                    
+                    # add spin high pull score
+                    state.pull_score = result.get('pull_score', 0)
+                    if result.get('pull_score', 0) >= 10:
+                        if spin_in_progress.is_set():
+                            spin_in_progress.clear()
+                            spin(*random.choice([(True, False), (False, True)]))
+                        else:
+                            threading.Thread(target=spin, args=(False, False,), daemon=True).start()
+                            
+                        logger.info(f"\t\t{BLCYN}Pull Score:: {result.get('pull_score', 0)}{RES}")
+                        alert_queue.put(f"pull score {state.pull_score}")
+                        
+                    state.prev_pull_delta = result.get('old_delta_10m')
 
                     if old_delta_10m != 0 and h10 < ph10 and delta_shift_decision:
                         if score >= 7 and h10 <= -50 and new_delta_10m <= -50 and delta_shift <= -50 and delta_shift_10m_1h <= -50:
@@ -953,8 +959,6 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
         signal = f"{LRED}＋{RES}" if bear_score > state.prev_bear_score else f"{LGRE}－{RES}" if bear_score < state.prev_bear_score else f"{LCYN}＝{RES}"
         state.bear_score_inc = True if bear_score > state.prev_bear_score else False
         state.prev_bear_score = bear_score
-        state.extreme_pull = False
-        state.intense_pull = False
 
         logger.info(f"\n\t🐻 Bear Score: {DGRY}[ {BWHTE}{bear_score} {DGRY}]{signal}")
 
@@ -963,11 +967,11 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
         else:
             logger.info("\n\t❌ Not Enough Bearish Momentum")
 
-        state.prev_pull_delta = result.get('old_delta_10m')
+        # state.prev_pull_delta = result.get('old_delta_10m')
         pull_score = result.get('pull_score', 0)
         signal = f"{LRED}＋{RES}" if pull_score > state.prev_pull_score else f"{LGRE}－{RES}" if pull_score < state.prev_pull_score else f"{LCYN}＝{RES}"
         state.pull_score_inc = True if pull_score > state.prev_pull_score else False
-        state.prev_pull_score  = pull_score
+        state.prev_pull_score = pull_score
 
         if pull_score >= 8 and bet_level == "max":
             trend_strength = "💥💥💥  Extreme Pull"
@@ -1108,35 +1112,26 @@ def save_breakout_memory(game: str, lowest_low: float, lowest_low_delta: float, 
         json.dump(data, f, indent=2)
 
 def play_alert(say: str=None):
-    while not stop_event.is_set():
-        # if platform.system() == "Darwin":
-        if alert_in_progress.is_set():
-            logger.info("\t⚠️ Alert still in action, skipping")
-            return
-        
-        alert_in_progress.is_set()
-        
-        try:    
-            say = alert_queue.get_nowait()
-            sound_file = (say)
+    if platform.system() == "Darwin":
+        while not stop_event.is_set():
+            try:
+                say = alert_queue.get_nowait()
+                sound_file = (say)
 
-            if sound_file == "ping":
-                subprocess.run(["afplay", PING])
-            else:
-                # voice = VOICES["Trinoids"] if "bet max" in sound_file or "bet high" in sound_file else VOICES["Samantha"]
-                voice = VOICES["Trinoids"] if "new" in sound_file else VOICES["Samantha"]
-                subprocess.run(["say", "-v", voice, "--", sound_file])
-                
-        except Empty:
-            continue
-        except Exception as e:
-            logger.info(f"\n\t[Alert Thread Error] {e}")
-        finally:
-            alert_in_progress.clear()
-        # else:
-        #     pass
+                if sound_file == "ping":
+                    subprocess.run(["afplay", PING])
+                else:
+                    voice = VOICES["Trinoids"] if "prediction" in sound_file or "bet max" in sound_file else VOICES["Samantha"]
+                    subprocess.run(["say", "-v", voice, "--", sound_file])
+                    
+            except Empty:
+                continue
+            except Exception as e:
+                logger.info(f"\n\t[Alert Thread Error] {e}")
+    else:
+        pass
 
-def countdown_timer(seconds: int = 5):
+def countdown_timer(seconds: int = 10):
     while not stop_event.is_set():
         now_time = time.time()
         current_sec = int(now_time) % seconds
@@ -1147,7 +1142,7 @@ def countdown_timer(seconds: int = 5):
         text = (
             f"{BLU}Betting Ends In{RES}"
             if state.bet_lvl is not None else
-            f"{BCYN}Loading Game Data{RES}" if state.api_jackpot == 0.0 else
+            f"{BCYN}Loading Game Data{RES}" if state.new_jackpot_val == 0.0 else
             f"{BLU}Waiting For Next Iteration{RES}"
         )
 
@@ -1179,12 +1174,12 @@ def countdown_timer(seconds: int = 5):
         #     # chose_spin = [ "turbo_spin", "board_spin_turbo" ]
         #     # spin_type = random.choice(chose_spin)
         #     # spin_queue.put((None, chose_spin[0], None, False))
-        #     # if current_sec % 10 >= 8 and state.api_jackpot == 100:
+        #     # if current_sec % 10 >= 8 and state.new_jackpot_val == 100:
         #     if state.api_major_pullback:
         #     # if current_sec % 10 >= 8 and state.api_major_pullback:
         #         spin_queue.put((None, "quick_spin", None, False))
 
-        # if state.api_jackpot >= 40 and state.curr_color == 'red' and state.bet_lvl is not None and state.bear_score_inc and state.pull_score_inc:
+        # if state.new_jackpot_val >= 40 and state.curr_color == 'red' and state.bet_lvl is not None and state.bear_score_inc and state.pull_score_inc:
         # if state.bear_score_inc and state.pull_score_inc: # Spin on Do not Bet
         #     if current_sec % 10 == 7 and state.auto_mode and (last_time_sec % 10 == 0 or last_time_sec % 10 == 1):# and not state.new_data:
         #         alert_queue.put("ping")# if state.jackpot_signal != "bullish" else None
@@ -1222,7 +1217,7 @@ def countdown_timer(seconds: int = 5):
         # if current_sec % 10 == 7:
         # # if time_left == 3:
         #     alert_queue.put("ping")
-        #     # if state.api_jackpot == 100 or (state.bet_lvl is not None and state.curr_color == 'red'):
+        #     # if state.new_jackpot_val == 100 or (state.bet_lvl is not None and state.curr_color == 'red'):
         #     if state.dual_slots:
         #         slots = ["left",  "right"]
         #         random.shuffle(slots)
@@ -1236,7 +1231,7 @@ def countdown_timer(seconds: int = 5):
             # if current_sec % 10 == 9:
             # if (
             #     (
-            #         state.api_jackpot >= 50
+            #         state.new_jackpot_val >= 50
             #         or state.last_pull_delta <= -30
             #         or state.api_10m <= -30
             #         or state.api_major_pullback
@@ -1269,106 +1264,115 @@ def countdown_timer(seconds: int = 5):
                 # if chosen_spin == "normal_spin" and random.random() < 0.1:
                 #     spin(*random.choice([(True, False), (False, True)]))
                 # # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+            # if state.current_color == "green":
+            # if "JILI" in provider and game == "Fortune Gems":
+            #     init_conditions = {
+            #         "helpslot_major_pullback": state.helpslot_major_pullback,
+            #         "api_major_pullback": state.api_major_pullback,
+            #         "helpslot_jackpot": state.helpslot_jackpot >= 80,
+            #         # "helpslot_jackpot_color": state.helpslot_jackpot >= 80 and state.helpslot_meter == "red",
+            #         "last_pull_delta": state.last_pull_delta <= -60,
+            #         # "api_10m": state.api_10m <= -60,
+            #         # "bearish": state.api_10m <= -30 and state.api_10m < state.api_1h < state.api_3h,
+            #         "extreme_pull": state.extreme_pull,
+            #         "intense_pull": state.intense_pull,
+            #         "is_high_breakout": state.is_high_breakout,
+            #         "is_high_delta_breakout": state.is_high_delta_breakout,
+            #         "is_reversal": state.is_reversal
+            #     }
+        # else:            
+            init_conditions = {
+                "green_meter": (
+                    state.helpslot_meter == "green" and
+                    state.helpslot_10m <= 0 and
+                    state.helpslot_10m > state.helpslot_1h > state.helpslot_3h
+                    # state.helpslot_10m > state.helpslot_1h > state.helpslot_3h > state.helpslot_6h
+                ),
+                "red_meter": (
+                    state.helpslot_meter == "red" and
+                    state.helpslot_10m >= 0 and
+                    state.helpslot_10m < state.helpslot_1h < state.helpslot_3h
+                    # state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h
+                ),
+                # "jackpot_helpslot_high": state.helpslot_jackpot >= 80
+                "jackpot_high": any([(state.api_jackpot_delta) >= 3, abs(state.helpslot_jackpot_delta) >= 3, state.helpslot_jackpot >= 80])
+                # "jackpot_high": any([(state.api_jackpot_delta) >= 3, abs(state.helpslot_jackpot_delta) >= 3])
+            }
             
-            if "JILI" in provider and game == "Fortune Gems":
-                init_conditions = {
-                    "api_major_pullback": state.api_major_pullback,
-                    "api_major_reset": state.api_major_reset,
-                    "helpslot_major_pullback": state.helpslot_major_pullback,
-                    "helpslot_major_pullback": state.helpslot_major_reversal,
-                    "helpslot_jackpot": state.helpslot_jackpot >= 88,
-                    "helpslot_meter": state.helpslot_jackpot >= 85 and state.helpslot_meter == "red",
-                    # "helpslot_jackpot_delta": state.helpslot_jackpot_delta <= -60,
-                    # "last_pull_delta": state.last_pull_delta <= -60,
-                    "api_10m": state.api_10m <= -60,
-                    "api_bearish": state.api_10m <= -30 and state.api_10m < state.api_1h < state.api_3h,
-                    "api_jackpot_delta": state.api_jackpot_delta < 0,
-                    "extreme_pull": state.extreme_pull,
-                    "intense_pull": state.intense_pull,
-                    "is_high_breakout": state.is_high_breakout,
-                    "is_high_delta_breakout": state.is_high_delta_breakout,
-                    "is_reversal_potential": state.is_reversal_potential,
-                    "is_reversal": state.is_reversal,
-                    "helpslot_green_meter": state.helpslot_10m > state.helpslot_1h > state.helpslot_3h > state.helpslot_6h,
-                    "helpslot_red_meter": state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h
-                }
-            else:
-                init_conditions = {
-                    "api_major_pullback": state.api_major_pullback,
-                    "api_major_reset": state.api_major_reset,
-                    "helpslot_major_pullback": state.helpslot_major_pullback,
-                    "helpslot_major_pullback": state.helpslot_major_reversal,
-                    "helpslot_jackpot": state.helpslot_jackpot >= 88,
-                    "helpslot_meter": state.helpslot_jackpot >= 85 and state.helpslot_meter == "red",
-                    # "helpslot_jackpot_delta": state.helpslot_jackpot_delta <= -60,
-                    # "last_pull_delta": state.last_pull_delta <= -60,
-                    "api_10m": state.api_10m <= -60,
-                    "api_bearish": state.api_10m <= -30 and state.api_10m < state.api_1h < state.api_3h,
-                    "api_jackpot_delta": state.api_jackpot_delta < 0,
-                    "extreme_pull": state.extreme_pull,
-                    "intense_pull": state.intense_pull,
-                    "is_high_breakout": state.is_high_breakout,
-                    "is_high_delta_breakout": state.is_high_delta_breakout,
-                    "is_reversal_potential": state.is_reversal_potential,
-                    "is_reversal": state.is_reversal,
-                    "neutralize": state.neutralize,
-                    "helpslot_green_meter": state.helpslot_10m > state.helpslot_1h > state.helpslot_3h > state.helpslot_6h,
-                    "helpslot_red_meter": state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h
-                }
-                
-            # for key, val in init_conditions.items():
-            #     is_triggered = val
+            momentum_potential = (
+                all([
+                    state.current_color == "green", 
+                    state.bear_score_inc, 
+                    state.api_10m < state.api_1h < state.api_3h
+                ]),
+                all([
+                    state.current_color == "red", 
+                    state.bear_score_inc,
+                    state.api_10m > state.api_1h > state.api_3h
+                ])
+            )
+            
+            reversal_potential = (
+                state.current_color == "green" and
+                any([
+                    not state.bear_score_inc and state.api_10m > state.api_1h < state.api_3h,
+                    state.is_reversal_potential
+                ])
+            )
+            
+            sub_conditions = {
+                # "helpslot_jackpot": state.helpslot_jackpot >= 80,
+                # "helpslot_jackpot_color": state.helpslot_jackpot >= 80 and state.helpslot_meter == "red",
+                # "last_pull_delta": state.last_pull_delta <= -60,
+                # "api_10m": state.api_10m <= -60,
+                # "bearish": state.api_10m <= -30 and state.api_10m < state.api_1h < state.api_3h,
+                "extreme_pull": state.extreme_pull,
+                "intense_pull": state.intense_pull,
+                "momentum_potential": momentum_potential,
+                "helpslot_major_pullback": state.helpslot_major_pullback,
+                "api_major_pullback": state.api_major_pullback,
+                "is_reversal": state.is_reversal, # always_red
+                "is_high_breakout": state.is_high_breakout,
+                "is_high_delta_breakout": state.is_high_delta_breakout
+            }
+            
+            prediction_conditions = any([
+                momentum_potential,
+                reversal_potential,
+                state.neutralize,
+                abs(state.api_jackpot_delta) >= 3,
+                abs(state.helpslot_jackpot_delta) >= 3,
+                # all([state.new_jackpot_val >= 50, state.current_color == "red"])  
+            ])
+        
+            # logger.info(f"\n\t{WHTE}--- INIT CONDITIONS ---{RES}")
+            # for key, is_triggered in init_conditions.items():
+            #     value = getattr(state, key)
             #     color = LRED if is_triggered else LCYN
             #     mark = " ✔" if is_triggered else ""
-            #     # if is_triggered:
-            #     value = getattr(state, key)
-            #     # alert_queue.put(key)
-            #     if key in [ "helpslot_jackpot", "helpslot_jackpot_delta", "api_10m" ]:
-            #         logger.info(f"\t{color}{key}{RES} >> {value}{mark}")
+                
+            #     # alert_queue.put(key) if is_triggered else None
+            #     logger.info(f"\t{color}{key}{RES} >> {value}{mark}") if is_triggered else None
             
-            if "JILI" in provider and game == "Fortune Gems":
-                sub_conditions = {
-                    "helpslot_green_meter": (
-                        state.helpslot_meter == "green" and
-                        state.helpslot_10m <= 0 and
-                        state.helpslot_10m > state.helpslot_1h > state.helpslot_3h
-                        # state.helpslot_10m > state.helpslot_1h > state.helpslot_3h > state.helpslot_6h
-                    ),
-                    "helpslot_red_meter": (
-                        state.helpslot_meter == "red" and
-                        state.helpslot_10m >= 0 and
-                        state.helpslot_10m < state.helpslot_1h < state.helpslot_3h
-                        # state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h
-                    ),
-                    # "jackpot_helpslot_high": state.helpslot_jackpot >= 80
-                    "jackpot_high": state.current_color == "red" or state.api_jackpot < 0,
-                    # "api_major_pullback": state.api_major_pullback,
-                    # "api_major_reset": state.api_major_reset,
-                    # "helpslot_major_pullback": state.helpslot_major_pullback,
-                    # "helpslot_major_pullback": state.helpslot_major_reversal
-                }
-            else:
-                sub_conditions = {
-                    "helpslot_green_meter": (
-                        state.helpslot_meter == "green" and
-                        state.helpslot_10m <= 0 and
-                        state.helpslot_10m > state.helpslot_1h > state.helpslot_3h
-                        # state.helpslot_10m > state.helpslot_1h > state.helpslot_3h > state.helpslot_6h
-                    ),
-                    "helpslot_red_meter": (
-                        state.helpslot_meter == "red" and
-                        state.helpslot_10m >= 0 and
-                        state.helpslot_10m < state.helpslot_1h < state.helpslot_3h
-                        # state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h
-                    ),
-                    # "jackpot_helpslot_high": state.helpslot_jackpot >= 80
-                    # "jackpot_high": state.api_jackpot >= 50
-                    "jackpot_high": state.current_color == "red" or state.api_jackpot < 0,
-                    # "api_major_pullback": state.api_major_pullback,
-                    # "api_major_reset": state.api_major_reset,
-                    # "helpslot_major_pullback": state.helpslot_major_pullback,
-                    # "helpslot_major_pullback": state.helpslot_major_reversal
-                }
+            # if "JILI" in provider and game == "Fortune Gems":
+            #     sub_conditions = {
+            #         "green_meter": (
+            #             state.helpslot_meter == "green" and
+            #             state.helpslot_10m <= 0 and
+            #             state.helpslot_10m > state.helpslot_1h > state.helpslot_3h
+            #             # state.helpslot_10m > state.helpslot_1h > state.helpslot_3h > state.helpslot_6h
+            #         ),
+            #         "red_meter": (
+            #             state.helpslot_meter == "red" and
+            #             state.helpslot_10m >= 0 and
+            #             state.helpslot_10m < state.helpslot_1h < state.helpslot_3h
+            #             # state.helpslot_10m < state.helpslot_1h < state.helpslot_3h < state.helpslot_6h
+            #         ),
+            #         # "jackpot_helpslot_high": state.helpslot_jackpot >= 80
+            #         "jackpot_high": state.current_color == "red" or abs(state.api_jackpot_delta) >= 3 or abs(state.helpslot_jackpot_delta) >= 3
+            #     }
+            # else:
+
             
             # logger.info(f"\n\t{WHTE}--- SUB CONDITIONS ---{RES}")
             # for key, is_triggered in sub_conditions.items():
@@ -1401,23 +1405,95 @@ def countdown_timer(seconds: int = 5):
             #     logger.info(f"\t{color}{key}{RES} >> {value}{mark}") if is_triggered else None
 
 
-            # Get which individual conditions are caught
+            # # Get which individual conditions are caught
+            # triggered_init = [name for name, value in init_conditions.items() if value]
+            # triggered_sub = [name for name, value in sub_conditions.items() if value]
+            # options = [
+            #     lambda: (threading.Thread(target=spin, args=(False, False,), daemon=True).start(), spin(False, False)),
+            #     lambda: spin(False, False)
+            # ]
+            
+            # if triggered_init and triggered_sub:
+            #     threading.Thread(target=spin, args=(False, False,), daemon=True)
+            #     chosen_spin = spin(False, False)
+            #     if chosen_spin == "normal_spin" and random.random() < 0.1:
+            #         spin(*random.choice([(True, False), (False, True)]))
+            #     # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+            # else:
+            # triggered_init = [name for name, value in init_conditions.items() if value]
+            # triggered_sub = [name for name, value in sub_conditions.items() if value]
+                        
             triggered_init = [name for name, value in init_conditions.items() if value]
             triggered_sub = [name for name, value in sub_conditions.items() if value]
             
-            # countdown_queue.put(True if all([triggered_init, triggered_sub]) else False)
+            last_time_sec = datetime.fromtimestamp(state.last_time).second
+            # logger.info(f"{LBLU}Trigger Sec ---> {trigger_sec}{RES}")
             
-            # if triggered_init and triggered_sub:
-            #     countdown_queue.put((triggered_init, triggered_sub))
+            if not state.fast_mode:
+                trigger_sec = int(last_time_sec) % seconds
+                reduce_secs = None
+                helpslot_trigger = False
+                api_trigger = False
                 
-            if triggered_init and triggered_sub:
-                # countdown_queue.put((triggered_init, triggered_sub))
-                threading.Thread(target=spin, args=(False, False,), daemon=True)
-                chosen_spin = spin(False, False)
-                if chosen_spin == "normal_spin" and random.random() < 0.1:
-                    spin(*random.choice([(True, False), (False, True)]))
-                # time.sleep(random.uniform(*SPIN_DELAY_RANGE))
+                if triggered_init and triggered_sub:
+                    reduce_secs = 9 if trigger_sec == 0 else (trigger_sec - 1) # 1 second
+                    # reduce_secs = 0 if trigger_sec == 0 else (trigger_sec1) # 0 seconds
+                    helpslot_trigger = True
+                    # alert_queue.put("instant")
+                    # logger.info(f"{LYEL}Current Sec ---> {current_sec}{RES}")
+                    # logger.info(f"{LYEL}Reduce 1 Sec ---> {reduce_secs}{RES}")
+                elif prediction_conditions:
+                    reduce_secs = 9 if trigger_sec == 1 else 8 if trigger_sec == 0 else (trigger_sec - 2) # 2 seconds
+                    # reduce_secs = 9 if trigger_sec == 0 else (trigger_sec - 1) # 1 second
+                    api_trigger = True
+                    # alert_queue.put("prediction")
+                    # logger.info(f" ---> prediction")
+                    # logger.info(f"{LMAG}Current Sec ---> {current_sec}{RES}")
+                    # logger.info(f"{LMAG}Reduce 2 Secs ---> {reduce_secs}{RES}")
+
+                if current_sec == reduce_secs:
+                    threading.Thread(target=spin, args=(False, False,), daemon=True).start()
+                    # if state.prev_pull_score >= 10:
+                    #     if spin_in_progress.is_set():
+                    #         spin_in_progress.clear()
+                    #         spin(*random.choice([(True, False), (False, True)]))
+                    #     else:
+                    #         threading.Thread(target=spin, args=(False, False,), daemon=True).start()
+                    
+                if current_sec % 10 == 7:
+                    alert_queue.put("ping")
+            else:   # FAST MODE
+                options = [
+                    # lambda: (threading.Thread(target=spin, args=(False, False,), daemon=True).start(), spin(False, False)),
+                    lambda: threading.Thread(target=spin, args=(False, False,), daemon=True).start(),
+                    lambda: spin(False, False)
+                ]
                 
+                if (current_sec != int(last_time_sec) % seconds): ##and (
+                    if triggered_init and triggered_sub:
+                        options[1]()
+                else:
+                    logger.info(f"{current_sec} -- {int(last_time_sec) % seconds}")
+                    if prediction_conditions:
+                        options[1]() if triggered_init else random.choice(options)()
+                        alert_queue.put("prediction")
+                
+                # spin(False, False)
+                # alert_queue.put("ping")
+                # logger.info(f"{LRED}High Jackpot Trigger ---> {helpslot_trigger}{RES}")    
+                # logger.info(f"{LRED}Prediction Trigger ---> {api_trigger}{RES}")    
+                # logger.info(f"{LRED}Current Sec ---> {current_sec}{RES}")
+                # logger.info(f"{LRED}Reduce Secs Final ---> {reduce_secs}{RES}")
+                # logger.info(f"{LMAG}Time Left ---> {time_left}{RES}")
+                    
+                # triggered_sub = [name for name, value in sub_conditions.items() if value]
+                # if triggered_init and triggered_sub:
+                #     options[1]()
+                # Get which individual conditions are caught
+                # options = [
+                #     lambda: (threading.Thread(target=spin, args=(False, False,), daemon=True).start(), spin(False, False)),
+                #     lambda: spin(False, False)
+                # ]
                 # logger.info(f"\n\t{WHTE}--- INIT CONDITIONS ---{RES}")
                 # for key, val in init_conditions.items():
                 #     is_triggered = val
@@ -1442,7 +1518,7 @@ def countdown_timer(seconds: int = 5):
                 #             f"6h={state.helpslot_6h}"
                 #         )
                 #     elif key == "jackpot_high":
-                #         value = state.api_jackpot
+                #         value = state.new_jackpot_val
                 #     else:
                 #         value = "N/A"
 
@@ -1508,8 +1584,6 @@ def countdown_timer(seconds: int = 5):
         # Calculate precise sleep until the next full second
         next_sec = math.ceil(now_time)
         sleep_time = max(0, next_sec - time.time())
-        # logger.info(f"sleep_time (now_time) ---- {sleep_time}")
-        # logger.info(f"sleep_time (state last_time) ---- {sleep_time}")
         time.sleep(sleep_time)
 
 # def countdown_timer(countdown_queue: ThQueue, seconds: int = 60):
@@ -1634,7 +1708,7 @@ def countdown_timer(seconds: int = 5):
     #     #     ):
     #     #         get_delta = round(state.api_10m - state.prev_10m, 2)
     #     #         state.non_stop = (
-    #     #             state.api_jackpot < state.prev_jackpot_val
+    #     #             state.new_jackpot_val < state.prev_jackpot_val
     #     #             and state.api_10m < state.prev_10m
     #     #             and get_delta < state.prev_pull_delta
     #     #         ) or state.is_low_breakout or state.is_low_delta_breakout or state.is_reversal or state.bet_lvl in ["max", "high"]
@@ -1774,7 +1848,7 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
 def spin(combo_spin: bool = False, spam_spin: bool = False):
     # while not stop_event.is_set():
     if spin_in_progress.is_set():
-        # logger.info("\t⚠️ Spin still in action, skipping")
+        logger.info("\t⚠️ Spin still in action, skipping")
         return
     
     spin_in_progress.set()
@@ -1830,7 +1904,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
         timeout_delay = random.uniform(*TIMEOUT_DELAY_RANGE)
         # print(f'widescreen: {widescreen}')
         # print(f'state.spin_btn: {state.spin_btn}')
-        # spin_type = "normal_spin"
+        # spin_type = "turbo_spin"
         
         if spin_type == "normal_spin":
             if state.widescreen:
@@ -2413,9 +2487,54 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
                     lambda: (pyautogui.click(x=rand_x, y=rand_y, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left')),
                     lambda: (pyautogui.click(x=rand_x, y=rand_y, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'))
                 ])
-        elif spin_type == "turbo_spin":
+        elif spin_type == "turbo_spin": # add turbo-on + space then board stop and turbo-off soon; also auto_spin + board_stop..etc
             if state.widescreen:
+                if game in [ "Fortune Gems", "Money Pot" ] and provider == "JILI": # Playtime
+                    cx += 40
+                    cy += 40
                 action.extend([
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.press('space'), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.press('space'), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.press('space'), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.press('space'), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    # super turbo
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.press('space'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.press('space'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.press('space'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.press('space'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    
                     lambda: pyautogui.doubleClick(x=cx + 520, y=cy + 335, button='left'),
                     lambda: pyautogui.doubleClick(x=cx + 520, y=cy + 335, button='right'),
                     lambda: (pyautogui.click(x=cx + 520, y=cy + 335, button='left'), pyautogui.press('space')),
@@ -2546,6 +2665,9 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
                 ])
         elif spin_type == "auto_spin":
             if state.widescreen:
+                if game in [ "Fortune Gems", "Money Pot" ] and provider == "JILI": # Playtime
+                    cx += 40
+                    cy += 40
                 action.extend([
                     lambda: pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='left'),
                     lambda: pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='right'),
@@ -2796,8 +2918,8 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
             
         # random.choice(init_action)()
         random.choice(action)()
-        logger.info(f"\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {RES}>")
-        
+        # now_time = time.time()
+        # current_sec = int(now_time) % 10
         return spin_type
         
         # now_time = time.time()
@@ -2817,9 +2939,12 @@ def spin(combo_spin: bool = False, spam_spin: bool = False):
         # print(f"\tTimeout Delay: {timeout_delay:.2f}")
         # print(f"\tCombo Spin: {combo_spin}")
         # logger.info(f"\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {RES}>")
+        # sys.stdout.write(f"\r\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {WHTE}{current_sec}{RES}>\n")
+        sys.stdout.write(f"\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES}>\n")
         # alert_queue.put("ping")
         # sys.stdout.flush()
-        # alert_queue.put(spin_type)
+        # alert_queue.put(f"{spin_type} {current_sec}")
+        alert_queue.put(f"{spin_type}") if not state.fast_mode else None
     # except Empty:
     #     continue
 
@@ -3923,62 +4048,36 @@ def get_game_data_from_local_api(game: str):
 
 def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
     last_min10 = None
-    
+
     while not stop_event.is_set():
         try:
             data, request_from = get_game_data_from_local_api(game)
-            state.new_data = False
-            
+
             if data and "error" not in data:
-                new_data = True
-                state.new_data = False
                 min10 = data.get("min10")
+                # state.new_data = False
                 if min10 != last_min10:
-                    data_queue.put(data)
-                    state.last_time = int(data.get('last_updated'))
-                    state.new_data = new_data
-                    
                     last_min10 = min10
-                    
-                    prev_api_jackpot_delta = state.api_jackpot_delta
-                    state.api_jackpot_delta = round(state.api_jackpot - data.get("value"), 2)
-                    state.api_jackpot = data.get("value")
-                    state.api_10m = data.get("min10")
-                    state.api_1h = data.get("hr1")
-                    state.api_3h = data.get("hr3")
-                    state.api_6h = data.get("hr6")
                     # state.non_stop = False
-                    # state.api_jackpot = data.get("value")
+                    # state.new_data = True
+                    # state.new_jackpot_val = data.get("value")
                     # state.api_major_pullback = False
-                    state.new_data = True
-                    state.api_major_pullback = False
-                    state.api_major_reset = False
-                    
-                    if data.get("value") >= 95:
-                        # alert_in_progress.clear()
-                        alert_queue.put(f"API Jackpot {data.get("value")}")
-                        if (state.api_jackpot_delta < prev_api_jackpot_delta) or (state.helpslot_jackpot >= 88 and (state.helpslot_major_pullback or state.helpslot_10m > -1 or state.helpslot_jackpot_delta < 1)):
-                            state.api_major_pullback = True
-                            # alert_in_progress.clear()
-                            # alert_queue.put(f"API Major Pullback")
-                        if data.get("value") == 100 and (state.api_jackpot_delta > prev_api_jackpot_delta):
-                            state.api_major_reset = True
-                            # alert_in_progress.clear()
-                            # alert_queue.put(f"API Major Reset")
+                    # if data.get("value") > 95:
+                    #     alert_queue.put(f"Jackpot {data.get("value")}")
+                    #     if data.get("value") == 100:
+                    #         state.api_major_pullback_next = True
                     # if state.api_major_pullback_next:
                     #     state.api_major_pullback = True
                     #     state.api_major_pullback_next = False
                     # state.jackpot_signal = ("bearish" if data.get("value") < state.prev_jackpot_val else "bullish" if data.get("value") > state.prev_jackpot_val else "neutral") if state.prev_jackpot_val != 0.0 else "neutral"
                     # signal = f"{LRED}⬇{RES}" if current_jackpot < prev_jackpot else f"{LGRE}⬆{RES}" if current_jackpot > prev_jackpot else f"{LCYN}◉{RES}"
                     # state.last_time = round(data.get('last_updated'))
-                    # state.last_time = int(data.get('last_updated'))
-                    # logger.debug(f"\n\tstate.last_time: {datetime.fromtimestamp(state.last_time)}")
+                    state.last_time = int(data.get('last_updated'))
+                    logger.debug(f"\n\tstate.last_time: {datetime.fromtimestamp(state.last_time)}")
                     # spin_queue.put((None, None, None, True)) # test spin on data not working
                     # alert_queue.put("new data")
-                    # data_queue.put(data)
-                else:
-                    new_data = False
-                    state.new_data = False
+                    data_queue.put(data)
+                # else:
                 #     alert_queue.put("redundant data")
                     # logger.info(f"\n\t🛰️. Redundant Data From [{BWHTE}{request_from}{RES}] → Current{BLNK}{BLYEL}={RES}{MAG}{min10}{RES} | Prev{BLNK}{BLYEL}={RES}{MAG}{last_min10}{RES}")
             else:
@@ -4002,27 +4101,34 @@ def on_key_press(key):
     if key == Key.shift:
         state.auto_mode = not state.auto_mode
         status = "ENABLED" if state.auto_mode else "DISABLED"
-        # alert_queue.put(say=f"auto mode {status}")
-        # alert_in_progress.clear()
+        # play_alert(say=f"auto mode {status}")
         alert_queue.put(f"auto mode {status}")
         color = BLMAG if status == "ENABLED" else BLRED
         logger.info(f"\t\t{WHTE}Auto Mode{RES}: {color}{status}{RES}")
+        
+    if key == Key.caps_lock:
+        state.fast_mode = not state.fast_mode
+        status = "ENABLED" if state.fast_mode else "DISABLED"
+        # play_alert(say=f"auto mode {status}")
+        alert_queue.put(f"fast mode {status}")
+        color = BLMAG if status == "ENABLED" else BLRED
+        logger.info(f"\t\t{WHTE}Fast Mode{RES}: {color}{status}{RES}")
 
 #     if key == Key.down:
 #         state.hotkeys = not state.hotkeys
 #         status = "ENABLED" if state.hotkeys else "DISABLED"
-#         alert_queue.put(say=f"hotkeys {status}")
+#         play_alert(say=f"hotkeys {status}")
 #         logger.info(f"Hotkeys: {status}")
 
 #     if key == Key.right:
 #         logger.info("Turbo: ON")
-#         alert_queue.put(say="turbo mode ON")
+#         play_alert(say="turbo mode ON")
 #         pyautogui.PAUSE = 0
 #         pyautogui.FAILSAFE = False
 
 #     elif key == Key.left:
 #         logger.info("Normal Speed: ON")
-#         alert_queue.put(say="normal speed ON")
+#         play_alert(say="normal speed ON")
 #         pyautogui.PAUSE = 0.1
 #         pyautogui.FAILSAFE = True
 
@@ -4412,7 +4518,6 @@ if __name__ == "__main__":
 
     stop_event = threading.Event()
     reset_event = threading.Event()
-    alert_in_progress = threading.Event()
     spin_in_progress = threading.Event()
 
     alert_queue = ThQueue()
@@ -4432,7 +4537,6 @@ if __name__ == "__main__":
     logger.info(render_games(provider))
     game = games_list(provider)
     alert_queue.put(game)
-    # alert_queue.put(game)
 
     # logger.info(f"\n\t>>> {RED}Select Source URL{RES} <<<\n")
 
@@ -4525,6 +4629,7 @@ if __name__ == "__main__":
 
     user_input = input(f"\n\n\tDo you want to enable {CYN}Auto Mode{RES} ❓ ({DGRY}y/N{RES}): ").strip().lower()
     auto_mode = user_input in ("y", "yes")
+    fast_mode = False
     dual_slots = False
     split_screen = False
     left_slot = right_slot = False
@@ -4560,8 +4665,8 @@ if __name__ == "__main__":
     breakout = load_breakout_memory(game)
 
     state = AutoState()
-    settings = configure_game(game, api_server, breakout, auto_mode, dual_slots, split_screen, left_slot, right_slot)#, forever_spin)
-
+    settings = configure_game(game, api_server, breakout, auto_mode, fast_mode, dual_slots, split_screen, left_slot, right_slot)#, forever_spin)
+    
     if dual_slots and split_screen:# and slot_position is not None:
         # if slot_position == "left":
         if left_slot:
@@ -4591,7 +4696,6 @@ if __name__ == "__main__":
     kb_thread = threading.Thread(target=start_listeners, args=(stop_event,), daemon=True)
     monitor_thread = threading.Thread(target=monitor_game_info, args=(game, provider, url, data_queue,), daemon=True)
     # spin_thread = threading.Thread(target=spin, daemon=True)
-    # spin_thread = threading.Thread(target=spin, args=(False, False,), daemon=True)
     # threading.Thread(target=keyboard, args=(settings,), daemon=True).start()
 
     # alert_thread.start()
@@ -4614,47 +4718,24 @@ if __name__ == "__main__":
         while True:
             try:
                 # Always check countdown queue in non-blocking way
-                # try:                    
-                #     trigger = countdown_queue.get_nowait()
-                    
-                #     if trigger and state.auto_mode:
-                #         chosen_spin = spin(False, False)
-                #         if chosen_spin == "normal_spin" and random.random() < 0.1:
-                #             chosen_spin = spin(*random.choice([(True, False), (False, True)]))
-                #         # alert_queue.put("ping")
-                #         logger.info(f"\t{LMAG}{trigger}{RES}") 
-                    
-                #     if not trigger and state.auto_mode:
-                #         now_time = time.time()
-                #         real_sec = int(now_time) % 10
-                #         last_time_sec = datetime.fromtimestamp(state.last_time).second
-                #         last_sec = int(last_time_sec) % 10
-                #         new_data_color = BLRED if state.new_data else DGRY
-                        
-                #         logger.info(f"\n\t✅ {real_sec} {last_sec}")
-                #         if (real_sec == last_sec) or state.new_data:
-                #             logger.info(f"\n\t✅ {new_data_color} << API New Data")
-                #             chosen_spin = spin(*random.choice([(True, False), (False, True)]))
-                #             # options = [
-                #             #     lambda: (threading.Thread(target=spin, args=(False, False,), daemon=True).start(), spin(False, False)),
-                #             #     lambda: spin(False, False)
-                #             # ]
-                #             # options[1]() if state.new_data else random.choice(options)()
-                #             chosen_spin = spin(False, False)
-                #             if chosen_spin == "normal_spin" and random.random() < 0.1:
-                #                 chosen_spin = spin(*random.choice([(True, False), (False, True)]))
+                # try:
+                #     msg = countdown_queue.get_nowait()
+                #     logger.info(f"\n✅ {msg}")
                 # except Empty:
                 #     pass
                 
-                helpslot_data = fetch_queue.get_nowait()                
+                # Wait for data (block until something arrives)
+                # data = data_queue.get(timeout=1)
+                helpslot_data = fetch_queue.get_nowait()
                 data = data_queue.get_nowait()
-                
                 parsed_data = extract_game_data(data)
-                all_helpslot_data = load_previous_data("helpslot")
+
                 all_data = load_previous_data("api")
-                previous_helpslot_data = all_helpslot_data.get(game.lower())
+                all_helpslot_data = load_previous_data("helpslot")
+
                 previous_data = all_data.get(game.lower())
-                
+                previous_helpslot_data = all_helpslot_data.get(game.lower())
+
                 compare_data(previous_data, parsed_data, previous_helpslot_data, helpslot_data)
 
                 all_data[game.lower()] = parsed_data

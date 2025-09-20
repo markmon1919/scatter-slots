@@ -13,7 +13,7 @@ requestFroms=("H5" "H6")
 rf_index=0
 
 api_url="https://www.helpslot.win/api/games"
-name="Super Ace"
+name="JILI CAISHEN"
 manuf="JILI"
 
 # ──────────────────────────────

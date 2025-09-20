@@ -192,7 +192,7 @@ GAME_CONFIGS = {
     "Master Tiger": GameConfig(False, True, True, None, False, True, "JILI"),
     "Mayan Empire": GameConfig(False, True, True, None, False, True, "JILI"),
     "Medusa": GameConfig(False, True, True, None, False, True, "JILI"),
-    "Mega Ace": GameConfig(False, True, True, None, False, True, "JILI"),
+    "Mega Ace": GameConfig(False, True, True, None, False, False, "JILI"),
     "Mines Gold": GameConfig(False, True, True, None, False, True, "JILI"),
     "Mines Grand": GameConfig(False, True, True, None, False, True, "JILI"),
     "Money Coming": GameConfig(False, True, True, None, False, True, "JILI"),
@@ -1115,7 +1115,7 @@ API_CONFIG = {
     "refresh_interval": 1  # fast initial poll interval
 }
 
-API_URL = [ "http://localhost:7777", "https://api-jackpot.fly.dev" ]
+API_URL = [ "http://localhost:8080", "https://api-jackpot.fly.dev" ]
 # API_URL = "https://api-jackpot.fly.dev"
 VPS_IP = "66.241.124.83"
 
