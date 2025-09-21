@@ -1246,7 +1246,7 @@ def countdown_timer(seconds: int = 10):
                 if spin_in_progress.is_set():
                     spin_in_progress.clear()
                                         
-                logger.info(f"\t\t{BLCYN}Pull Score: {state.pull_score} {"CLEAR" if spin_in_progress.is_set() else "INSTANT"} -- {current_sec} secs{RES}")
+                logger.info(f"\t\t{BLCYN}Pull Score: {state.pull_score} {"Clear" if spin_in_progress.is_set() else "Instant"} -- {current_sec} secs{RES}")
                 threading.Thread(target=spin, args=(False, False, True, 0.0,), daemon=True).start()
                 # alert_queue.put(f"pull score spin")
             # if current_sec % 10 == 9:
