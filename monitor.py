@@ -1242,7 +1242,7 @@ def countdown_timer(seconds: int = 10):
 
         # NEW
         if state.auto_mode:
-            if current_sec in range(2) and any([state.pull_score >= 10, state.helpslot_jackpot >= 90, state.new_jackpot_val >= 100]):
+            if current_sec in range(1) and any([state.pull_score >= 10, state.helpslot_jackpot >= 90, state.new_jackpot_val >= 100]):
                 if spin_in_progress.is_set():
                     spin_in_progress.clear()
                                         
@@ -4777,7 +4777,7 @@ if __name__ == "__main__":
                 save_current_data("api", all_data)
                 save_current_data("helpslot", all_helpslot_data)
 
-                # create_time_log(all_data)
+                create_time_log(all_data)
 
                 # alert_queue.put(re.sub(r"\s*\(.*?\)", "", game))
                 # alert_queue.put("low_break_out") if state.is_low_breakout else None
