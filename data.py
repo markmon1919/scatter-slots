@@ -1,7 +1,8 @@
 #!/usr/bin/env .venv/bin/python
 
-import asyncio, hashlib, httpx, json, math, random, subprocess, time, uvicorn
+import asyncio, hashlib, httpx, json, math, os, random, socket, subprocess, time, uvicorn
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from decimal import Decimal
@@ -282,16 +283,37 @@ async def get_latest_game(
 
     return latest_data[key]
 
-@app.get("/games")
-async def list_games():
-    return {
-        "registered_games": list(registrations.keys()),
-        "data_keys": [f"{n}|{rf}" for (n, rf) in latest_data.keys()]
-    }
+@app.get("/file/game")
+async def get_game_csv():
+    # Make sure there is at least one registered game
+    if not registrations:
+        raise HTTPException(status_code=404, detail="No registered games available")
+    
+    # Take the first registered game
+    game_name = list(registrations.keys())[0]
+    filename = f"{game_name.replace(' ', '_').lower()}_log.csv"
+    
+    if not os.path.isfile(filename):
+        raise HTTPException(status_code=404, detail=f"CSV file for '{game_name}' not found")
+    
+    return FileResponse(filename, media_type="text/csv")
 
-# ──────────────
-# MAIN
-# ──────────────
+def get_lan_ip():
+    """Get the LAN IP of the machine"""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Connect to a public IP (doesn't actually send data)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = "127.0.0.1"
+    finally:
+        s.close()
+    return ip
 
 if __name__ == "__main__":
+    lan_ip = get_lan_ip()
+    print(f"🚀 FastAPI running on localhost:8080 (also accessible via LAN: http://{lan_ip}:8080)")
+    
     uvicorn.run("data:app", host="0.0.0.0", port=8080, reload=True)
+    

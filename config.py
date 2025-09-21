@@ -1115,7 +1115,7 @@ API_CONFIG = {
     "refresh_interval": 1  # fast initial poll interval
 }
 
-API_URL = [ "http://localhost:8080", "https://api-jackpot.fly.dev" ]
+API_URL = [ "http://localhost:8080", "https://api-jackpot.fly.dev", "http://172.16.0.128:8080" ]
 # API_URL = "https://api-jackpot.fly.dev"
 VPS_IP = "66.241.124.83"
 

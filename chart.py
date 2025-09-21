@@ -7,11 +7,14 @@ import requests
 from matplotlib.animation import FuncAnimation
 from config import API_URL
 
-# ---------- GET GAME INFO ----------
+# ---------- GET GAME INFO ----------    
 def get_games_data_from_local_api():
+    # api_url = API_URL[0] #localhost
+    api_url = API_URL[2] #local network
+    
     try:
         response = requests.get(
-            f"{API_URL[0]}/games",
+            f"{api_url}/games",
         )
 
         json_data = response.json()
@@ -21,17 +24,37 @@ def get_games_data_from_local_api():
     except Exception as e:
         print(f"❌ Error calling API: {e}")
         return {"error": str(e)}
+    
+def get_games_csv_from_local_api():
+    # api_url = API_URL[0] #localhost
+    api_url = API_URL[2] #local network
+    
+    try:
+        response = requests.get(
+            f"{api_url}/file/game",
+        )
+
+        filename = response.json()
+        
+        return filename if filename else None
+
+    except Exception as e:
+        print(f"❌ Error calling API: {e}")
+        return {"error": str(e)}
 
 # ---------- SETTINGS ----------
 GAME = None
-CSV_FILE = None
+CSV_FILE = get_games_csv_from_local_api()
 GAME_LIST = get_games_data_from_local_api()
 
 if GAME_LIST:
     GAME = GAME_LIST[0]  # take the first registered game
-    CSV_FILE = f"{GAME.replace(' ', '_').lower()}_log.csv"
 else:
     print("⚠️ No registered games found from API.")
+    
+if not CSV_FILE:
+    CSV_FILE = f"{GAME.replace(' ', '_').lower()}_log.csv"
+    print("⚠️ No filename found from API. Fetching local file")
     
 MAX_CANDLES = 24
 REFRESH_INTERVAL = 2000  # ms
