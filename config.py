@@ -191,7 +191,7 @@ GAME_CONFIGS = {
     "Magic Lamp Bingo": GameConfig(False, True, True, None, False, True, "JILI"),
     "Master Tiger": GameConfig(False, True, True, None, False, True, "JILI"),
     "Mayan Empire": GameConfig(False, True, True, None, False, True, "JILI"),
-    "Medusa": GameConfig(False, True, True, None, False, True, "JILI"),
+    # "Medusa": GameConfig(False, True, True, None, False, True, "JILI"), Conflict Key same name
     "Mega Ace": GameConfig(False, True, True, None, False, False, "JILI"),
     "Mines Gold": GameConfig(False, True, True, None, False, True, "JILI"),
     "Mines Grand": GameConfig(False, True, True, None, False, True, "JILI"),

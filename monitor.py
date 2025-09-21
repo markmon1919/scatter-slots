@@ -420,7 +420,7 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
     slot_text_centered = center_text(slot_text, space_for_text)
     slot_line = f"🃏{slot_text_centered}🎰"
 
-    time_line = f"\n\n\n\t\t{WHTE}[{DGRY}{f"{today.second}.{today.microsecond // 10000:02d}"} ms{WHTE}]{RES}  ⏰  {BYEL}{today.strftime('%I')}{BWHTE}:{BYEL}{today.strftime('%M')}{BWHTE}:{BLYEL}{today.strftime('%S')} {LBLU}{today.strftime('%p')} {MAG}{today.strftime('%a')}{RES}"
+    time_line = f"\n\n\n\t\t{LMAG}[{DGRY}{f"{today.second}.{today.microsecond // 10000:02d}"} ms{WHTE}]{RES}  ⏰  {BYEL}{today.strftime('%I')}{BWHTE}:{BYEL}{today.strftime('%M')}{BWHTE}:{BLYEL}{today.strftime('%S')} {LBLU}{today.strftime('%p')} {MAG}{today.strftime('%a')}{RES}"
     time_line_centered = center_text(time_line, content_width)
 
     banner_lines = [
@@ -4447,7 +4447,7 @@ def render_games(provider: str, blink_idx: int=None, blink_on: bool=True):
         left_str = f"[{WHTE}{idx}{RES}] - {left_color}{left_game}{RES}"
         
         if left_game.lower() in trending_games:
-            left_str = f"[{WHTE}{idx}{RES}] - {left_color}{BLNK}{left_game}{RES}"
+            left_str = f" {LMAG}{idx}{RES}  - {LYEL}{BLNK}{left_game} 🔥{RES}"
             is_blinking = True
                 
         right_index = idx - 1 + half
@@ -4458,7 +4458,7 @@ def render_games(provider: str, blink_idx: int=None, blink_on: bool=True):
         # else:
         #     right_str = "\t"
         if right_game.lower() in trending_games:
-            right_str = f"[{WHTE}{right_index + 1:>2}{RES}] - {right_color}{BLNK}{right_game}{RES}"
+            right_str = f" {LMAG}{right_index + 1:>2}{RES}  - {LYEL}{BLNK}{right_game} 🔥{RES}"
 
         if is_blinking:
             lines.append(f"\t{left_str:<50}\t\t\t{right_str}")
