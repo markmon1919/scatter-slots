@@ -1134,7 +1134,7 @@ def play_alert(say: str=None):
                 if sound_file == "ping":
                     subprocess.run(["afplay", PING])
                 else:
-                    voice = VOICES["Trinoids"] if sound_file in [ "prediction", "pull score spin", "bet max" ] else VOICES["Samantha"]
+                    voice = VOICES["Trinoids"] if "prediction" in sound_file or "pull score spin" in sound_file or "bet max" in sound_file else VOICES["Samantha"]
                     subprocess.run(["say", "-v", voice, "--", sound_file])
                     
             except Empty:
@@ -1246,7 +1246,7 @@ def countdown_timer(seconds: int = 10):
                 if spin_in_progress.is_set():
                     spin_in_progress.clear()
                                         
-                logger.info(f"\t\t{BLCYN}Pull Score:: {state.pull_score} {"CLEAR" if spin_in_progress.is_set() else "INSTANT"} -- {current_sec} secs{RES}")
+                logger.info(f"\t\t{BLCYN}Pull Score: {state.pull_score} {"CLEAR" if spin_in_progress.is_set() else "INSTANT"} -- {current_sec} secs{RES}")
                 threading.Thread(target=spin, args=(False, False, True, 0.0,), daemon=True).start()
                 # alert_queue.put(f"pull score spin")
             # if current_sec % 10 == 9:
