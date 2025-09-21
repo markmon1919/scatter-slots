@@ -48,7 +48,7 @@ CSV_FILE = None
 if GAME:
     CSV_FILE = f"{GAME.replace(' ', '_').lower()}_log.csv"
 
-MAX_CANDLES = 24
+MAX_CANDLES = 45 # 1 candle : 10 secs / 6 candles : 1 min
 REFRESH_INTERVAL = 2000  # ms
 
 # Dark style with green up/red down
