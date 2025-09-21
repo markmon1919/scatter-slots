@@ -2973,7 +2973,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
         # alert_queue.put("ping")
         # sys.stdout.flush()
         # alert_queue.put(f"{spin_type} {current_sec}")
-        alert_queue.put(f"{spin_type}") if not state.fast_mode else alert_queue.put(f"pull score spin") if turbo_spin else None
+        alert_queue.put(f"{spin_type if not turbo_spin else 'pull score spin'}") if not state.fast_mode else None
     # except Empty:
     #     continue
 
