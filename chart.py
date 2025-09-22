@@ -7,11 +7,12 @@ import io, requests
 from matplotlib.animation import FuncAnimation
 from config import API_URL
 
+
+# api_url = API_URL[0]  # localhost
+api_url = API_URL[2]  # local network
+
 # ---------- GET GAME INFO ----------    
 def get_games_data_from_local_api():
-    # api_url = API_URL[0]  # localhost
-    api_url = API_URL[2]  # local network
-
     try:
         response = requests.get(f"{api_url}/games", timeout=3)
         response.raise_for_status()
@@ -23,7 +24,6 @@ def get_games_data_from_local_api():
         return None
     
 def get_games_csv_from_local_api():
-    api_url = API_URL[2]  # local network
     try:
         response = requests.get(f"{api_url}/file/game", timeout=3)
         if response.status_code == 200:

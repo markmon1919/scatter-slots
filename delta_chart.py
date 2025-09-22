@@ -7,11 +7,12 @@ import io, requests
 from matplotlib.animation import FuncAnimation
 from config import API_URL
 
+
+# api_url = API_URL[0]  # localhost
+api_url = API_URL[2]  # local network
+
 # ---------- GET GAME INFO ----------    
 def get_games_data_from_local_api():
-    # api_url = API_URL[0]  # localhost
-    api_url = API_URL[2]  # local network
-
     try:
         response = requests.get(f"{api_url}/games", timeout=3)
         response.raise_for_status()
@@ -23,7 +24,6 @@ def get_games_data_from_local_api():
         return None
     
 def get_games_csv_from_local_api():
-    api_url = API_URL[2]  # local network
     try:
         response = requests.get(f"{api_url}/file/game", timeout=3)
         if response.status_code == 200:
@@ -52,7 +52,7 @@ MAX_CANDLES = 45 # 1 candle : 10 secs / 6 candles : 1 min
 REFRESH_INTERVAL = 2000  # ms
 
 # Dark style with green up/red down
-mc = mpf.make_marketcolors(up='lime', down='red', wick='white', edge='inherit')
+mc = mpf.make_marketcolors(up='lightgreen', down='tomato', wick='white', edge='inherit')
 dark_style = mpf.make_mpf_style(
     base_mpf_style='nightclouds',
     marketcolors=mc,
@@ -97,7 +97,7 @@ def load_data():
         print(f"⚠️  Unexpected CSV error: {e}")
         return pd.DataFrame()
 
-    if "timestamp" not in df.columns or "10m" not in df.columns:
+    if "timestamp" not in df.columns or "10m_delta" not in df.columns:
         print("⚠️  Missing required columns in CSV")
         return pd.DataFrame()
 
@@ -131,14 +131,14 @@ def animate(i):
             type='candle',
             style=dark_style,
             ax=ax,
-            ylabel='10m Value'
+            ylabel='10m Pull Value'
         )
-        ax.set_title(f"{GAME_LABEL} - [10 minute Chart] ({pd.Timestamp.now().date()})", color="white")
+        ax.set_title(f"{GAME_LABEL} - [10MIN PULL CHART] ({pd.Timestamp.now().date()})", color="white")
     else:
         ax.set_title(f"{GAME_LABEL} - ⚠️  No data available", color="white")
 
     ax.set_xlabel("Time", color="white")
-    ax.set_ylabel("10m Value", color="white")
+    ax.set_ylabel("10m Pull Value", color="white")
     plt.setp(ax.get_xticklabels(), rotation=45, ha='right', color='white')
     plt.setp(ax.get_yticklabels(), color='white')
     ax.grid(True, linestyle="--", color="gray", alpha=0.5)

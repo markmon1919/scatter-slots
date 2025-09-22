@@ -290,13 +290,14 @@ async def get_game_csv():
         raise HTTPException(status_code=404, detail="No registered games available")
     
     # Take the first registered game
-    game_name = list(registrations.keys())[0]
-    filename = f"{game_name.replace(' ', '_').lower()}_log.csv"
+    game = list(registrations.keys())[0]
+    logs_folder = os.path.join(os.getcwd(), "logs")
+    TIME_DATA = os.path.join(logs_folder, f"{game.strip().replace(' ', '_').lower()}_log.csv")
     
-    if not os.path.isfile(filename):
-        raise HTTPException(status_code=404, detail=f"CSV file for '{game_name}' not found")
+    if not os.path.isfile(TIME_DATA):
+        raise HTTPException(status_code=404, detail=f"CSV file for '{game}' not found")
     
-    return FileResponse(filename, media_type="text/csv")
+    return FileResponse(TIME_DATA, media_type="text/csv")
 
 def get_lan_ip():
     """Get the LAN IP of the machine"""

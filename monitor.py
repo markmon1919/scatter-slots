@@ -368,7 +368,7 @@ def load_previous_time_data():
                 }
             else:
                 result[key] = None
-
+                
         result["latest"] = {
             "timestamp": base_time,
             "jackpot_meter": latest_row["jackpot_meter"],
@@ -4713,8 +4713,10 @@ if __name__ == "__main__":
         CENTER_X, CENTER_Y = SCREEN_POS.get("center_x"), SCREEN_POS.get("center_y")
     LEFT_X, RIGHT_X, TOP_Y, BTM_Y = 0, SCREEN_POS.get("right_x"), 0, SCREEN_POS.get("bottom_y")
     # LEFT_X, RIGHT_X, TOP_Y, BTM_Y = 0, SCREEN_POS.get("right_x"), 0, SCREEN_POS.get("bottom_y") - 55 # DREAM CASINO
-
-    TIME_DATA = f"{game.strip().replace(' ', '_').lower()}_log.csv"
+    
+    logs_folder = os.path.join(os.getcwd(), "logs")
+    os.makedirs(logs_folder, exist_ok=True)
+    TIME_DATA = os.path.join(logs_folder, f"{game.strip().replace(' ', '_').lower()}_log.csv")
 
     # alert_queue = ThQueue()
     bet_queue = ThQueue()
