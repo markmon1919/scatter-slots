@@ -131,14 +131,14 @@ def animate(i):
             type='candle',
             style=dark_style,
             ax=ax,
-            ylabel='10m Pull Value'
+            ylabel='10m Delta Value'
         )
-        ax.set_title(f"{GAME_LABEL} - [10MIN PULL CHART] ({pd.Timestamp.now().date()})", color="white")
+        ax.set_title(f"{GAME_LABEL} - [ 10 MIN DELTA CHART ] ({pd.Timestamp.now().date()})", color="white")
     else:
         ax.set_title(f"{GAME_LABEL} - ⚠️  No data available", color="white")
 
     ax.set_xlabel("Time", color="white")
-    ax.set_ylabel("10m Pull Value", color="white")
+    ax.set_ylabel("10m Delta Value", color="white")
     plt.setp(ax.get_xticklabels(), rotation=45, ha='right', color='white')
     plt.setp(ax.get_yticklabels(), color='white')
     ax.grid(True, linestyle="--", color="gray", alpha=0.5)

@@ -52,7 +52,7 @@ MAX_CANDLES = 45 # 1 candle : 10 secs / 6 candles : 1 min
 REFRESH_INTERVAL = 2000  # ms
 
 # Dark style with green up/red down
-mc = mpf.make_marketcolors(up='lime', down='red', wick='white', edge='inherit')
+mc = mpf.make_marketcolors(up='lime', down='tomato', wick='white', edge='inherit')
 dark_style = mpf.make_mpf_style(
     base_mpf_style='nightclouds',
     marketcolors=mc,
@@ -97,7 +97,7 @@ def load_data():
         print(f"⚠️  Unexpected CSV error: {e}")
         return pd.DataFrame()
 
-    if "timestamp" not in df.columns or "10m" not in df.columns:
+    if "timestamp" not in df.columns or "jackpot_meter" not in df.columns:
         print("⚠️  Missing required columns in CSV")
         return pd.DataFrame()
 
@@ -108,8 +108,8 @@ def load_data():
         return pd.DataFrame()
 
     # Build OHLC
-    df_today['Open'] = df_today['10m'].shift(1)
-    df_today['Close'] = df_today['10m']
+    df_today['Open'] = df_today['jackpot_meter'].shift(1)
+    df_today['Close'] = df_today['jackpot_meter']
     df_today['High'] = df_today[['Open', 'Close']].max(axis=1)
     df_today['Low'] = df_today[['Open', 'Close']].min(axis=1)
     df_today = df_today.dropna()
@@ -131,14 +131,14 @@ def animate(i):
             type='candle',
             style=dark_style,
             ax=ax,
-            ylabel='10m Value'
+            ylabel='Jackpot Meter Value'
         )
-        ax.set_title(f"{GAME_LABEL} - [ 10 MIN CHART ] ({pd.Timestamp.now().date()})", color="white")
+        ax.set_title(f"{GAME_LABEL} - [ JACKPOT CHART ] ({pd.Timestamp.now().date()})", color="white")
     else:
         ax.set_title(f"{GAME_LABEL} - ⚠️  No data available", color="white")
 
     ax.set_xlabel("Time", color="white")
-    ax.set_ylabel("10m Value", color="white")
+    ax.set_ylabel("Jackpot Meter Value", color="white")
     plt.setp(ax.get_xticklabels(), rotation=45, ha='right', color='white')
     plt.setp(ax.get_yticklabels(), color='white')
     ax.grid(True, linestyle="--", color="gray", alpha=0.5)
