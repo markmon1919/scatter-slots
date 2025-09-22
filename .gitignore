@@ -73,6 +73,7 @@ dist/*
 *.py[cod]
 *.pyc
 *_data.json
+logs/*
 
 # # dependencies
 **/node_modules/**
