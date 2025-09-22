@@ -291,10 +291,11 @@ def create_time_log(data: dict):
         "10m": history.get("10m", ""),
         "1h": history.get("1h", ""),
         "3h": history.get("3h", ""),
-        "6h": history.get("6h", "")
+        "6h": history.get("6h", ""),
+        "10m_delta": state.pull_delta
     }
 
-    fieldnames = [ "timestamp", "jackpot_meter", "color", "10m", "1h", "3h", "6h" ]
+    fieldnames = [ "timestamp", "jackpot_meter", "color", "10m", "1h", "3h", "6h", "10m_delta" ]
     write_header = not os.path.exists(TIME_DATA)
 
     with open(TIME_DATA, "a", newline="") as csvfile:
@@ -317,7 +318,8 @@ def load_previous_time_data():
                     "10m": float(row["10m"]),
                     "1h": float(row["1h"]),
                     "3h": float(row["3h"]),
-                    "6h": float(row["6h"])
+                    "6h": float(row["6h"]),
+                    "10m_delta": float(row["10m_delta"])
                 }
                 data.append(parsed)
 
@@ -2942,9 +2944,9 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
             # continue
             
         # random.choice(init_action)()
-        if wait > 0.0 and spin_type != "auto_spin":
-            # logger.info(f"\n WAIT BEFORE SPIN (exclude exclude_auto_spin) >> {wait}")
-            time.sleep(wait)
+        # if wait > 0.0 and spin_type != "auto_spin":
+        #     # logger.info(f"\n WAIT BEFORE SPIN (exclude exclude_auto_spin) >> {wait}")
+        #     time.sleep(wait)
         
         random.choice(action)()
         # now_time = time.time()
@@ -4776,7 +4778,7 @@ if __name__ == "__main__":
 
                 save_current_data("api", all_data)
                 save_current_data("helpslot", all_helpslot_data)
-
+                
                 create_time_log(all_data)
 
                 # alert_queue.put(re.sub(r"\s*\(.*?\)", "", game))
