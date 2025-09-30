@@ -14,7 +14,7 @@ api_url = API_URL[2]  # local network
 # ---------- GET GAME INFO ----------    
 def get_games_data_from_local_api():
     try:
-        response = requests.get(f"{api_url}/games", timeout=3)
+        response = requests.get(f"{api_url}/games", timeout=5)
         response.raise_for_status()
         json_data = response.json()
         data = json_data.get("registered_games", [])

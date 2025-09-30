@@ -1,21 +1,28 @@
 #!/usr/bin/env .venv/bin/python
 
-import asyncio, hashlib, httpx, json, math, os, random, socket, subprocess, time, uvicorn
+import aiofiles, asyncio, httpx, json, logging, os, random, time, uvicorn, socket#, hashlib, socket, csv, subprocess, math, 
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from datetime import datetime
-from config import (USER_AGENTS, PROVIDERS,
+from config import (USER_AGENTS, PROVIDERS, LOGS_PATH,
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, 
                     GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, 
                     BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
+
+logging.basicConfig(
+    level=logging.INFO,
+    # format="%(asctime)s [%(levelname)s] %(message)s",
+    # datefmt="%H:%M:%S",
+)
+logger = logging.getLogger("data")
+
 # ──────────────
 # CONSTANTS
 # ──────────────
-
 REQUEST_FROMS = ["H5", "H6"]
 POLL_SLEEP_SECONDS = 6  # sleep when no change detected
 
@@ -35,43 +42,24 @@ class RegisterRequest(BaseModel):
 registrations = {}          # name -> {"url": ..., "provider": ...}
 last_min10s = {}            # (name, requestFrom) → min10 value
 last_change_times = {}      # (name, requestFrom) → Decimal(timestamp)
-last_hashes = {}            # (name, requestFrom) → str(hash)
+# last_hashes = {}            # (name, requestFrom) → str(hash)
 latest_data = {}            # (name, requestFrom) → dict
+last_logged = {}
 
 # ──────────────
 # HELPER FUNCTIONS
 # ──────────────
 
-def _make_safe_attr(name: str, request_from: str) -> str:
-    safe_name = "".join(c if c.isalnum() else "_" for c in name)
-    safe_req = "".join(c if c.isalnum() else "_" for c in request_from)
-    return f"last_known_hash_{safe_name}_{safe_req}"
+# def _make_safe_attr(name: str, request_from: str) -> str:
+#     safe_name = "".join(c if c.isalnum() else "_" for c in name)
+#     safe_req = "".join(c if c.isalnum() else "_" for c in request_from)
+#     return f"last_known_hash_{safe_name}_{safe_req}"
 
-async def kill_port_8080():
-    try:
-        result = subprocess.run(
-            ["lsof", "-t", "-i", ":8080"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True
-        )
-        pids = result.stdout.strip().splitlines()
-        if not pids:
-            print(f"\n✅  No process using port 8080.")
-            return
-
-        for pid in pids:
-            subprocess.run(["kill", "-9", pid])
-            print(f"\n🛑  Killed process {pid} using port 8080\n")
-
-    except Exception as e:
-        print(f"\n❌  Failed to kill port 8080: {e}")
-
-async def align_to_next_7s():
+async def align_to_next_6s():
     now = time.time()
     next_t = ((int(now) // 6) + 1) * 6
     wait_time = next_t - now
-    print(f"\n⏰  Waiting {BLMAG}{wait_time:.3f}{RES}s to align to next polling boundary...\n")
+    logger.info(f"\n⏰  Waiting {BLMAG}{wait_time:.3f}{RES}s to align to next polling boundary...\n")
     await asyncio.sleep(wait_time)
 
 # ──────────────
@@ -97,7 +85,7 @@ async def poll_single(client, name, reg, requestFrom):
     provider_obj = PROVIDERS.get(provider)
     provider_color = getattr(provider_obj, "color", "") if provider_obj else ""
     
-    print(f"\n🕓  Polling {PROVIDERS.get(provider).color}{name}{RES} with requestFrom={WHTE}{requestFrom}{RES} UA={WHTE}{user_agent[:30]}{RES}\n")
+    logger.info(f"\n🕓  Polling {PROVIDERS.get(provider).color}{name}{RES} with requestFrom={WHTE}{requestFrom}{RES} UA={WHTE}{user_agent[:30]}{RES}\n")
 
     try:
         resp = await client.get(poll_url, params=params, headers=headers)
@@ -114,11 +102,11 @@ async def poll_single(client, name, reg, requestFrom):
             if min10 is not None:
                 key = (name, requestFrom)
                 prev_min10 = last_min10s.get(key)
-
+                
                 if min10 != prev_min10:
                     if key in last_change_times:
                         interval = now_time - last_change_times[key]
-                        print(
+                        logger.info(
                             f"\n✅  <{BYEL}{now_dt.strftime('%I')}{BWHTE}:{BYEL}{now_dt.strftime('%M')}"
                             f"{BWHTE}:{BLYEL}{now_dt.strftime('%S')}{now_dt.strftime('%f')[:3]}{RES}>"
                             f"[{provider_color}{name}{RES} | "
@@ -126,25 +114,29 @@ async def poll_single(client, name, reg, requestFrom):
                             f"Changed → {LYEL}{min10}{RES} ({LMAG}Δ {BLCYN}{interval}{RES}s)\n"
                         )
                     else:
-                        print(
+                        logger.info(
                             f"\n✅  <{BYEL}{now_dt.strftime('%I')}{BWHTE}:{BYEL}{now_dt.strftime('%M')}"
                             f"{BWHTE}:{BLYEL}{now_dt.strftime('%S')}{now_dt.strftime('%f')[:3]}{RES}>"
                             f"[{provider_color}{name}{RES} | "
                             f"{WHTE if requestFrom == 'H5' else DGRY}{requestFrom}{RES}] "
                             f"First → {YEL}{min10}{RES}\n"
                         )
-
+                        
                     new_data = dict(first)
                     new_data["last_updated"] = str(now_time)
-                    hash_val = hashlib.md5(json.dumps(new_data, sort_keys=True).encode()).hexdigest()
-
+                    # hash_val = hashlib.md5(json.dumps(new_data, sort_keys=True).encode()).hexdigest()
                     latest_data[key] = new_data
                     last_min10s[key] = min10
                     last_change_times[key] = now_time
-                    last_hashes[key] = hash_val
+                    # last_hashes[key] = hash_val
+                    new_data['10m_delta'] = (min10 - prev_min10)
+                    try:
+                        await create_time_log(new_data)
+                    except Exception as e:
+                        logger.info(f"⚠️ {BLRED}Failed to log CSV for {provider_color}{name}{RES}: {e}")
                 else:
                     # No change
-                    print(
+                    logger.info(
                         f"\n❌  <{BYEL}{now_dt.strftime('%I')}{BWHTE}:{BYEL}{now_dt.strftime('%M')}"
                         f"{BWHTE}:{BLYEL}{now_dt.strftime('%S')}{now_dt.strftime('%f')[:3]}{RES}>"
                         f"[{provider_color}{name}{RES} | "
@@ -152,20 +144,22 @@ async def poll_single(client, name, reg, requestFrom):
                         f"Still → {DGRY}{min10}{RES}\n"
                     )
             else:
-                print(f"⚠️  Received data but missing 'min10' for {name} [{requestFrom}]")
+                logger.info(f"⚠️  Received data but missing 'min10' for {name} [{requestFrom}]")
         else:
-            print(f"⚠️  No valid data list for {name} [{requestFrom}]")
+            logger.info(f"⚠️  No valid data list for {name} [{requestFrom}]")
     except Exception as e:
-        print(f"⚠️  Poll error [{name} / {requestFrom}]: {e}")
+        logger.info(f"⚠️  Poll error [{name} / {requestFrom}]: {e}")
 
 # ──────────────
 # POLLER LOOP
 # ──────────────
 
 async def poller_loop():
-    await align_to_next_7s()
+    await align_to_next_6s()
     
-    async with httpx.AsyncClient(timeout=1.0) as client:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(
+        connect=2.0, read=5.0, write=5.0, pool=5.0
+    )) as client:
         rf_index = 0  # alternating index
 
         while True:
@@ -191,7 +185,7 @@ async def poller_loop():
                         stale_names.append(name)
 
             if stale_names:
-                print(f"⏳. {DGRY}Refreshing stale data from {other_rf} for games{RES}: {stale_names}")
+                logger.info(f"⏳. {DGRY}Refreshing stale data from {other_rf} for games{RES}: {stale_names}")
                 refresh_tasks = [
                     poll_single(client, name, registrations[name], other_rf)
                     for name in stale_names
@@ -216,8 +210,7 @@ async def lifespan(app: FastAPI):
         try:
             await poller_task
         except asyncio.CancelledError:
-            print("\n⛔  Poller loop cancelled cleanly on shutdown.")
-        await kill_port_8080()
+            logger.info("\n⛔  Poller loop cancelled cleanly on shutdown.")
 
 # ──────────────
 # FastAPI app
@@ -239,7 +232,7 @@ async def root():
 async def register_game(req: RegisterRequest):
     if not req.name or not req.url or not req.provider:
         raise HTTPException(status_code=400, detail="Missing name, url, or provider")
-
+    
     registrations[req.name] = {
         "url": req.url,
         "provider": req.provider
@@ -249,7 +242,7 @@ async def register_game(req: RegisterRequest):
     color = getattr(provider_obj, "color", "") if provider_obj else ""
     provider_name = getattr(provider_obj, "provider", req.provider) if provider_obj else req.provider
 
-    print(f"\n🎰 Registered: {BWHTE}{BLNK}{req.name}{RES} ({color}{provider_name}{RES}) URL={req.url}\n")
+    logger.info(f"\n🎰 Registered: {BWHTE}{BLNK}{req.name}{RES} ({color}{provider_name}{RES}) URL={req.url}\n")
 
     return {"status": "registered", "name": req.name}
 
@@ -266,9 +259,9 @@ async def deregister_game(req: RegisterRequest):
             latest_data.pop(key, None)
             last_min10s.pop(key, None)
             last_change_times.pop(key, None)
-            last_hashes.pop(key, None)
+            # last_hashes.pop(key, None)
 
-    print(f"\n🗑️  Deregistered: {BWHTE}{req.name}{RES}\n")
+    logger.info(f"\n🗑️  Deregistered: {BWHTE}{req.name}{RES}\n")
 
     return {"status": "deregistered", "name": req.name}
 
@@ -280,7 +273,7 @@ async def get_latest_game(
     key = (name, requestFrom)
     if key not in latest_data:
         raise HTTPException(status_code=404, detail=f"Game '{name}' with requestFrom '{requestFrom}' has no data yet.")
-
+    
     return latest_data[key]
 
 @app.get("/file/game")
@@ -289,15 +282,48 @@ async def get_game_csv():
     if not registrations:
         raise HTTPException(status_code=404, detail="No registered games available")
     
+    if not os.path.exists(LOGS_PATH):
+        os.makedirs(LOGS_PATH, exist_ok=True)
+    
     # Take the first registered game
     game = list(registrations.keys())[0]
-    logs_folder = os.path.join(os.getcwd(), "logs")
-    TIME_DATA = os.path.join(logs_folder, f"{game.strip().replace(' ', '_').lower()}_log.csv")
+    game_logs = os.path.join(LOGS_PATH, f"{game.strip().replace(' ', '_').lower()}_log.csv")
     
-    if not os.path.isfile(TIME_DATA):
+    if not os.path.isfile(game_logs):
         raise HTTPException(status_code=404, detail=f"CSV file for '{game}' not found")
     
-    return FileResponse(TIME_DATA, media_type="text/csv")
+    return FileResponse(game_logs, media_type="text/csv")
+
+async def create_time_log(data: dict):
+    if not os.path.exists(LOGS_PATH):
+        os.makedirs(LOGS_PATH, exist_ok=True)
+        
+    # 🔑 check if same as last written
+    if last_logged.get("min10") == data.get("min10"):
+        return  # skip writing identical row
+    
+    # update last_logged cache
+    last_logged["min10"] = data.get("min10")
+    
+    csv_file = os.path.join(LOGS_PATH, f"{data.get("name").strip().replace(' ', '_').lower()}_log.csv")
+    write_header = not os.path.exists(csv_file)
+    
+    fieldnames = ["timestamp", "jackpot_meter", "color", "10m", "1h", "3h", "6h", "10m_delta"]
+    row = {
+        "timestamp": datetime.fromtimestamp(float(data.get("last_updated", time.time()))).strftime("%Y-%m-%d %I:%M:%S %p"),
+        "jackpot_meter": data.get("value"),
+        "color": "green" if data.get("up") is True else "red",
+        "10m": data.get("min10"),
+        "1h": data.get("hr1"),
+        "3h": data.get("hr3"),
+        "6h": data.get("hr6"),
+        "10m_delta": data.get("10m_delta")
+    }
+
+    async with aiofiles.open(csv_file, mode="a", newline="") as f:
+        if write_header:
+            await f.write(",".join(fieldnames) + "\n")
+        await f.write(",".join(str(row.get(fn, "")) for fn in fieldnames) + "\n")
 
 def get_lan_ip():
     """Get the LAN IP of the machine"""
@@ -314,7 +340,7 @@ def get_lan_ip():
 
 if __name__ == "__main__":
     lan_ip = get_lan_ip()
-    print(f"🚀 FastAPI running on localhost:8080 (also accessible via LAN: http://{lan_ip}:8080)")
+    logger.info(f"🚀 FastAPI running on localhost:8080 (also accessible via LAN: http://{lan_ip}:8080)")
     
-    uvicorn.run("data:app", host="0.0.0.0", port=8080, reload=True)
+    uvicorn.run("data:app", host="0.0.0.0", port=8080)
     

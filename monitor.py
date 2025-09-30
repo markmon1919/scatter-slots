@@ -58,7 +58,8 @@ class AutoState:
     last_trend: str = None
     # last_pull_delta: float = 0.0
     pull_delta: float = 0.0
-    prev_pull_delta: float = 0.0
+    old_delta: float = 0.0
+    # prev_pull_delta: float = 0.0
     prev_pull_score: int = 0
     prev_bear_score: int = 0
     pull_score: int = 0
@@ -274,111 +275,111 @@ def save_current_data(data_source: str, data: dict):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-def create_time_log(data: dict):
-    raw_data = data[game.lower()]
+# def create_time_log(data: dict):
+#     raw_data = data[game.lower()]
 
-    if not raw_data:
-        raise ValueError(f"No data found for game: {game}")
+#     if not raw_data:
+#         raise ValueError(f"No data found for game: {game}")
     
-    # timestamp = datetime.fromtimestamp(float(state.last_time)).strftime("%Y-%m-%d %I:%M:%S %p")
-    timestamp = datetime.fromtimestamp(float(state.last_time)).strftime("%Y-%m-%d %I:%M:%S %p")
-    history = raw_data.get("history", {})
+#     # timestamp = datetime.fromtimestamp(float(state.last_time)).strftime("%Y-%m-%d %I:%M:%S %p")
+#     timestamp = datetime.fromtimestamp(float(state.last_time)).strftime("%Y-%m-%d %I:%M:%S %p")
+#     history = raw_data.get("history", {})
 
-    row = {
-        "timestamp": timestamp,
-        "jackpot_meter": raw_data.get("jackpot_meter"),     
-        "color": raw_data.get("color"),
-        "10m": history.get("10m", ""),
-        "1h": history.get("1h", ""),
-        "3h": history.get("3h", ""),
-        "6h": history.get("6h", ""),
-        "10m_delta": state.pull_delta
-    }
+#     row = {
+#         "timestamp": timestamp,
+#         "jackpot_meter": raw_data.get("jackpot_meter"),     
+#         "color": raw_data.get("color"),
+#         "10m": history.get("10m", ""),
+#         "1h": history.get("1h", ""),
+#         "3h": history.get("3h", ""),
+#         "6h": history.get("6h", ""),
+#         "10m_delta": state.pull_delta
+#     }
 
-    fieldnames = [ "timestamp", "jackpot_meter", "color", "10m", "1h", "3h", "6h", "10m_delta" ]
-    write_header = not os.path.exists(TIME_DATA)
+#     fieldnames = [ "timestamp", "jackpot_meter", "color", "10m", "1h", "3h", "6h", "10m_delta" ]
+#     write_header = not os.path.exists(TIME_DATA)
 
-    with open(TIME_DATA, "a", newline="") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        if write_header:
-            writer.writeheader()
-        writer.writerow(row)
+#     with open(TIME_DATA, "a", newline="") as csvfile:
+#         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+#         if write_header:
+#             writer.writeheader()
+#         writer.writerow(row)
 
-def load_previous_time_data():
-    try:
-        data = []
+# def load_previous_time_data():
+#     try:
+#         data = []
 
-        with open(TIME_DATA, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                parsed = {
-                    "timestamp": datetime.strptime(row["timestamp"], "%Y-%m-%d %I:%M:%S %p"),
-                    "jackpot_meter": float(row["jackpot_meter"]),
-                    "color": str(row["color"]),
-                    "10m": float(row["10m"]),
-                    "1h": float(row["1h"]),
-                    "3h": float(row["3h"]),
-                    "6h": float(row["6h"]),
-                    "10m_delta": float(row["10m_delta"])
-                }
-                data.append(parsed)
+#         with open(TIME_DATA, "r", encoding="utf-8") as f:
+#             reader = csv.DictReader(f)
+#             for row in reader:
+#                 parsed = {
+#                     "timestamp": datetime.strptime(row["timestamp"], "%Y-%m-%d %I:%M:%S %p"),
+#                     "jackpot_meter": float(row["jackpot_meter"]),
+#                     "color": str(row["color"]),
+#                     "10m": float(row["10m"]),
+#                     "1h": float(row["1h"]),
+#                     "3h": float(row["3h"]),
+#                     "6h": float(row["6h"]),
+#                     "10m_delta": float(row["10m_delta"])
+#                 }
+#                 data.append(parsed)
 
-        if not data:
-            return {}
+#         if not data:
+#             return {}
 
-        data.sort(key=lambda x: x["timestamp"])
-        latest_row = data[-1]
-        base_time = latest_row["timestamp"]
+#         data.sort(key=lambda x: x["timestamp"])
+#         latest_row = data[-1]
+#         base_time = latest_row["timestamp"]
 
-        targets = {
-            "10m": base_time - timedelta(minutes=10),
-            "1h": base_time - timedelta(hours=1),
-            "3h": base_time - timedelta(hours=3),
-            "6h": base_time - timedelta(hours=6)
-        }
+#         targets = {
+#             "10m": base_time - timedelta(minutes=10),
+#             "1h": base_time - timedelta(hours=1),
+#             "3h": base_time - timedelta(hours=3),
+#             "6h": base_time - timedelta(hours=6)
+#         }
 
-        # test sync
-        # targets = {
-        #     "10m": base_time - timedelta(minutes=9),
-        #     "1h": base_time - timedelta(minutes=59),
-        #     "3h": base_time - timedelta(minutes=179),
-        #     "6h": base_time - timedelta(minutes=359)
-        # }
+#         # test sync
+#         # targets = {
+#         #     "10m": base_time - timedelta(minutes=9),
+#         #     "1h": base_time - timedelta(minutes=59),
+#         #     "3h": base_time - timedelta(minutes=179),
+#         #     "6h": base_time - timedelta(minutes=359)
+#         # }
 
-        closest = {key: None for key in targets}
-        smallest_diffs = {key: timedelta.max for key in targets}
+#         closest = {key: None for key in targets}
+#         smallest_diffs = {key: timedelta.max for key in targets}
 
-        for row in data:
-            for key, target_time in targets.items():
-                if row["timestamp"] < base_time:
-                    diff = abs(row["timestamp"] - target_time)
-                    if diff < smallest_diffs[key]:
-                        smallest_diffs[key] = diff
-                        closest[key] = row
+#         for row in data:
+#             for key, target_time in targets.items():
+#                 if row["timestamp"] < base_time:
+#                     diff = abs(row["timestamp"] - target_time)
+#                     if diff < smallest_diffs[key]:
+#                         smallest_diffs[key] = diff
+#                         closest[key] = row
 
-        result = {}
+#         result = {}
 
-        for key in ["10m", "1h", "3h", "6h"]:
-            if closest[key]:
-                result[key] = {
-                    "timestamp": closest[key]["timestamp"],
-                    "jackpot_meter": closest[key]["jackpot_meter"],
-                    "color": closest[key]["color"],
-                    "change": closest[key][key]
-                }
-            else:
-                result[key] = None
+#         for key in ["10m", "1h", "3h", "6h"]:
+#             if closest[key]:
+#                 result[key] = {
+#                     "timestamp": closest[key]["timestamp"],
+#                     "jackpot_meter": closest[key]["jackpot_meter"],
+#                     "color": closest[key]["color"],
+#                     "change": closest[key][key]
+#                 }
+#             else:
+#                 result[key] = None
                 
-        result["latest"] = {
-            "timestamp": base_time,
-            "jackpot_meter": latest_row["jackpot_meter"],
-            "color": latest_row["color"]
-        }
+#         result["latest"] = {
+#             "timestamp": base_time,
+#             "jackpot_meter": latest_row["jackpot_meter"],
+#             "color": latest_row["color"]
+#         }
 
-        return result
+#         return result
 
-    except FileNotFoundError:
-        return {}
+#     except FileNotFoundError:
+#         return {}
 
 def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: dict):
     # today = datetime.fromtimestamp(time.time())
@@ -717,7 +718,7 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
                     new_num_10m = new_num
                     old_num_10m = old_num
                     new_delta_10m = delta
-
+                    
                     updated = False
 
                     if lowest_low <= 0 and new_num < lowest_low:
@@ -759,9 +760,9 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
                 elif index == 1 and new_num_10m is not None and old_num_10m is not None and new_delta_10m is not None:
                     h10, h1 = pct(new_num_10m), pct(new_num)
                     ph10, ph1 = pct(old_num_10m), pct(old_num)
-
-                    old_delta_10m = state.pull_delta
-                    state.pull_delta = new_delta_10m
+                    
+                    old_delta_10m = state.old_delta
+                    state.old_delta = new_delta_10m
                     new_delta_10m_1h = h10 - h1
                     old_delta_10m_1h = ph10 - ph1
 
@@ -882,7 +883,7 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
                     #     # logger.info(f"\t\t{BLCYN}Pull Score:: {result.get('pull_score', 0)}{RES}")
                     #         alert_queue.put(f"pull score {state.pull_score}")
                         
-                    state.prev_pull_delta = result.get('old_delta_10m')
+                    # state.prev_pull_delta = result.get('old_delta_10m')
 
                     if old_delta_10m != 0 and h10 < ph10 and delta_shift_decision:
                         if score >= 7 and h10 <= -50 and new_delta_10m <= -50 and delta_shift <= -50 and delta_shift_10m_1h <= -50:
@@ -1097,7 +1098,7 @@ def pct(p):
 
 def load_breakout_memory(game: str):
     today = datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d")
-
+    
     if os.path.exists(BREAKOUT_FILE):
         with open(BREAKOUT_FILE, 'r') as f:
             data = json.load(f)
@@ -4064,14 +4065,15 @@ def get_game_data_from_local_api(game: str):
             params={
                 "name": game,
                 "requestFrom": request_from
-            }
+            },
+            timeout=5
         )
-
+        
         json_data = response.json()
 
         logger.debug(f"📡 Response >> [{BWHTE}{request_from}{RES}] {json_data}")
 
-        return json_data, request_from
+        return json_data#, request_from
 
     except Exception as e:
         logger.info(f"❌ Error calling API: {e}")
@@ -4082,7 +4084,8 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
 
     while not stop_event.is_set():
         try:
-            data, request_from = get_game_data_from_local_api(game)
+            # data, request_from = get_game_data_from_local_api(game)
+            data = get_game_data_from_local_api(game)
 
             if data and "error" not in data:
                 min10 = data.get("min10")
@@ -4090,6 +4093,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                 if min10 != last_min10:
                     data_queue.put(data)
                     state.last_time = Decimal(data.get('last_updated'))
+                    state.pull_delta = data.get('10m_delta')
                     last_min10 = min10
                     
                     logger.debug(f"\n\tstate.last_time: {datetime.fromtimestamp(float(state.last_time))}")
@@ -4714,9 +4718,9 @@ if __name__ == "__main__":
     LEFT_X, RIGHT_X, TOP_Y, BTM_Y = 0, SCREEN_POS.get("right_x"), 0, SCREEN_POS.get("bottom_y")
     # LEFT_X, RIGHT_X, TOP_Y, BTM_Y = 0, SCREEN_POS.get("right_x"), 0, SCREEN_POS.get("bottom_y") - 55 # DREAM CASINO
     
-    logs_folder = os.path.join(os.getcwd(), "logs")
-    os.makedirs(logs_folder, exist_ok=True)
-    TIME_DATA = os.path.join(logs_folder, f"{game.strip().replace(' ', '_').lower()}_log.csv")
+    # logs_folder = os.path.join(os.getcwd(), "logs")
+    # os.makedirs(logs_folder, exist_ok=True)
+    # TIME_DATA = os.path.join(logs_folder, f"{game.strip().replace(' ', '_').lower()}_log.csv")
 
     # alert_queue = ThQueue()
     bet_queue = ThQueue()
@@ -4781,7 +4785,7 @@ if __name__ == "__main__":
                 save_current_data("api", all_data)
                 save_current_data("helpslot", all_helpslot_data)
                 
-                create_time_log(all_data)
+                # create_time_log(all_data)
 
                 # alert_queue.put(re.sub(r"\s*\(.*?\)", "", game))
                 # alert_queue.put("low_break_out") if state.is_low_breakout else None

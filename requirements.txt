@@ -1,3 +1,4 @@
+aiofiles,
 asyncio
 bs4
 datetime

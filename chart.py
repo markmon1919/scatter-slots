@@ -25,7 +25,7 @@ def get_games_data_from_local_api():
     
 def get_games_csv_from_local_api():
     try:
-        response = requests.get(f"{api_url}/file/game", timeout=3)
+        response = requests.get(f"{api_url}/file/game", timeout=5)
         if response.status_code == 200:
             text = response.text.strip()
             if not text:
