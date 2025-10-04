@@ -10,7 +10,7 @@ from collections import namedtuple
 #     timer_start = (60 - today.second)
 #     return today if not countdown else timer_start
 
-LOG_LEVEL = ""#DEBUG"
+LOG_LEVEL = ""#DEBUG
 LOGS_PATH = "logs"
 BREAKOUT_FILE = "breakout_data.json"
 DATA_FILE = "previous_data.json"
@@ -1108,19 +1108,6 @@ DEFAULT_PROVIDER_PROPS = ProviderProps("Jili", WHTE, "41786877e5b48c0f35948ec66a
 
 URLS = [ "https://www.helpslot.win", "https://slimeserveahead.github.io/monitor" ]
 
-API_CONFIG = {
-    "host": "0.0.0.0",
-    "port": 4444,
-    "reload": True,
-    "url": next((url for url in URLS if 'helpslot' in url), None),
-    "refresh_interval": 1  # fast initial poll interval
-}
-
-API_URL = [ "http://localhost:8080", "https://api-jackpot.fly.dev", "http://172.16.0.149:8080" ]
-# API_URL = [ "http://localhost:8080", "https://api-jackpot.fly.dev", "http://192.168.1.10:8080" ]
-# API_URL = "https://api-jackpot.fly.dev"
-VPS_IP = "66.241.124.83"
-
 USER_AGENTS = [
     # Windows Chrome
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -1139,3 +1126,14 @@ USER_AGENTS = [
     "AppleWebKit/605.1.15 (KHTML, like Gecko) "
     "Version/15.3 Mobile/15E148 Safari/604.1"
 ]
+
+API_CONTAINER = "data-api"
+API_CONTAINER_PORT = 3000
+API_HOST_IP = ""
+API_PORT = 3333
+
+VPS_IP = "66.241.124.83"
+
+API_URL = [ f"http://localhost:{API_PORT}", "https://api-jackpot.fly.dev", f"http://{API_HOST_IP}:{API_PORT}" ]
+# API_URL = [ "http://localhost:8080", "https://api-jackpot.fly.dev", "http://192.168.1.10:8080" ]
+# API_URL = "https://api-jackpot.fly.dev"

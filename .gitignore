@@ -73,7 +73,9 @@ dist/*
 *.py[cod]
 *.pyc
 *_data.json
+*.egg*
 logs/*
+*.out
 
 # # dependencies
 **/node_modules/**

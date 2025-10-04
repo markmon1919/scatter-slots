@@ -8,13 +8,13 @@ from matplotlib.animation import FuncAnimation
 from config import API_URL
 
 
-# api_url = API_URL[0]  # localhost
-api_url = API_URL[2]  # local network
+api_url = API_URL[0]  # localhost
+# api_url = API_URL[2]  # local network
 
 # ---------- GET GAME INFO ----------    
 def get_games_data_from_local_api():
     try:
-        response = requests.get(f"{api_url}/games", timeout=3)
+        response = requests.get(f"{api_url}/games", timeout=5)
         response.raise_for_status()
         json_data = response.json()
         data = json_data.get("registered_games", [])
@@ -49,7 +49,7 @@ if GAME:
     CSV_FILE = f"{GAME.replace(' ', '_').lower()}_log.csv"
 
 MAX_CANDLES = 45 # 1 candle : 10 secs / 6 candles : 1 min
-REFRESH_INTERVAL = 2000  # ms
+REFRESH_INTERVAL = 500  # ms
 
 # Dark style with green up/red down
 mc = mpf.make_marketcolors(up='lime', down='red', wick='white', edge='inherit')
@@ -127,11 +127,12 @@ def animate(i):
 
     if not ohlc.empty:
         mpf.plot(
-            ohlc,
+            ohlc, 
             type='candle',
             style=dark_style,
             ax=ax,
-            ylabel='10m Value'
+            ylabel='10m Value',
+            # show_nontrading=True
         )
         ax.set_title(f"{GAME_LABEL} - [ 10 MIN CHART ] ({pd.Timestamp.now().date()})", color="white")
     else:

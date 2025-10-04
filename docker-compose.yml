@@ -1,0 +1,14 @@
+services:
+  data-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CONTAINER_NAME: ${API_CONTAINER}
+        CONTAINER_PORT: ${API_CONTAINER_PORT}
+    volumes:
+      - ./${LOGS_PATH}:/api/${LOGS_PATH}
+    container_name: ${API_CONTAINER}
+    ports:
+      - ${API_PORT}:${API_CONTAINER_PORT}
+      

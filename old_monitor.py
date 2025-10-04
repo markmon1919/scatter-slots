@@ -13,7 +13,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from trend import load_trend_memory
-from config import (LOG_LEVEL, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, TREND_FILE, BREAKOUT_FILE, DATA_FILE, HELPSLOT_DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, 
+from config import (LOGS_PATH, LOG_LEVEL, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_URL, VPS_IP, TREND_FILE, BREAKOUT_FILE, DATA_FILE, HELPSLOT_DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, 
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
@@ -4456,7 +4456,7 @@ if __name__ == "__main__":
     
     # provider = GAME_CONFIGS.get(game).provider
     # api_server = API_URL[0] # hard code
-    api_server = "http://localhost:8081"
+    api_server = API_URL[0] # hard code
 
     # logger.info(f"\n\n\t{BLNK}{DGRY}🔔 Select Server{RES}\n")
     # logger.info("  ".join(f"\n\t[{WHTE}{i}{RES}] - {BLBLU + 'Local' if 'localhost' in host else BLRED + 'VPS'}{RES}" for i, host in enumerate(API_URL, start=1)))

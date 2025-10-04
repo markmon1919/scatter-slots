@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=65.5.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "${CONTAINER_NAME}"
+version = "0.1.0"
+dependencies = [
+    "aiofiles",
+    "asyncio",
+    "datetime",
+    "fastapi[standard]",
+    "httpx",
+    "logging",
+    "pydantic",
+    "uvicorn[standard]"
+]
+
+[tool.setuptools]
+py-modules = ["${CONTAINER_NAME}"]
+
+[project.optional-dependencies]
+deps = [
+    "bs4",
+    "matplotlib",
+    "mplfinance",
+    "pandas",
+    "pyautogui",
+    "pynput",
+    "requests",
+    "selenium",
+    "webdriver-manager"
+]

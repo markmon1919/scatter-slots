@@ -1,20 +1,18 @@
-#!/usr/bin/env .venv/bin/python
-
-import aiofiles, asyncio, httpx, json, logging, os, random, time, uvicorn, socket#, hashlib, socket, csv, subprocess, math, 
+import aiofiles, asyncio, httpx, logging, os, random, time
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from datetime import datetime
-from config import (USER_AGENTS, PROVIDERS, LOGS_PATH,
+from pydantic import BaseModel
+from config import (USER_AGENTS, PROVIDERS, LOGS_PATH, LOG_LEVEL,
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, 
                     GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, 
                     BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=(logging.DEBUG if LOG_LEVEL == "DEBUG" else logging.INFO),
     # format="%(asctime)s [%(levelname)s] %(message)s",
     # datefmt="%H:%M:%S",
 )
@@ -278,6 +276,38 @@ async def get_latest_game(
 
 @app.get("/file/game")
 async def get_game_csv():
+    if not registrations:
+        raise HTTPException(status_code=404, detail="No registered games available")
+
+    if not os.path.exists(LOGS_PATH):
+        os.makedirs(LOGS_PATH, exist_ok=True)
+
+    game = list(registrations.keys())[0]
+    game_logs = os.path.join(LOGS_PATH, f"{game.strip().replace(' ', '_').lower()}_log.csv")
+    
+    if not os.path.isfile(game_logs):
+        raise HTTPException(status_code=404, detail=f"CSV file for '{game}' not found")
+    
+    return game
+
+@app.get("/file")
+async def get_game_csv():
+    if not registrations:
+        raise HTTPException(status_code=404, detail="No registered games available")
+
+    if not os.path.exists(LOGS_PATH):
+        os.makedirs(LOGS_PATH, exist_ok=True)
+
+    game = list(registrations.keys())[0]
+    game_logs = os.path.join(LOGS_PATH, f"{game.strip().replace(' ', '_').lower()}_log.csv")
+    
+    if not os.path.isfile(game_logs):
+        raise HTTPException(status_code=404, detail=f"CSV file for '{game}' not found")
+    
+    return FileResponse(game_logs, media_type="text/csv")
+
+@app.get("/file/jackpot")
+async def get_hs_csv():
     # Make sure there is at least one registered game
     if not registrations:
         raise HTTPException(status_code=404, detail="No registered games available")
@@ -287,7 +317,7 @@ async def get_game_csv():
     
     # Take the first registered game
     game = list(registrations.keys())[0]
-    game_logs = os.path.join(LOGS_PATH, f"{game.strip().replace(' ', '_').lower()}_log.csv")
+    game_logs = os.path.join(LOGS_PATH, f"{game.strip().replace(' ', '_').lower()}_log-hs.csv")
     
     if not os.path.isfile(game_logs):
         raise HTTPException(status_code=404, detail=f"CSV file for '{game}' not found")
@@ -324,23 +354,4 @@ async def create_time_log(data: dict):
         if write_header:
             await f.write(",".join(fieldnames) + "\n")
         await f.write(",".join(str(row.get(fn, "")) for fn in fieldnames) + "\n")
-
-def get_lan_ip():
-    """Get the LAN IP of the machine"""
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        # Connect to a public IP (doesn't actually send data)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-    except Exception:
-        ip = "127.0.0.1"
-    finally:
-        s.close()
-    return ip
-
-if __name__ == "__main__":
-    lan_ip = get_lan_ip()
-    logger.info(f"🚀 FastAPI running on localhost:8080 (also accessible via LAN: http://{lan_ip}:8080)")
-    
-    uvicorn.run("data:app", host="0.0.0.0", port=8080)
-    
+        

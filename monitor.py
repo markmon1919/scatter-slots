@@ -13,7 +13,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from trend import load_trend_memory
-from config import (LOG_LEVEL, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_CONFIG, API_URL, VPS_IP, TREND_FILE, BREAKOUT_FILE, DATA_FILE, HELPSLOT_DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, 
+from config import (LOGS_PATH, LOG_LEVEL, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_URL, VPS_IP, TREND_FILE, BREAKOUT_FILE, DATA_FILE, HELPSLOT_DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, 
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
@@ -81,6 +81,7 @@ class AutoState:
     new_jackpot_val: float = 0.0
     jackpot_signal: str = None
     # new_data: bool = False
+    prev_helpslot_jackpot: float = 0.0
     api_major_pullback: bool = False
     helpslot_jackpot: float = 0.00
     helpslot_meter: str = None
@@ -92,7 +93,6 @@ class AutoState:
     helpslot_major_pullback: bool = False
     extreme_pull: bool = False
     intense_pull: bool = False
-
 
 @dataclass
 class GameSettings:
@@ -188,6 +188,8 @@ def fetch_html(driver: webdriver.Chrome, url: str, game: str, provider: str):
 
 def fetch_game_data(driver: webdriver.Chrome, game: str, fetch_queue: ThQueue) -> list:
     while not stop_event.is_set():
+        now_time = Decimal(str(time.time()))
+        
         card = driver.find_element(By.CSS_SELECTOR, ".game-block")
         
         try:
@@ -203,8 +205,9 @@ def fetch_game_data(driver: webdriver.Chrome, game: str, fetch_queue: ThQueue) -
             #     return None
             
             if state.helpslot_jackpot != value:
+                create_time_log(value, now_time)
                 state.helpslot_jackpot = value
-
+                
                 progress_bar_elem = card.find_element(By.CSS_SELECTOR, ".progress-bar")
                 bg = progress_bar_elem.value_of_css_property("background-color").lower()
                 up = "red" if "255, 0, 0" in bg else "green"
@@ -275,35 +278,40 @@ def save_current_data(data_source: str, data: dict):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-# def create_time_log(data: dict):
-#     raw_data = data[game.lower()]
-
-#     if not raw_data:
-#         raise ValueError(f"No data found for game: {game}")
+def create_time_log(jackpot_value: float, timestamp: Decimal):
+    if not os.path.exists(LOGS_PATH):
+        os.makedirs(LOGS_PATH, exist_ok=True)
     
-#     # timestamp = datetime.fromtimestamp(float(state.last_time)).strftime("%Y-%m-%d %I:%M:%S %p")
-#     timestamp = datetime.fromtimestamp(float(state.last_time)).strftime("%Y-%m-%d %I:%M:%S %p")
-#     history = raw_data.get("history", {})
-
-#     row = {
-#         "timestamp": timestamp,
-#         "jackpot_meter": raw_data.get("jackpot_meter"),     
-#         "color": raw_data.get("color"),
-#         "10m": history.get("10m", ""),
-#         "1h": history.get("1h", ""),
-#         "3h": history.get("3h", ""),
-#         "6h": history.get("6h", ""),
-#         "10m_delta": state.pull_delta
-#     }
-
-#     fieldnames = [ "timestamp", "jackpot_meter", "color", "10m", "1h", "3h", "6h", "10m_delta" ]
-#     write_header = not os.path.exists(TIME_DATA)
-
-#     with open(TIME_DATA, "a", newline="") as csvfile:
-#         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-#         if write_header:
-#             writer.writeheader()
-#         writer.writerow(row)
+    spike = float(jackpot_value - state.prev_helpslot_jackpot)
+    state.prev_helpslot_jackpot = jackpot_value
+    
+    if spike == state.prev_helpslot_jackpot == jackpot_value:
+        return
+    
+    state.fast_mode = False
+    
+    if state.auto_mode and abs(spike) >= 1.0:
+        # if spin_in_progress.is_set():
+        #     spin_in_progress.clear()
+        # threading.Thread(target=spin, args=(False, False, False,), daemon=True).start()
+        spin(False, False, True, False,)
+        state.fast_mode = True
+        alert_queue.put(f"spike {int(timestamp % 60)} fast mode {state.fast_mode}")
+                
+    csv_file = os.path.join(LOGS_PATH, f"{game.strip().replace(' ', '_').lower()}_log-hs.csv")
+    write_header = not os.path.exists(csv_file)
+    
+    fieldnames = ["timestamp", "jackpot_meter","jackpot_delta"]
+    row = {
+        "timestamp": datetime.fromtimestamp(float(timestamp)).strftime("%Y-%m-%d %I:%M:%S %p"),
+        "jackpot_meter": jackpot_value,
+        "jackpot_delta": spike
+    }
+        
+    with open(csv_file, "a", newline="") as f:
+        if write_header:
+            f.write(",".join(fieldnames) + "\n")
+        f.write(",".join(str(row.get(fn, "")) for fn in fieldnames) + "\n")
 
 # def load_previous_time_data():
 #     try:
@@ -508,7 +516,7 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
     current_jackpot = pct(current['jackpot_meter'])
     jackpot_bar = get_jackpot_bar(current_jackpot, current['color'])
     
-    state.pull_score = 0
+    # state.pull_score = 0
     state.extreme_pull = False
     state.intense_pull = False
     state.is_reversal = False
@@ -871,7 +879,7 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
                     }
                     
                     # add spin high pull score
-                    state.pull_score = result.get('pull_score', 0)
+                    # state.pull_score = result.get('pull_score', 0)
                     # if result.get('pull_score', 0) >= 10:
                     #     if spin_in_progress.is_set():
                     #         spin_in_progress.clear()
@@ -1153,6 +1161,16 @@ def countdown_timer(seconds: int = 10):
         # now_time = Decimal(str(time.time()))
         current_sec = int(now_time) % seconds
         time_left = 0 if current_sec % 10 == 0 else seconds - current_sec
+        # trigger_sec = random.choice([5, 6, 7])
+        # reduce_secs = 1 if trigger_sec == 7 else 2 if trigger_sec == 6 else 3
+        # if current_sec in range(7, 9):
+        #     alert_queue.put(f"{time_left}")
+        # if current_sec % 10 == 8:
+        #     alert_queue.put("2")
+        # if current_sec % 10 == 9:
+        #     alert_queue.put("1")
+        # if current_sec % 10 == 0:
+        #     alert_queue.put("ping") 
 
         blink = BLNK if current_sec % 2 == 0 else ""
         
@@ -1245,12 +1263,13 @@ def countdown_timer(seconds: int = 10):
 
         # NEW
         if state.auto_mode:
-            if current_sec in range(1) and any([state.pull_score >= 10, state.helpslot_jackpot >= 90, state.new_jackpot_val >= 100]):
-                if spin_in_progress.is_set():
-                    spin_in_progress.clear()
-                                        
-                logger.info(f"\t\t{BLCYN}Pull Score: {state.pull_score} {"Clear" if spin_in_progress.is_set() else "Instant"} -- {current_sec} secs{RES}")
-                threading.Thread(target=spin, args=(False, False, True, 0.0,), daemon=True).start()
+            # if current_sec in (0, -1) and any([state.pull_score >= 10, state.helpslot_jackpot >= 90, state.new_jackpot_val >= 100]):
+            # if current_sec == -1 and any([state.pull_delta >= 10, state.helpslot_jackpot >= 90, state.new_jackpot_val >= 100]):
+            #     if spin_in_progress.is_set():
+            #         spin_in_progress.clear()
+                    
+            #     logger.info(f"\t\t{BLCYN}Pull Score: {state.pull_score} {"Clear" if spin_in_progress.is_set() else "Instant"} -- {current_sec} secs{RES}")
+            #     threading.Thread(target=spin, args=(False, False, True), daemon=True).start()
                 # alert_queue.put(f"pull score spin")
             # if current_sec % 10 == 9:
             # if (
@@ -1364,8 +1383,8 @@ def countdown_timer(seconds: int = 10):
                 momentum_potential,
                 reversal_potential,
                 state.neutralize,
-                abs(state.api_jackpot_delta) >= 3,
-                abs(state.helpslot_jackpot_delta) >= 3,
+                abs(state.api_jackpot_delta) >= 1,
+                abs(state.helpslot_jackpot_delta) >= 1,
                 # all([state.new_jackpot_val >= 50, state.current_color == "red"])  
             ])
         
@@ -1455,53 +1474,91 @@ def countdown_timer(seconds: int = 10):
             # logger.info(f"{LBLU}Trigger Sec ---> {trigger_sec}{RES}")
             
             if not state.fast_mode:
-                trigger_sec = int(last_time_sec) % seconds
-                reduce_secs = None
-                helpslot_trigger = False
-                api_trigger = False
+                # trigger_sec = int(last_time_sec) % seconds
+                # reduce_secs = None
+                # helpslot_trigger = False
+                # api_trigger = False
                 
-                if triggered_init and triggered_sub:
-                    reduce_secs = 9 if trigger_sec == 0 else (trigger_sec - 1) # 1 second
-                    # reduce_secs = 0 if trigger_sec == 0 else (trigger_sec1) # 0 seconds
-                    helpslot_trigger = True
-                    # alert_queue.put("instant")
-                    # logger.info(f"{LYEL}Current Sec ---> {current_sec}{RES}")
-                    # logger.info(f"{LYEL}Reduce 1 Sec ---> {reduce_secs}{RES}")
-                elif prediction_conditions:
-                    reduce_secs = 9 if trigger_sec == 1 else 8 if trigger_sec == 0 else (trigger_sec - 2) # 2 seconds
-                    # reduce_secs = 9 if trigger_sec == 0 else (trigger_sec - 1) # 1 second
-                    api_trigger = True
-                    # alert_queue.put("prediction")
-                    # logger.info(f" ---> prediction")
-                    # logger.info(f"{LMAG}Current Sec ---> {current_sec}{RES}")
-                    # logger.info(f"{LMAG}Reduce 2 Secs ---> {reduce_secs}{RES}")
+                # if prediction_conditions:
+                #     reduce_secs = 9 if trigger_sec == 1 else 8 if trigger_sec == 0 else (trigger_sec - 2) # 2 seconds
+                #     # reduce_secs = 9 if trigger_sec == 0 else (trigger_sec - 1) # 1 second
+                #     api_trigger = True
+                #     # alert_queue.put("prediction")
+                #     # logger.info(f" ---> prediction")
+                #     # logger.info(f"{LMAG}Current Sec ---> {current_sec}{RES}")
+                #     # logger.info(f"{LMAG}Reduce 2 Secs ---> {reduce_secs}{RES}")
+                # elif triggered_init and triggered_sub:
+                #     reduce_secs = 9 if trigger_sec == 0 else (trigger_sec - 1) # 1 second
+                #     # reduce_secs = 0 if trigger_sec == 0 else (trigger_sec1) # 0 seconds
+                #     helpslot_trigger = True
+                #     # alert_queue.put("instant")
+                #     # logger.info(f"{LYEL}Current Sec ---> {current_sec}{RES}")
+                #     # logger.info(f"{LYEL}Reduce 1 Sec ---> {reduce_secs}{RES}")
                     
-                if current_sec in range(8, 10) and current_sec == reduce_secs:
-                    interval_ms = Decimal(str(time.time())) - state.last_time
-                    wait_before_spin = float(current_sec - interval_ms)
+                # if current_sec in range(8, 10) and current_sec == reduce_secs:
+                #     interval_ms = Decimal(str(time.time())) - state.last_time
+                #     wait_before_spin = float(current_sec - interval_ms)
                     
-                    # logger.info(f"{LMAG}Reduce {'1 sec' if helpslot_trigger else '2 secs' if api_trigger else 'no trigger'} ---> {reduce_secs}{RES}")
-                    # logger.info(f"{LYEL}Reduce MS ---> {interval_ms}{RES} {LBLU}Current Sec:---> {current_sec}{RES}")
-                    # logger.info(f"{LRED}New Trigger Sec ---> {wait_before_spin}{RES}")
-                    threading.Thread(target=spin, args=(False, False, False, wait_before_spin,), daemon=True).start()
+                #     # logger.info(f"{LMAG}Reduce {'1 sec' if helpslot_trigger else '2 secs' if api_trigger else 'no trigger'} ---> {reduce_secs}{RES}")
+                #     # logger.info(f"{LYEL}Reduce MS ---> { interval_ms}{RES} {LBLU}Current Sec:---> {current_sec}{RES}")
+                #     # logger.info(f"{LRED}New Trigger Sec ---> {wait_before_spin}{RES}")
+                #     threading.Thread(target=spin, args=(False, False, False, wait_before_spin,), daemon=True).start()
+                
+                # trigger_sec = random.choice([5, 6, 7])
+                
+                if current_sec == 6 and prediction_conditions and state.last_time != Decimal('0'):
+                    # wait_before_spin = float(interval_ms - 2)
+                    # wait_before_spin = float(interval_ms)
+                    threading.Thread(target=spin, args=(False, False, False, True,), daemon=True).start()
                     
-                if current_sec % 10 == 7:
-                    alert_queue.put("ping")
+                    # logger.info(f"\nCurrent Sec ({YEL}{current_sec}){RES}, Trigger Sec: ({MAG}{trigger_sec}{RES})")
+                    # logger.info(f"\nINTERVAL MS (prediction): {interval_ms}")
+                    # spin(False, False, False, wait_before_spin)
+                    # logger.info(f"\nTRIGGER SEC (prediction): {trigger_sec}")
+                    # logger.info(f"\nWAIT INIT (prediction): {wait_before_spin}")
+                else:
+                    if current_sec >= 8 or current_sec == 0:
+                        alert_queue.put(f"{time_left}")
+                    
+                # else:
+                    # if current_sec in (9) and any([state.pull_score >= 10, state.helpslot_jackpot >= 90, state.new_jackpot_val >= 100]):
+                    # if current_sec in range(0) and any([
+                    #     state.pull_score >= 10,
+                    #     state.helpslot_jackpot >= 90,
+                    #     state.new_jackpot_val >= 100
+                    # ]):
+                    #     if spin_in_progress.is_set():
+                    #         spin_in_progress.clear()
+                            
+                    #     threading.Thread(target=spin, args=(False, False, True), daemon=True).start()
+                    #     logger.info(f"\t\t{BLCYN}Pull Score: {state.pull_score}")
+                    #                 #{"Clear" if spin_in_progress.is_set() else "Instant"} -- {current_sec} secs{RES}")
+
+                # if current_sec == 9 and triggered_init and triggered_sub:
+                #     # reduce_secs = 9 if trigger_sec == 0 else (trigger_sec - 1) # 1 second
+                #     threading.Thread(target=spin, args=(False, False, False), daemon=True).start()
+                    
+                    
+                    
+                    # threading.Thread(target=spin, args=(False, False, False, wait_before_spin,), daemon=True).start()
+                    
             else:   # FAST MODE
-                options = [
-                    # lambda: (threading.Thread(target=spin, args=(False, False,), daemon=True).start(), spin(False, False)),
-                    lambda: threading.Thread(target=spin, args=(False, False, False, 0.0,), daemon=True).start(),
-                    lambda: spin(False, False, False, 0.0)
-                ]
+                # options = [
+                #     # lambda: (threading.Thread(target=spin, args=(False, False,), daemon=True).start(), spin(False, False)),
+                #     lambda: threading.Thread(target=spin, args=(False, False, False, False,), daemon=True),
+                #     lambda: spin(False, False, False, False,)
+                # ]
                 
                 if (current_sec != int(last_time_sec) % seconds): ##and (
                     if triggered_init and triggered_sub:
-                        options[1]()
+                        # options[1]()
+                        spin(False, False, False, False,)
                 else:
                     # logger.info(f"{current_sec} -- {int(last_time_sec) % seconds}")
                     if prediction_conditions:
-                        options[1]() if triggered_init else random.choice(options)()
-                        alert_queue.put("prediction")
+                        # options[1]() if triggered_init else random.choice(options)()
+                        spin(False, False, False, False,)
+                        # alert_queue.put("prediction")
                 
                 # spin(False, False)
                 # alert_queue.put("ping")
@@ -1870,10 +1927,10 @@ def bet_switch(bet_level: str=None, extra_bet: bool=None, slot_position: str=Non
         except Empty:
             continue
 
-def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = False, wait: float = 0.0):
+def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = False, wait_before_spin: bool = False):
     # while not stop_event.is_set():
     if spin_in_progress.is_set():
-        logger.info("\t⚠️  Spin still in action, skipping")
+        sys.stdout.write("\t⚠️  Spin still in action, skipping")
         return
     
     spin_in_progress.set()
@@ -1881,7 +1938,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
     try:
         # cmd, combo_spin = spin_queue.get_nowait()
         # spin_in_progress, combo_spin = spin_queue.get(timeout=1)
-        spin_types = [ "normal_spin", "spin_hold", "spin_delay", "spin_hold_delay", "turbo_spin", "board_spin", "board_spin_hold", "board_spin_delay", "board_spin_hold_delay", "board_spin_turbo", "spin_slide", "auto_spin" ]
+        spin_types = [ "normal_spin", "spin_hold", "spin_delay", "spin_hold_delay", "turbo_spin", "super_turbo", "board_spin", "board_spin_hold", "board_spin_delay", "board_spin_hold_delay", "board_spin_turbo", "spin_slide", "auto_spin" ]
         
         if not combo_spin and "PG" in provider:
             spin_types = [s for s in spin_types if not s.startswith("board")]
@@ -1891,9 +1948,21 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
             spin_types.extend(["combo_spin", "spam_spin", "turbo_spin"])
             
         if turbo_spin:
-            spin_types = [ "turbo_spin", "spin_hold", "spam_spin" ]
-
-        spin_type = random.choice(spin_types) #if not spam_spin else "spam_spin"
+            spin_types = [ "turbo_spin", "super_turbo", "spin_hold", "spam_spin", "combo_spin" ]
+            if "JILI" in provider:
+                spin_types.extend([ "max_turbo" ])
+        
+        if not state.fast_mode:
+            if "JILI" in provider:
+                spin_types.extend([ "max_turbo" ])
+        else:
+            spin_types = [s for s in spin_types if not s.startswith("super")]
+            
+        if not state.fast_mode and wait_before_spin and random.random() < 0.4: # 40% use normal spin
+            spin_type = "normal_spin"
+        else:
+            spin_type = random.choice(spin_types) #if not spam_spin else "spam_spin"
+            
         cx, cy = CENTER_X, CENTER_Y
 
         shrink_percentage = 60 if state.widescreen else 32
@@ -1926,13 +1995,12 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
         # print(f'\trand_y2 >>> {rand_y2}')
         
         action = []
-
+        
         hold_delay = random.uniform(*HOLD_DELAY_RANGE)
-        spin_delay = random.uniform(*SPIN_DELAY_RANGE)
+        # spin_delay = random.uniform(*SPIN_DELAY_RANGE)
         timeout_delay = random.uniform(*TIMEOUT_DELAY_RANGE)
         # print(f'widescreen: {widescreen}')
         # print(f'state.spin_btn: {state.spin_btn}')
-        # spin_type = "turbo_spin"
         
         if spin_type == "normal_spin":
             if state.widescreen:
@@ -1980,7 +2048,6 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
                     lambda: (pyautogui.keyDown('space'), pyautogui.mouseDown(x=rand_x, y=rand_y, button='left')),
                     lambda: (pyautogui.keyDown('space'), pyautogui.mouseDown(x=rand_x, y=rand_y, button='right'))
                 ])
-                
             else:
                 action.extend([
                     lambda: (pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), pyautogui.mouseDown(button='left')),
@@ -2521,48 +2588,6 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
                     cx += 40
                     cy += 40
                 action.extend([
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.press('space'), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.press('space'), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.press('space'), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.press('space'), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
-                    # super turbo
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.press('space'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.press('space'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.press('space'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.press('space'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
-                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
-                    
                     lambda: pyautogui.doubleClick(x=cx + 520, y=cy + 335, button='left'),
                     lambda: pyautogui.doubleClick(x=cx + 520, y=cy + 335, button='right'),
                     lambda: (pyautogui.click(x=cx + 520, y=cy + 335, button='left'), pyautogui.press('space')),
@@ -2626,13 +2651,15 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
                         # lambda: (pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), pyautogui.click(x=rand_x, y=rand_y, button='right')),
                         # lambda: (pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), pyautogui.click(x=rand_x, y=rand_y, button='left')),
                         # lambda: (pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), pyautogui.click(x=rand_x, y=rand_y, button='right')),
-                        # TURBO ENABLED
-                        lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
-                        # lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
-                        # lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
-                        # lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
-                        # lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='right'), pyautogui.press('space'), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
-                        # TURBO ENABLED
+                        
+                        # # TURBO ENABLED
+                        # lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
+                        # # lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
+                        # # lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
+                        # # lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
+                        # # lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='right'), pyautogui.press('space'), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
+                        # # TURBO ENABLED
+                        
                         lambda: (pyautogui.press('space'), pyautogui.press('space')),
                         lambda: (pyautogui.press('space'), pyautogui.keyDown('space')),
                         
@@ -2688,8 +2715,159 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
                         lambda: (pyautogui.keyDown('space'), pyautogui.click(x=rand_x, y=rand_y, button='left')),
                         lambda: (pyautogui.keyDown('space'), pyautogui.click(x=rand_x, y=rand_y, button='right'))
                     ]) if not state.spin_btn else \
+                    action.extend([
+                        #
+                    ])
+        elif spin_type == "super_turbo": # 1 star if JILI
+            if state.widescreen:
+                if game in [ "Fortune Gems", "Money Pot" ] and provider == "JILI": # Playtime
+                    cx += 40
+                    cy += 40
                 action.extend([
-                    #
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.press('space'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.press('space'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.press('space'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.press('space'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    # auto spin style
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='left'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.click(x=cx + 240, y=cy + 325, button='right'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'))
+                ])
+            else:
+                if "PG" in provider:
+                    action.extend([
+                        # TURBO ENABLED
+                        lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
+                        # lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
+                        # lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
+                        # lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
+                        # lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='right'), pyautogui.press('space'), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left')),
+                        # TURBO ENABLED
+                        lambda: (pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left'), pyautogui.press('space'), time.sleep(0.5), pyautogui.click(x=cx - 200, y=BTM_Y - 105, button='left'))
+                    ])
+                else:
+                    action.extend([
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.press('space'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.press('space'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.press('space'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.press('space'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left')),
+                        # auto spin style
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left')),
+                        lambda: (pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'))
+                    ]) if not state.spin_btn else \
+                    action.extend([
+                        #
+                    ])
+        elif spin_type == "max_turbo": # 2 stars only JILI
+            if state.widescreen:
+                if game in [ "Fortune Gems", "Money Pot" ] and provider == "JILI": # Playtime
+                    cx += 40
+                    cy += 40
+                action.extend([
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.press('space'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.press('space'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.press('space'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.press('space'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=cx + 520, y=cy + 335, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    # auto spin style
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='left'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 240, y=cy + 325, button='right'), pyautogui.doubleClick(x=cx + 380, y=cy + 325, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 240, y=cy + 325, button='right'))
+                ])
+            else:
+                action.extend([
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.press('space'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.press('space'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.press('space'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.press('space'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.click(x=rand_x2, y=rand_y2, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left')),
+                    # auto spin style
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='left'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='left'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='left')),
+                    lambda: (pyautogui.doubleClick(x=cx + 152, y=BTM_Y - 105, button='right'), pyautogui.doubleClick(x=cx + 95, y=BTM_Y - 105, button='right'), time.sleep(0.5), pyautogui.click(x=cx + 152, y=BTM_Y - 105, button='right'))
                 ])
         elif spin_type == "auto_spin":
             if state.widescreen:
@@ -2942,20 +3120,52 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
         if not action:
             logger.info(f"\t⚠️ No available spin actions for {spin_type}")
             return
-            # continue
-            
-        # random.choice(init_action)()
-        # if wait > 0.0 and spin_type != "auto_spin":
-        #     # logger.info(f"\n WAIT BEFORE SPIN (exclude exclude_auto_spin) >> {wait}")
-        #     time.sleep(wait)
         
+        if not state.fast_mode:
+            alert_queue.put(f"{spin_type}")
+        
+        if not state.fast_mode and wait_before_spin:
+            interval_ms = Decimal(str(time.time())) - state.last_time
+            waiting_time = float(interval_ms) - 3
+            
+            if spin_type.endswith("delay"):# or spin_type.startswith("combo"):
+                waiting_time = waiting_time - hold_delay
+            elif spin_type.endswith("slide"):
+                waiting_time = waiting_time - timeout_delay
+            # elif spin_type.startswith("super"):
+            #     if "PG" in provider:
+            #         waiting_time = waiting_time - 0.3
+            #     elif "JILI" in provider:
+            #         waiting_time = waiting_time - 0.5
+            elif spin_type.startswith("auto") and "PG" in provider:
+                waiting_time = 0
+                
+            sys.stdout.write(f"\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES} {WHTE}{waiting_time}{RES}>\n")
+            
+            time.sleep(waiting_time)
+        else:
+            sys.stdout.write(f"\t\t<{BLNK}🌀{RES} {RED}SPIKE SPIN{RES}>\n")
+        
+        # COMBO SPIN INITIAL spin(normal or auto_spin)
+        if spin_type.startswith("combo"):
+            init_action = []
+            init_action.extend([
+                lambda: pyautogui.click(x=cx, y=BTM_Y - 105, button='left'),
+                # lambda: pyautogui.click(x=cx, y=BTM_Y - 105, button='right'),
+                lambda: pyautogui.press('space'),
+                lambda: (pyautogui.click(x=cx + 195, y=BTM_Y - 105, button='left'), time.sleep(0.3), pyautogui.click(x=cx - 195, y=BTM_Y - 205, button='left'), pyautogui.click(x=cx, y=BTM_Y - 105, button='left'))
+            ])
+            random.choice(init_action)()
+            time.sleep(1)
+            
         random.choice(action)()
         # now_time = time.time()
         # current_sec = int(now_time) % 10
-        return spin_type
+        # return spin_type
         
         # now_time = time.time()
         # current_sec = int(now_time) % 60
+        # sys.stdout.write(f"\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES} {MAG}{current_sec}{RES}>\n")
 
         # print(f"\tHold Delay: {hold_delay:.2f}")
         # print(f"\tSpin Delay: {spin_delay:.2f}")
@@ -2972,11 +3182,13 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
         # print(f"\tCombo Spin: {combo_spin}")
         # logger.info(f"\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {RES}>")
         # sys.stdout.write(f"\r\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()} {WHTE}{current_sec}{RES}>\n")
-        sys.stdout.write(f"\t\t<{BLNK}🌀{RES} {RED}{spin_type.replace('_', ' ').upper()}{RES}>\n")
-        # alert_queue.put("ping")
-        # sys.stdout.flush()
-        # alert_queue.put(f"{spin_type} {current_sec}")
-        alert_queue.put(f"{spin_type if not turbo_spin else 'pull score spin'}") if not state.fast_mode else None
+            # logger.info(f"\n WAIT BEFORE SPIN >>{ spin_type}: {wait}")
+            # alert_queue.put("ping")
+            # sys.stdout.flush()
+            # alert_queue.put(f"{spin_type} {current_sec}")
+            # alert_queue.put(f"{spin_type if not turbo_spin else 'pull score spin'}") if not state.fast_mode else None
+            # alert_queue.put(f"{spin_type}")
+            # alert_queue.put("spike spin")
     # except Empty:
     #     continue
 
@@ -4725,7 +4937,7 @@ if __name__ == "__main__":
     # alert_queue = ThQueue()
     bet_queue = ThQueue()
     data_queue = ThQueue()
-    countdown_queue = ThQueue()
+    # countdown_queue = ThQueue()
     fetch_queue = ThQueue()
     # spin_queue = ThQueue()
     

@@ -8,24 +8,30 @@ from matplotlib.animation import FuncAnimation
 from config import API_URL
 
 
-# api_url = API_URL[0]  # localhost
-api_url = API_URL[2]  # local network
+# ---------- SETTINGS ----------
+api_url = API_URL[0]  # localhost
+# api_url = API_URL[2]  # local network
+GAME = None
+MAX_CANDLES = 60 # 1 candle : 10 secs / 6 candles : 1 min
+REFRESH_INTERVAL = 500  # ms
 
 # ---------- GET GAME INFO ----------    
-def get_games_data_from_local_api():
+def get_game_name_from_local_api():
     try:
-        response = requests.get(f"{api_url}/games", timeout=5)
-        response.raise_for_status()
-        json_data = response.json()
-        data = json_data.get("registered_games", [])
-        return data if data else None
+        response = requests.get(f"{api_url}/file/game", timeout=5)
+        if response.status_code == 200:
+            data = response.text.strip()
+            return data
+        else:
+            print(f"❌ Failed to fetch game file. Status: {response.status_code}")
+            return None
     except Exception as e:
-        print(f"❌ Error calling /games API: {e}")
+        print(f"❌  Error calling /file/game API: {e}")
         return None
     
 def get_games_csv_from_local_api():
     try:
-        response = requests.get(f"{api_url}/file/game", timeout=3)
+        response = requests.get(f"{api_url}/file", timeout=5)
         if response.status_code == 200:
             text = response.text.strip()
             if not text:
@@ -36,20 +42,8 @@ def get_games_csv_from_local_api():
             print(f"❌ Failed to fetch CSV. Status: {response.status_code}")
             return None
     except Exception as e:
-        print(f"❌  Error calling /file/game API: {e}")
+        print(f"❌  Error calling /file API: {e}")
         return None
-
-# ---------- SETTINGS ----------
-GAME_LIST = get_games_data_from_local_api()
-GAME = GAME_LIST[0] if GAME_LIST else None
-GAME_LABEL = GAME if GAME else "⚠️  No game registered"
-
-CSV_FILE = None
-if GAME:
-    CSV_FILE = f"{GAME.replace(' ', '_').lower()}_log.csv"
-
-MAX_CANDLES = 45 # 1 candle : 10 secs / 6 candles : 1 min
-REFRESH_INTERVAL = 2000  # ms
 
 # Dark style with green up/red down
 mc = mpf.make_marketcolors(up='lightgreen', down='tomato', wick='white', edge='inherit')
@@ -70,35 +64,36 @@ dark_style = mpf.make_mpf_style(
 )
 
 # ---------- DATA LOADING ----------
-def load_data():
+def load_data(resample_rule: str | None = None):
+    global GAME  # so we can update it if needed
     try:
-        # Always fetch fresh CSV each cycle
+        # Fetch CSV from API
         csv_buffer = get_games_csv_from_local_api()
-        if csv_buffer:
-            df = pd.read_csv(
-                csv_buffer,
-                parse_dates=['timestamp'],
-                date_format="%Y-%m-%d %I:%M:%S %p",
-                skipinitialspace=True
-            )
-        elif CSV_FILE:
-            df = pd.read_csv(
-                CSV_FILE,
-                parse_dates=['timestamp'],
-                date_format="%Y-%m-%d %I:%M:%S %p",
-                skipinitialspace=True
-            )
-        else:
-            return pd.DataFrame()
+
+        # If CSV is empty, try refreshing GAME and fetch again
+        if not csv_buffer:
+            print("⚠️ CSV buffer empty, fetching game name again...")
+            GAME = get_game_name_from_local_api()
+            csv_buffer = get_games_csv_from_local_api()
+        
+        if not csv_buffer:
+            return pd.DataFrame()  # still empty
+        # --- continue normal CSV loading ---
+        df = pd.read_csv(
+            csv_buffer,
+            parse_dates=['timestamp'],
+            date_format="%Y-%m-%d %I:%M:%S %p",
+            skipinitialspace=True
+        )
     except (pd.errors.EmptyDataError, FileNotFoundError) as e:
-        print(f"⚠️  No CSV data available ({e}).")
+        print(f"⚠️ No CSV data available ({e}).")
         return pd.DataFrame()
     except Exception as e:
-        print(f"⚠️  Unexpected CSV error: {e}")
+        print(f"⚠️ Unexpected CSV error: {e}")
         return pd.DataFrame()
 
     if "timestamp" not in df.columns or "10m_delta" not in df.columns:
-        print("⚠️  Missing required columns in CSV")
+        print("⚠️ Missing required columns in CSV")
         return pd.DataFrame()
 
     # Filter only today
@@ -107,15 +102,21 @@ def load_data():
     if df_today.empty:
         return pd.DataFrame()
 
-    # Build OHLC
-    df_today['Open'] = df_today['10m_delta'].shift(1)
-    df_today['Close'] = df_today['10m_delta']
-    df_today['High'] = df_today[['Open', 'Close']].max(axis=1)
-    df_today['Low'] = df_today[['Open', 'Close']].min(axis=1)
-    df_today = df_today.dropna()
-
-    ohlc = df_today[['timestamp', 'Open', 'High', 'Low', 'Close']].copy()
-    ohlc.set_index('timestamp', inplace=True)
+    if resample_rule:
+        ohlc = (
+            df_today.set_index("timestamp")['10m_delta']
+            .resample(resample_rule)
+            .ohlc()
+            .dropna()
+        )
+    else:
+        df_today['Open'] = df_today['10m_delta'].shift(1)
+        df_today['Close'] = df_today['10m_delta']
+        df_today['High'] = df_today[['Open', 'Close']].max(axis=1)
+        df_today['Low'] = df_today[['Open', 'Close']].min(axis=1)
+        df_today = df_today.dropna()
+        ohlc = df_today[['timestamp', 'Open', 'High', 'Low', 'Close']].copy()
+        ohlc.set_index('timestamp', inplace=True)
 
     return ohlc.tail(MAX_CANDLES)
 
@@ -124,6 +125,7 @@ def animate(i):
     ohlc = load_data()
     ax.clear()
     ax.set_facecolor('black')
+    title = GAME if GAME else "Unknown Game"
 
     if not ohlc.empty:
         mpf.plot(
@@ -131,11 +133,12 @@ def animate(i):
             type='candle',
             style=dark_style,
             ax=ax,
-            ylabel='10m Delta Value'
+            ylabel='10m Delta Value',
+            # show_nontrading=True
         )
-        ax.set_title(f"{GAME_LABEL} - [ 10 MIN DELTA CHART ] ({pd.Timestamp.now().date()})", color="white")
+        ax.set_title(f"{title} - [ 10 MIN DELTA CHART ] ({pd.Timestamp.now().date()})", color="white")
     else:
-        ax.set_title(f"{GAME_LABEL} - ⚠️  No data available", color="white")
+        ax.set_title(f"{title} - ⚠️ No data available", color="white")
 
     ax.set_xlabel("Time", color="white")
     ax.set_ylabel("10m Delta Value", color="white")
@@ -150,5 +153,5 @@ fig.patch.set_facecolor('black')
 ani = FuncAnimation(fig, animate, interval=REFRESH_INTERVAL, cache_frame_data=False)
 
 plt.tight_layout()
-print(f"📊 Live chart running {GAME_LABEL}... refresh every {REFRESH_INTERVAL/1000:.0f}s")
+print(f"📊 Live chart running {GAME}... refresh every {REFRESH_INTERVAL/1000:.0f}s")
 plt.show()
