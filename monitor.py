@@ -279,6 +279,9 @@ def save_current_data(data_source: str, data: dict):
         json.dump(data, f, indent=2)
 
 def create_time_log(jackpot_value: float, timestamp: Decimal):
+    if state.auto_mode and state.fast_mode:
+        state.fast_mode = False
+    
     if not os.path.exists(LOGS_PATH):
         os.makedirs(LOGS_PATH, exist_ok=True)
     
@@ -288,15 +291,14 @@ def create_time_log(jackpot_value: float, timestamp: Decimal):
     if spike == state.prev_helpslot_jackpot == jackpot_value:
         return
     
-    state.fast_mode = False
-    
     if state.auto_mode and abs(spike) >= 1.0:
         # if spin_in_progress.is_set():
         #     spin_in_progress.clear()
         # threading.Thread(target=spin, args=(False, False, False,), daemon=True).start()
-        spin(False, False, True, False,)
-        state.fast_mode = True
-        alert_queue.put(f"spike {int(timestamp % 60)} fast mode {state.fast_mode}")
+        if not state.fast_mode:
+            spin(False, False, True, False,)
+            state.fast_mode = True
+            alert_queue.put(f"spike {int(timestamp % 60)} fast mode {state.fast_mode}")
                 
     csv_file = os.path.join(LOGS_PATH, f"{game.strip().replace(' ', '_').lower()}_log-hs.csv")
     write_header = not os.path.exists(csv_file)
@@ -1949,14 +1951,9 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
             
         if turbo_spin:
             spin_types = [ "turbo_spin", "super_turbo", "spin_hold", "spam_spin", "combo_spin" ]
-            if "JILI" in provider:
-                spin_types.extend([ "max_turbo" ])
-        
-        if not state.fast_mode:
-            if "JILI" in provider:
-                spin_types.extend([ "max_turbo" ])
-        else:
-            spin_types = [s for s in spin_types if not s.startswith("super")]
+                
+        if "JILI" in provider:
+            spin_types.extend([ "max_turbo" ])
             
         if not state.fast_mode and wait_before_spin and random.random() < 0.4: # 40% use normal spin
             spin_type = "normal_spin"
