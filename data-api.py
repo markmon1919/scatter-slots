@@ -153,62 +153,116 @@ async def poll_single(client, name, reg, requestFrom):
 # ──────────────
 
 async def poller_loop():
-    await align_to_next_6s()
-    
-    async with httpx.AsyncClient(timeout=httpx.Timeout(
-        connect=2.0, read=5.0, write=5.0, pool=5.0
-    )) as client:
-        rf_index = 0  # alternating index
+    try:
+        await align_to_next_6s()
+        
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(connect=2.0, read=5.0, write=5.0, pool=5.0)
+        ) as client:
+            rf_index = 0  # alternating index
+            logger.info("🚀 Poller loop started.")
 
-        while True:
-            requestFrom = REQUEST_FROMS[rf_index]
-            rf_index = (rf_index + 1) % len(REQUEST_FROMS)
+            while registrations:  # ✅ loop only while something is registered
+                requestFrom = REQUEST_FROMS[rf_index]
+                rf_index = (rf_index + 1) % len(REQUEST_FROMS)
 
-            # Poll all registered games concurrently for current requestFrom
-            poll_tasks = [
-                poll_single(client, name, reg, requestFrom)
-                for name, reg in registrations.items()
-            ]
-            await asyncio.gather(*poll_tasks)
-
-            now_time = Decimal(str(time.time()))
-
-            # Check stale data for the other requestFrom and refresh immediately
-            other_rf = REQUEST_FROMS[rf_index]  # the next one
-            stale_names = []
-            for (name, rf) in latest_data.keys():
-                if rf == other_rf:
-                    last_updated = Decimal(str(latest_data[(name, rf)].get("last_updated", "0")))
-                    if now_time - last_updated > 10:  # stale threshold seconds
-                        stale_names.append(name)
-
-            if stale_names:
-                logger.info(f"⏳. {DGRY}Refreshing stale data from {other_rf} for games{RES}: {stale_names}")
-                refresh_tasks = [
-                    poll_single(client, name, registrations[name], other_rf)
-                    for name in stale_names
-                    if name in registrations
+                # Poll all registered games concurrently
+                poll_tasks = [
+                    poll_single(client, name, reg, requestFrom)
+                    for name, reg in registrations.items()
                 ]
-                await asyncio.gather(*refresh_tasks)
+                await asyncio.gather(*poll_tasks)
 
-            # Short sleep to avoid CPU hammering, adjust as needed
-            await asyncio.sleep(0.1)
+                now_time = Decimal(str(time.time()))
+                other_rf = REQUEST_FROMS[rf_index]
+                stale_names = []
+
+                # Refresh stale data
+                for (name, rf) in list(latest_data.keys()):
+                    if rf == other_rf:
+                        last_updated = Decimal(str(latest_data[(name, rf)].get("last_updated", "0")))
+                        if now_time - last_updated > 10:
+                            stale_names.append(name)
+
+                if stale_names:
+                    logger.info(f"⏳ Refreshing stale data from {other_rf}: {stale_names}")
+                    refresh_tasks = [
+                        poll_single(client, name, registrations[name], other_rf)
+                        for name in stale_names if name in registrations
+                    ]
+                    await asyncio.gather(*refresh_tasks)
+                    
+                await asyncio.sleep(0.1) # Short sleep to avoid CPU hammering, adjust as needed
+
+            logger.info("⏸️ Registrations empty — poller exiting.")
+    except asyncio.CancelledError:
+        logger.info("⛔ Poller loop cancelled cleanly.")
+        raise
+    except Exception as e:
+        logger.exception(f"💥 Poller loop crashed: {e}")
 
 # ──────────────
 # LIFESPAN
 # ──────────────
+poller_task: asyncio.Task | None = None
+monitor_task: asyncio.Task | None = None
 
+async def monitor_registrations():
+    """Monitor registration changes and start/stop poller accordingly."""
+    global poller_task
+
+    while True:
+        try:
+            if registrations and (poller_task is None or poller_task.done()):
+                logger.info("🚀 Starting poller loop (registrations found).")
+                poller_task = asyncio.create_task(poller_loop())
+
+            elif not registrations and poller_task and not poller_task.done():
+                logger.info("⏸️ No registrations — cancelling poller loop...")
+                poller_task.cancel()
+                try:
+                    await poller_task
+                except asyncio.CancelledError:
+                    logger.info("⛔ Poller loop stopped cleanly.")
+
+            # Check every 2 seconds for registration changes
+            await asyncio.sleep(2)
+
+        except Exception as e:
+            logger.error(f"⚠️ Monitor error: {e}")
+            await asyncio.sleep(2)
+
+# ──────────────
+# LIFESPAN
+# ──────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    poller_task = asyncio.create_task(poller_loop())
+    app.state.poller_task = None
+
+    logger.info("🌐 App starting up...")
+
     try:
         yield
     finally:
-        poller_task.cancel()
-        try:
-            await poller_task
-        except asyncio.CancelledError:
-            logger.info("\n⛔  Poller loop cancelled cleanly on shutdown.")
+        logger.info("🛑 Shutting down app...")
+        if app.state.poller_task:
+            app.state.poller_task.cancel()
+            try:
+                await app.state.poller_task
+            except asyncio.CancelledError:
+                logger.info("✅ Poller stopped cleanly.")
+                
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     poller_task = asyncio.create_task(poller_loop())
+#     try:
+#         yield
+#     finally:
+#         poller_task.cancel()
+#         try:
+#             await poller_task
+#         except asyncio.CancelledError:
+#             logger.info("\n⛔  Poller loop cancelled cleanly on shutdown.")
 
 # ──────────────
 # FastAPI app
@@ -241,14 +295,19 @@ async def register_game(req: RegisterRequest):
     provider_name = getattr(provider_obj, "provider", req.provider) if provider_obj else req.provider
 
     logger.info(f"\n🎰 Registered: {BWHTE}{BLNK}{req.name}{RES} ({color}{provider_name}{RES}) URL={req.url}\n")
-
+    
+    # ✅ Start poller if not already running
+    if not app.state.poller_task or app.state.poller_task.done():
+        app.state.poller_task = asyncio.create_task(poller_loop())
+        logger.info("🚀 Poller started (on new registration).")
+    
     return {"status": "registered", "name": req.name}
 
 @app.post("/deregister")
 async def deregister_game(req: RegisterRequest):
     if req.name not in registrations:
         raise HTTPException(status_code=404, detail=f"{req.name} not registered")
-
+    
     del registrations[req.name]
     
     # Clean up associated data keys in latest_data, last_min10s, last_change_times, last_hashes
@@ -260,6 +319,14 @@ async def deregister_game(req: RegisterRequest):
             # last_hashes.pop(key, None)
 
     logger.info(f"\n🗑️  Deregistered: {BWHTE}{req.name}{RES}\n")
+
+    if not registrations and app.state.poller_task:
+        app.state.poller_task.cancel()
+        try:
+            await app.state.poller_task
+        except asyncio.CancelledError:
+            logger.info("✅ Poller stopped cleanly.")
+        app.state.poller_task = None
 
     return {"status": "deregistered", "name": req.name}
 
@@ -281,7 +348,7 @@ async def get_game_csv():
 
     if not os.path.exists(LOGS_PATH):
         os.makedirs(LOGS_PATH, exist_ok=True)
-
+        
     game = list(registrations.keys())[0]
     game_logs = os.path.join(LOGS_PATH, f"{game.strip().replace(' ', '_').lower()}_log.csv")
     
@@ -298,7 +365,7 @@ async def get_game_csv():
     if not os.path.exists(LOGS_PATH):
         os.makedirs(LOGS_PATH, exist_ok=True)
 
-    game = list(registrations.keys())[0]
+    game = list(registrations.keys())[0]    
     game_logs = os.path.join(LOGS_PATH, f"{game.strip().replace(' ', '_').lower()}_log.csv")
     
     if not os.path.isfile(game_logs):

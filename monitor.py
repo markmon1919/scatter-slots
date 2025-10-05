@@ -93,6 +93,7 @@ class AutoState:
     helpslot_major_pullback: bool = False
     extreme_pull: bool = False
     intense_pull: bool = False
+    spike: bool = False
 
 @dataclass
 class GameSettings:
@@ -278,10 +279,7 @@ def save_current_data(data_source: str, data: dict):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-def create_time_log(jackpot_value: float, timestamp: Decimal):
-    if state.auto_mode and state.fast_mode:
-        state.fast_mode = False
-    
+def create_time_log(jackpot_value: float, timestamp: Decimal):    
     if not os.path.exists(LOGS_PATH):
         os.makedirs(LOGS_PATH, exist_ok=True)
     
@@ -290,15 +288,29 @@ def create_time_log(jackpot_value: float, timestamp: Decimal):
     
     if spike == state.prev_helpslot_jackpot == jackpot_value:
         return
-    
+
     if state.auto_mode and abs(spike) >= 1.0:
         # if spin_in_progress.is_set():
         #     spin_in_progress.clear()
         # threading.Thread(target=spin, args=(False, False, False,), daemon=True).start()
+        
+        # spin(False, False, True, False,)
+        # state.spike = True
+        # alert_queue.put(f"spike {int(timestamp % 60)} spike mode ON")
+        
         if not state.fast_mode:
             spin(False, False, True, False,)
             state.fast_mode = True
-            alert_queue.put(f"spike {int(timestamp % 60)} fast mode {state.fast_mode}")
+            alert_queue.put(f"spike {int(timestamp % 60)} fast mode ON")
+        
+    # if state.auto_mode and state.spike and abs(spike) <= 0.5:
+    #     spin(False, False, True, False,)
+    #     state.spike = False
+    #     alert_queue.put(f"spike mode OFF")
+            
+    if state.auto_mode and state.fast_mode and abs(spike) <= 0.5:
+        state.fast_mode = False
+        alert_queue.put(f"fast mode OFF")
                 
     csv_file = os.path.join(LOGS_PATH, f"{game.strip().replace(' ', '_').lower()}_log-hs.csv")
     write_header = not os.path.exists(csv_file)
@@ -2581,7 +2593,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
                 ])
         elif spin_type == "turbo_spin": # add turbo-on + space then board stop and turbo-off soon; also auto_spin + board_stop..etc
             if state.widescreen:
-                if game in [ "Fortune Gems", "Money Pot" ] and provider == "JILI": # Playtime
+                if game in [ "Fortune Gems", "Money Pot", "Ali Baba", "Devil Fire", "Devil Fire 2" ] and provider == "JILI": # Playtime
                     cx += 40
                     cy += 40
                 action.extend([
@@ -2717,7 +2729,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
                     ])
         elif spin_type == "super_turbo": # 1 star if JILI
             if state.widescreen:
-                if game in [ "Fortune Gems", "Money Pot" ] and provider == "JILI": # Playtime
+                if game in [ "Fortune Gems", "Money Pot", "Ali Baba", "Devil Fire", "Devil Fire 2" ] and provider == "JILI": # Playtime
                     cx += 40
                     cy += 40
                 action.extend([
@@ -2800,7 +2812,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
                     ])
         elif spin_type == "max_turbo": # 2 stars only JILI
             if state.widescreen:
-                if game in [ "Fortune Gems", "Money Pot" ] and provider == "JILI": # Playtime
+                if game in [ "Fortune Gems", "Money Pot", "Ali Baba", "Devil Fire", "Devil Fire 2" ] and provider == "JILI": # Playtime
                     cx += 40
                     cy += 40
                 action.extend([
@@ -2868,7 +2880,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
                 ])
         elif spin_type == "auto_spin":
             if state.widescreen:
-                if game in [ "Fortune Gems", "Money Pot" ] and provider == "JILI": # Playtime
+                if game in [ "Fortune Gems", "Money Pot", "Ali Baba", "Devil Fire", "Devil Fire 2" ] and provider == "JILI": # Playtime
                     cx += 40
                     cy += 40
                 action.extend([
@@ -4265,30 +4277,42 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
 #         except Empty:
 #             continue
 
+def game_registry(url: str, game: str, provider: str, action: str):
+    try:
+        response = requests.post(f"{api_server}/{action}",
+            json={
+                'url': url,
+                'name': game,
+                'provider': provider  
+            }, timeout=5)
+        
+        json_data = response.json()
+        
+        logger.info(f"\t\t📡  ( {BLMAG}{json_data.get("status").title()}{RES}: {DGRY}{json_data.get("name")}{RES} | {PROVIDERS.get(provider).color}{json_data.get("name")}{RES} )")
+    except Exception as e:
+        logger.info(f"\t\t❌  Failed to {action} game: {e}")
+
 def get_game_data_from_local_api(game: str):
     request_from = random.choice(["H5", "H6"])
 
     try:
-        response = requests.get(
-            f"{api_server}/game",
+        response = requests.get(f"{api_server}/game",
             params={
                 "name": game,
                 "requestFrom": request_from
-            },
-            timeout=5
-        )
+            }, timeout=5)
         
         json_data = response.json()
 
-        logger.debug(f"📡 Response >> [{BWHTE}{request_from}{RES}] {json_data}")
+        logger.debug(f"📡  Response >> [{BWHTE}{request_from}{RES}] {json_data}")
 
         return json_data#, request_from
 
     except Exception as e:
-        logger.info(f"❌ Error calling API: {e}")
+        logger.info(f"❌  Error calling API: {e}")
         return {"error": str(e)}, request_from
-
-def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
+    
+def monitor_game_info(game: str, data_queue: ThQueue):
     last_min10 = None
 
     while not stop_event.is_set():
@@ -4313,7 +4337,7 @@ def monitor_game_info(game: str, provider: str, url: str, data_queue: ThQueue):
                 #     alert_queue.put("redundant data")
                     # logger.info(f"\n\t🛰️. Redundant Data From [{BWHTE}{request_from}{RES}] → Current{BLNK}{BLYEL}={RES}{MAG}{min10}{RES} | Prev{BLNK}{BLYEL}={RES}{MAG}{last_min10}{RES}")
             else:
-                logger.info(f"\n\t⚠️  Game '{game}' not found") if state.elapsed != 0 else None
+                logger.info(f"\n\t⚠️  Game '{game}' not found") #if state.elapsed != 0 else None
                 # subprocess.run(["bash", "api_restart.sh"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) if state.elapsed != 0 else None
         except Exception as e:
             logger.info(f"🤖❌  {e}")
@@ -4907,8 +4931,8 @@ if __name__ == "__main__":
 
     logger.info(f"\n\n\t... {WHTE}Starting real-time jackpot monitor.\n\t    Press ({BLMAG}Ctrl+C{RES}{WHTE}) to stop.{RES}\n\n")
 
-    # Register a game
-    requests.post(f"{api_server}/register", json={'url': url, 'name': game, 'provider': provider})
+    # Register game to api server
+    game_registry(url, game, provider, "register")
     
     breakout = load_breakout_memory(game)
 
@@ -4944,7 +4968,7 @@ if __name__ == "__main__":
     countdown_thread = threading.Thread(target=countdown_timer, daemon=True)
     fetch_thread = threading.Thread(target=fetch_game_data, args=(driver, game, fetch_queue,), daemon=True)
     kb_thread = threading.Thread(target=start_listeners, args=(stop_event,), daemon=True)
-    monitor_thread = threading.Thread(target=monitor_game_info, args=(game, provider, url, data_queue,), daemon=True)
+    monitor_thread = threading.Thread(target=monitor_game_info, args=(game, data_queue,), daemon=True)
     # spin_thread = threading.Thread(target=spin, daemon=True)
     # threading.Thread(target=keyboard, args=(settings,), daemon=True).start()
 
@@ -4979,7 +5003,7 @@ if __name__ == "__main__":
                 helpslot_data = fetch_queue.get_nowait()
                 data = data_queue.get_nowait()
                 parsed_data = extract_game_data(data)
-
+                
                 all_data = load_previous_data("api")
                 all_helpslot_data = load_previous_data("helpslot")
 
@@ -5013,7 +5037,6 @@ if __name__ == "__main__":
             except Empty:
                 # No data in the last 1 second — not an error
                 pass
-
     except KeyboardInterrupt:
         logger.error(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
         stop_event.set()
@@ -5062,11 +5085,9 @@ if __name__ == "__main__":
 
     # requests.post(f"http://{API_CONFIG.get('host')}:{API_CONFIG.get('port')}/deregister", json={'url': url, 'name': game, 'provider': provider})
     finally:
-        requests.post(f"{api_server}/deregister", json={
-            'url': url,
-            'name': game,
-            'provider': provider
-        })
+        # Deregister game to api server
+        game_registry(url, game, provider, "deregister")
+        driver.quit()
         
         if os.path.exists(DATA_FILE):
             os.remove(DATA_FILE)

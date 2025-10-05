@@ -1,160 +1,227 @@
 #!/usr/bin/env .venv/bin/python
 
+import io, time, threading, requests, queue
 import pandas as pd
 import mplfinance as mpf
 import matplotlib.pyplot as plt
-import io, requests
 from matplotlib.animation import FuncAnimation
 from config import API_URL
 
 
-# ---------- SETTINGS ----------
-api_url = API_URL[0]  # localhost
-# api_url = API_URL[2]  # local network
-GAME = None
-MAX_CANDLES = 60 # 1 candle : 10 secs / 6 candles : 1 min
-REFRESH_INTERVAL = 500  # ms
+class ChartWatcher:
+    def __init__(
+        self,
+        api_url: str,
+        chart_refresh_interval_ms: int = 500,
+        fetch_sec: float = 0.5,
+        max_rows: int = 60,
+        chart_title: str = "Untitled Chart",
+        header: str = None
+    ):
+        self.api_url = api_url
+        self.refresh_ms = chart_refresh_interval_ms
+        self.fetch_sec = fetch_sec
+        self.max_rows = max_rows
+        self.chart_title = chart_title
+        self.header = header
 
-# ---------- GET GAME INFO ----------    
-def get_game_name_from_local_api():
-    try:
-        response = requests.get(f"{api_url}/file/game", timeout=5)
-        if response.status_code == 200:
-            data = response.text.strip()
-            return data
-        else:
-            print(f"❌ Failed to fetch game file. Status: {response.status_code}")
-            return None
-    except Exception as e:
-        print(f"❌  Error calling /file/game API: {e}")
+        # internal state
+        self.lock = threading.Lock()
+        self.stop_event = threading.Event()
+        self.ohlc_df = pd.DataFrame()
+        self.game_name = "Unknown"
+        self.connected = True
+        self.last_data_ts = 0
+        self.last_game_ts = 0
+
+        # safe UI updates
+        self.ui_queue = queue.Queue()
+
+        # setup chart style
+        mc = mpf.make_marketcolors(up="green", down="red", wick="white", edge="inherit")
+        self.style = mpf.make_mpf_style(
+            base_mpf_style="nightclouds",
+            marketcolors=mc,
+            facecolor="black",
+            edgecolor="black",
+            gridcolor="gray",
+            rc={
+                "axes.labelcolor": "white",
+                "xtick.color": "white",
+                "ytick.color": "white",
+                "axes.edgecolor": "white",
+                "grid.color": "gray",
+                "grid.linestyle": "--",
+            },
+        )
+
+    # ======= API Fetch =======
+    def get_game_name(self):
+        """Fetch the current game name."""
+        try:
+            res = requests.get(f"{self.api_url}/file/game", timeout=5)
+            name = res.text.strip() if res.status_code == 200 else ""
+            if name and name.lower() != "none":
+                if self.game_name != name:
+                    print(f"🎮 Game detected: {name}")
+                    self.game_name = name
+                    self.ui_queue.put(f"{self.chart_title} — {self.game_name}")
+                self.last_game_ts = time.time()
+            else:
+                if self.game_name == "Unknown":
+                    print("⌛ Waiting for valid game name...")
+                    self.ui_queue.put(f"{self.chart_title} — Waiting...")
+        except Exception as e:
+            print(f"❌ Error getting game name: {e}")
+
+    def fetch_csv(self):
+        """Fetch CSV data."""
+        try:
+            res = requests.get(f"{self.api_url}/file", timeout=5)
+            if res.status_code == 200 and res.text.strip():
+                self.last_data_ts = time.time()
+                return io.StringIO(res.text)
+            print(f"⚠️ CSV fetch failed ({res.status_code})")
+        except Exception as e:
+            print(f"❌ Error fetching CSV: {e}")
         return None
-    
-def get_games_csv_from_local_api():
-    try:
-        response = requests.get(f"{api_url}/file", timeout=5)
-        if response.status_code == 200:
-            text = response.text.strip()
-            if not text:
-                print("⚠️ API returned empty CSV")
-                return None
-            return io.StringIO(text)
+
+    def process_csv(self, buf):
+        """Parse CSV into OHLC dataframe."""
+        try:
+            df = pd.read_csv(
+                buf,
+                parse_dates=["timestamp"],
+                date_format="%Y-%m-%d %I:%M:%S %p",
+                skipinitialspace=True
+            )
+            if self.header not in df.columns:
+                print(f"⚠️ Missing {self.header} column.")
+                return pd.DataFrame()
+
+            today = pd.Timestamp.now().date()
+            df = df[df['timestamp'].dt.date == today].reset_index(drop=True)
+
+            if df.empty:
+                return pd.DataFrame()
+
+            df["Open"] = df[self.header].shift(1)
+            df["Close"] = df[self.header]
+            df["High"] = df[["Open", "Close"]].max(axis=1)
+            df["Low"] = df[["Open", "Close"]].min(axis=1)
+            df = df.dropna()
+            ohlc = df[['timestamp', 'Open', 'High', 'Low', 'Close']].copy()
+            ohlc.set_index('timestamp', inplace=True)
+            return ohlc.tail(self.max_rows)
+        except Exception as e:
+            print(f"⚠️ CSV parse error: {e}")
+            return pd.DataFrame()
+
+    # ======= Threads =======
+    def data_watcher(self):
+        """Continuously fetch and update chart data."""
+        while not self.stop_event.is_set():
+            buf = self.fetch_csv()
+            if buf:
+                df = self.process_csv(buf)
+                with self.lock:
+                    self.ohlc_df = df
+            time.sleep(self.fetch_sec)
+
+    def poll_game_name(self):
+        """Periodically check game name."""
+        while not self.stop_event.is_set():
+            self.get_game_name()
+            time.sleep(2)
+
+    # ======= Chart Update =======
+    def update_chart(self, _):
+        """Matplotlib animation frame update."""
+        while not self.ui_queue.empty():
+            title = self.ui_queue.get_nowait()
+            try:
+                self.fig.canvas.manager.set_window_title(title)
+            except Exception:
+                pass
+
+        now = time.time()
+        disconnected = (now - max(self.last_data_ts, self.last_game_ts)) > 10
+        if disconnected and self.connected:
+            self.connected = False
+            print("⚠️ Lost connection (no updates for 10s)")
+            self.ui_queue.put(f"{self.chart_title} — {self.game_name} (Disconnected)")
+        elif not disconnected and not self.connected:
+            self.connected = True
+            print("✅ Connection restored")
+            self.ui_queue.put(f"{self.chart_title} — {self.game_name}")
+
+        self.ax.clear()
+        self.ax.set_facecolor("black")
+
+        with self.lock:
+            df = self.ohlc_df.copy()
+
+        if not df.empty:
+            mpf.plot(
+                df,
+                ax=self.ax,
+                style=self.style,
+                type="candle",
+                ylabel=self.header,
+                show_nontrading=True
+            )
+            self.ax.set_title(
+                f"{self.game_name} - {self.chart_title} ({pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')})",
+                color="white",
+            )
         else:
-            print(f"❌ Failed to fetch CSV. Status: {response.status_code}")
-            return None
-    except Exception as e:
-        print(f"❌  Error calling /file API: {e}")
-        return None
+            self.ax.set_title("Waiting for data...", color="white")
 
-# Dark style with green up/red down
-mc = mpf.make_marketcolors(up='lime', down='red', wick='white', edge='inherit')
-dark_style = mpf.make_mpf_style(
-    base_mpf_style='nightclouds',
-    marketcolors=mc,
-    facecolor='black',
-    edgecolor='black',
-    gridcolor='gray',
-    rc={
-        'axes.labelcolor': 'white',
-        'xtick.color': 'white',
-        'ytick.color': 'white',
-        'axes.edgecolor': 'white',
-        'grid.color': 'gray',
-        'grid.linestyle': '--'
-    }
-)
+        self.ax.set_xlabel("Time", color="white")
+        self.ax.set_ylabel(self.header.title(), color="white")
+        plt.setp(self.ax.get_xticklabels(), rotation=45, ha="right", color="white")
+        plt.setp(self.ax.get_yticklabels(), color="white")
+        self.ax.grid(True, linestyle="--", color="gray", alpha=0.5)
 
-# ---------- DATA LOADING ----------
-def load_data(resample_rule: str | None = None):
-    global GAME  # so we can update it if needed
-    try:
-        # Fetch CSV from API
-        csv_buffer = get_games_csv_from_local_api()
-
-        # If CSV is empty, try refreshing GAME and fetch again
-        if not csv_buffer:
-            print("⚠️ CSV buffer empty, fetching game name again...")
-            GAME = get_game_name_from_local_api()
-            csv_buffer = get_games_csv_from_local_api()
+    # ======= Runner =======
+    def run(self):
+        self.fig, self.ax = plt.subplots(figsize=(10, 6))
+        self.fig.patch.set_facecolor("black")
+        self.fig.canvas.manager.set_window_title(f"{self.chart_title} — Waiting...")
         
-        if not csv_buffer:
-            return pd.DataFrame()  # still empty
-        # --- continue normal CSV loading ---
-        df = pd.read_csv(
-            csv_buffer,
-            parse_dates=['timestamp'],
-            date_format="%Y-%m-%d %I:%M:%S %p",
-            skipinitialspace=True
-        )
-    except (pd.errors.EmptyDataError, FileNotFoundError) as e:
-        print(f"⚠️ No CSV data available ({e}).")
-        return pd.DataFrame()
-    except Exception as e:
-        print(f"⚠️ Unexpected CSV error: {e}")
-        return pd.DataFrame()
+        threading.Thread(target=self.data_watcher, daemon=True).start()
+        threading.Thread(target=self.poll_game_name, daemon=True).start()
 
-    if "timestamp" not in df.columns or "jackpot_meter" not in df.columns:
-        print("⚠️ Missing required columns in CSV")
-        return pd.DataFrame()
+        ani = FuncAnimation(self.fig, self.update_chart, interval=self.refresh_ms, cache_frame_data=False)
+        plt.tight_layout()
 
-    # Filter only today
-    today = pd.Timestamp.now().date()
-    df_today = df[df['timestamp'].dt.date == today].reset_index(drop=True)
-    if df_today.empty:
-        return pd.DataFrame()
+        print(f"📡 Chart running (refresh={self.refresh_ms/1000:.1f}s)")
 
-    if resample_rule:
-        # ---- TIME-BASED CANDLES ----
-        ohlc = (
-            df_today.set_index("timestamp")['10m']
-            .resample(resample_rule)   # e.g. "1T"=1min, "5T"=5min, "15T"=15min
-            .ohlc()
-            .dropna()
-        )
-    else:
-        # ---- ROW-BASED CANDLES ----
-        df_today['Open'] = df_today['10m'].shift(1)
-        df_today['Close'] = df_today['10m']
-        df_today['High'] = df_today[['Open', 'Close']].max(axis=1)
-        df_today['Low'] = df_today[['Open', 'Close']].min(axis=1)
-        df_today = df_today.dropna()
+        try:
+            plt.show()
+        except KeyboardInterrupt:
+            print("🛑 Interrupted")
+        finally:
+            self.stop_event.set()
+            print("✅ Clean exit")
 
-        ohlc = df_today[['timestamp', 'Open', 'High', 'Low', 'Close']].copy()
-        ohlc.set_index('timestamp', inplace=True)
 
-    return ohlc.tail(MAX_CANDLES)
+# ======= Run Instance =======
+if __name__ == "__main__":
+    api_url = API_URL[0]  # localhost
+    # api_url = API_URL[2]  # local network
 
-# ---------- ANIMATION ----------
-def animate(i):
-    ohlc = load_data()
-    ax.clear()
-    ax.set_facecolor('black')
-    title = GAME if GAME else "Unknown Game"
+    chart_refresh_interval_ms = 500
+    fetch_sec = 0.5
+    max_rows = 60
 
-    if not ohlc.empty:
-        mpf.plot(
-            ohlc,
-            type='candle',
-            style=dark_style,
-            ax=ax,
-            ylabel='10m Value',
-            # show_nontrading=True
-        )
-        ax.set_title(f"{title} - [ 10 MIN CHART ] ({pd.Timestamp.now().date()})", color="white")
-    else:
-        ax.set_title(f"{title} - ⚠️ No data available", color="white")
-
-    ax.set_xlabel("Time", color="white")
-    ax.set_ylabel("10m Value", color="white")
-    plt.setp(ax.get_xticklabels(), rotation=45, ha='right', color='white')
-    plt.setp(ax.get_yticklabels(), color='white')
-    ax.grid(True, linestyle="--", color="gray", alpha=0.5)
-
-# ---------- MAIN ----------
-fig, ax = plt.subplots(figsize=(10, 6))
-fig.patch.set_facecolor('black')
-
-ani = FuncAnimation(fig, animate, interval=REFRESH_INTERVAL, cache_frame_data=False)
-
-plt.tight_layout()
-print(f"📊 Live chart running {GAME}... refresh every {REFRESH_INTERVAL/1000:.0f}s")
-plt.show()
+    watcher = ChartWatcher(
+        api_url,
+        chart_refresh_interval_ms,
+        fetch_sec,
+        max_rows,
+        chart_title="10 Minute Chart",
+        header = "10m"
+    )
+    watcher.run()
+    
