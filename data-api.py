@@ -39,6 +39,7 @@ class RegisterRequest(BaseModel):
 
 registrations = {}          # name -> {"url": ..., "provider": ...}
 last_min10s = {}            # (name, requestFrom) → min10 value
+last_prev_min10s = {}
 last_change_times = {}      # (name, requestFrom) → Decimal(timestamp)
 # last_hashes = {}            # (name, requestFrom) → str(hash)
 latest_data = {}            # (name, requestFrom) → dict
@@ -123,11 +124,18 @@ async def poll_single(client, name, reg, requestFrom):
                     new_data = dict(first)
                     new_data["last_updated"] = str(now_time)
                     # hash_val = hashlib.md5(json.dumps(new_data, sort_keys=True).encode()).hexdigest()
+                    # latest_data[key] = new_data
+                    # last_min10s[key] = min10
+                    # last_change_times[key] = now_time
+                    # last_hashes[key] = hash_val
+                    new_data['prev_10m_delta'] = (last_min10s.get(key) or 0.0) - (last_prev_min10s.get(key) or 0.0)
+                    new_data['10m_delta'] = min10 - (last_min10s.get(key) or 0.0)
+                    last_prev_min10s[key] = last_min10s.get(key) or 0.0
+                        
                     latest_data[key] = new_data
                     last_min10s[key] = min10
                     last_change_times[key] = now_time
-                    # last_hashes[key] = hash_val
-                    new_data['10m_delta'] = (min10 - prev_min10)
+                    
                     try:
                         await create_time_log(new_data)
                     except Exception as e:
@@ -315,6 +323,7 @@ async def deregister_game(req: RegisterRequest):
         if key[0] == req.name:
             latest_data.pop(key, None)
             last_min10s.pop(key, None)
+            last_prev_min10s.pop(key, None)
             last_change_times.pop(key, None)
             # last_hashes.pop(key, None)
 
@@ -405,7 +414,7 @@ async def create_time_log(data: dict):
     csv_file = os.path.join(LOGS_PATH, f"{data.get("name").strip().replace(' ', '_').lower()}_log.csv")
     write_header = not os.path.exists(csv_file)
     
-    fieldnames = ["timestamp", "jackpot_meter", "color", "10m", "1h", "3h", "6h", "10m_delta"]
+    fieldnames = [ "timestamp", "jackpot_meter", "color", "10m", "1h", "3h", "6h", "10m_delta" ]
     row = {
         "timestamp": datetime.fromtimestamp(float(data.get("last_updated", time.time()))).strftime("%Y-%m-%d %I:%M:%S %p"),
         "jackpot_meter": data.get("value"),
@@ -414,7 +423,7 @@ async def create_time_log(data: dict):
         "1h": data.get("hr1"),
         "3h": data.get("hr3"),
         "6h": data.get("hr6"),
-        "10m_delta": data.get("10m_delta")
+        "10m_delta": data.get("10m_delta", 0.0)
     }
 
     async with aiofiles.open(csv_file, mode="a", newline="") as f:
