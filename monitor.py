@@ -1411,8 +1411,9 @@ def countdown_timer(seconds: int = 10):
                 # test maybe if green?? then next is sure reversal
                 state.last_pull_delta < state.pull_delta,
                 state.last_min10 < state.min10,
-                state.min10 > 0,
-                state.pull_delta >= 25
+                state.min10 >= 40, # note on this change too
+                # state.pull_delta >= 25 # this is trend changer in charet.. 
+                state.pull_delta >= 50 # this is trend changer in charet.. 
             ])
             
             if jackpot_conditions and triggered_sec is None:
