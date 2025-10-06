@@ -1133,6 +1133,7 @@ API_HOST_IP = ""
 API_PORT = 3333
 
 VPS_IP = "66.241.124.83"
+VPS_DOMAIN = "https://scatter.goldenarbitrage.net"
 
 API_URL = [ f"http://localhost:{API_PORT}", "https://api-jackpot.fly.dev", f"http://{API_HOST_IP}:{API_PORT}" ]
 # API_URL = [ "http://localhost:8080", "https://api-jackpot.fly.dev", "http://192.168.1.10:8080" ]

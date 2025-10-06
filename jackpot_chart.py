@@ -1,11 +1,11 @@
 #!/usr/bin/env .venv/bin/python
 
-import io, time, threading, requests, queue
+import io, os, time, threading, requests, queue
 import pandas as pd
 import mplfinance as mpf
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from config import API_URL
+from config import VPS_DOMAIN, API_URL, LOGS_PATH
 
 
 class ChartWatcher:
@@ -75,16 +75,35 @@ class ChartWatcher:
             print(f"❌ Error getting game name: {e}")
 
     def fetch_csv(self):
-        """Fetch CSV data."""
-        try:
-            res = requests.get(f"{self.api_url}/file/jackpot", timeout=5)
-            if res.status_code == 200 and res.text.strip():
-                self.last_data_ts = time.time()
-                return io.StringIO(res.text)
-            print(f"⚠️ CSV fetch failed ({res.status_code})")
-        except Exception as e:
-            print(f"❌ Error fetching CSV: {e}")
-        return None
+        """Fetch CSV data."""    
+        if "scatter." in self.api_url:      
+            try:
+                csv_file = os.path.join(
+                    LOGS_PATH,
+                    f"{self.game_name.strip().replace('\"', '').replace(' ', '_').lower()}_log-hs.csv"
+                )
+                if os.path.exists(csv_file):
+                    with open(csv_file, "r", encoding="utf-8") as f:
+                        csv_content = f.read()
+                        self.last_data_ts = time.time()
+                        return io.StringIO(csv_content)  # so pandas can read it
+                else:
+                    print(f"⚠️ CSV file not found: {csv_file}")
+                    return None
+
+            except Exception as e:
+                print(f"❌ Error reading CSV: {e}")
+                return None
+        else:
+            try:
+                res = requests.get(f"{self.api_url}/file/jackpot", timeout=5)
+                if res.status_code == 200 and res.text.strip():
+                    self.last_data_ts = time.time()
+                    return io.StringIO(res.text)
+                print(f"⚠️ CSV fetch failed ({res.status_code})")
+            except Exception as e:
+                print(f"❌ Error fetching CSV: {e}")
+            return None
 
     def process_csv(self, buf):
         """Parse CSV into OHLC dataframe."""
@@ -208,7 +227,8 @@ class ChartWatcher:
 
 # ======= Run Instance =======
 if __name__ == "__main__":
-    api_url = API_URL[0]  # localhost
+    api_url = VPS_DOMAIN # vps
+    # api_url = API_URL[0]  # localhost
     # api_url = API_URL[2]  # local network
 
     chart_refresh_interval_ms = 500

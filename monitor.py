@@ -13,7 +13,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from trend import load_trend_memory
-from config import (LOGS_PATH, LOG_LEVEL, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_URL, VPS_IP, TREND_FILE, BREAKOUT_FILE, DATA_FILE, HELPSLOT_DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, 
+from config import (VPS_DOMAIN, LOGS_PATH, LOG_LEVEL, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_URL, VPS_IP, TREND_FILE, BREAKOUT_FILE, DATA_FILE, HELPSLOT_DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, 
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 
@@ -2637,7 +2637,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
                 ])
         elif spin_type == "turbo_spin": # add turbo-on + space then board stop and turbo-off soon; also auto_spin + board_stop..etc
             if state.widescreen:
-                if game in [ "Fortune Gems", "Money Pot", "Ali Baba", "Devil Fire", "Devil Fire 2" ] and provider == "JILI": # Playtime
+                if provider == "JILI": # Playtime
                     cx += 40
                     cy += 40
                 action.extend([
@@ -2773,7 +2773,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
                     ])
         elif spin_type == "super_turbo": # 1 star if JILI
             if state.widescreen:
-                if game in [ "Fortune Gems", "Money Pot", "Ali Baba", "Devil Fire", "Devil Fire 2" ] and provider == "JILI": # Playtime
+                if provider == "JILI": # Playtime
                     cx += 40
                     cy += 40
                 action.extend([
@@ -2856,7 +2856,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
                     ])
         elif spin_type == "max_turbo": # 2 stars only JILI
             if state.widescreen:
-                if game in [ "Fortune Gems", "Money Pot", "Ali Baba", "Devil Fire", "Devil Fire 2" ] and provider == "JILI": # Playtime
+                if provider == "JILI": # Playtime
                     cx += 40
                     cy += 40
                 action.extend([
@@ -2924,7 +2924,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
                 ])
         elif spin_type == "auto_spin":
             if state.widescreen:
-                if game in [ "Fortune Gems", "Money Pot", "Ali Baba", "Devil Fire", "Devil Fire 2" ] and provider == "JILI": # Playtime
+                if provider == "JILI": # Playtime
                     cx += 40
                     cy += 40
                 action.extend([
@@ -3217,7 +3217,7 @@ def spin(combo_spin: bool = False, spam_spin: bool = False, turbo_spin: bool = F
         # if not state.fast_mode and wait_before_spin and spin_type == "normal_spin":
         #     extra_spin = []
         #     if state.widescreen:
-        #         if game in [ "Fortune Gems", "Money Pot", "Ali Baba", "Devil Fire", "Devil Fire 2" ] and provider == "JILI": # Playtime
+        #         if provider == "JILI": # Playtime
         #             cx += 40
         #             cy += 40
         #         extra_spin.extend([
@@ -4970,7 +4970,8 @@ if __name__ == "__main__":
     #         logger.info("\tPlease enter a valid number.")
     
     # provider = GAME_CONFIGS.get(game).provider
-    api_server = API_URL[0] # hard code
+    # api_server = API_URL[0] # hard code
+    api_server = VPS_DOMAIN
 
     # logger.info(f"\n\n\t{BLNK}{DGRY}🔔 Select Server{RES}\n")
     # logger.info("  ".join(f"\n\t[{WHTE}{i}{RES}] - {BLBLU + 'Local' if 'localhost' in host else BLRED + 'VPS'}{RES}" for i, host in enumerate(API_URL, start=1)))

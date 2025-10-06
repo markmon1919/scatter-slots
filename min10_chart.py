@@ -5,7 +5,7 @@ import pandas as pd
 import mplfinance as mpf
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from config import API_URL
+from config import VPS_DOMAIN, API_URL
 
 
 class ChartWatcher:
@@ -208,7 +208,8 @@ class ChartWatcher:
 
 # ======= Run Instance =======
 if __name__ == "__main__":
-    api_url = API_URL[0]  # localhost
+    api_url = VPS_DOMAIN # vps
+    # api_url = API_URL[0]  # localhost
     # api_url = API_URL[2]  # local network
 
     chart_refresh_interval_ms = 500
