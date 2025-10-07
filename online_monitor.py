@@ -1,6 +1,8 @@
 #!/usr/bin/env .venv/bin/python
 
 import aiofiles, asyncio, certifi, json, logging, math, os, platform, pyautogui, random, re, ssl, shutil, subprocess, sys, time, threading, websockets
+import numpy as np
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
@@ -96,6 +98,8 @@ class AutoState:
     extreme_pull: bool = False
     intense_pull: bool = False
     spike: bool = False
+    pull_thresh: int = 0
+    min10_thresh: int = 0
 
 @dataclass
 class GameSettings:
@@ -1160,19 +1164,25 @@ def countdown_timer(seconds: int = 10):
         sys.stdout.flush()
         
         if state.auto_mode:
+            # dynamic jackpot conditions
             jackpot_conditions = all([
-                # test maybe if green?? then next is sure reversal
                 state.last_pull_delta < state.pull_delta,
                 state.last_min10 < state.min10,
-                state.min10 >= 40, # note on this change too
-                # state.pull_delta >= 25 # this is trend changer in charet.. 
-                state.pull_delta >= 50 # this is trend changer in charet.. 
+                state.min10 >= state.min10_thresh,
+                state.pull_delta >= state.pull_thresh
             ])
+            # jackpot_conditions = all([
+            #     state.last_pull_delta < state.pull_delta,
+            #     state.last_min10 < state.min10,
+            #     state.min10 >= 40, # note on this change too
+            #     state.pull_delta >= 50 # this is trend changer in charet.. 
+            # ])
             
             if jackpot_conditions and triggered_sec is None:
                 spin(False, False, True, False,)
                 # state.fast_mode = True
                 triggered_sec = current_sec
+                logger.info(f"\n\t💥  Jackpot trend detected! pull_delta={state.pull_delta:.2f}, min10={state.min10:.2f}")
                 alert_queue.put(f"{current_sec} jackpot mode ON")
                 
             if triggered_sec is not None:
@@ -2801,6 +2811,28 @@ def providers_list():
         except ValueError:
             logger.warning("\t⚠️  Please enter a valid number.")
             
+# def update_recent_data(pull_delta, min10):
+#     """Add new data to the rolling window"""
+#     recent_pull_deltas.append(pull_delta)
+#     recent_min10.append(min10)
+
+def get_dynamic_thresholds():
+    """Compute dynamic thresholds for pull_delta and min10"""
+    if len(recent_pull_deltas) < 5:
+        # Not enough data yet, use default conservative values
+        return 50, 40
+    
+    # pull_delta threshold: mean + 1.5*std or 95th percentile
+    pull_array = np.array(recent_pull_deltas)
+    pull_thresh = max(pull_array.mean() + 1.5 * pull_array.std(),
+                    np.percentile(pull_array, 95))
+    
+    # min10 threshold: top 25% of recent min10 values
+    min10_array = np.array(recent_min10)
+    min10_thresh = np.percentile(min10_array, 75)
+
+    return pull_thresh, min10_thresh
+            
 # ────────────── ASYNC WEBSOCKET CLIENT ──────────────
 def start_ws_client(api_server, game, data_queue: ThQueue,):
     async def fetch_api_data():
@@ -2826,6 +2858,18 @@ def start_ws_client(api_server, game, data_queue: ThQueue,):
                         except Exception as e:
                             logger.info(f"⚠️ {BLRED}Failed to log CSV for {game}: {e}")
                             
+                        # Example usage in your main loop
+                        # pull_delta = state.pull_delta
+                        # min10 = state.min10
+
+                        # update rolling window
+                        # update_recent_data(pull_delta, min10)
+                        recent_pull_deltas.append(data.get('10m_delta'))
+                        recent_min10.append(data.get('min10'))
+
+                        # compute dynamic thresholds
+                        state.pull_thresh, state.min10_thresh = get_dynamic_thresholds()
+                        
                         data_queue.put(data)
                         
                         logger.debug(f"\n\tstate.last_time: {datetime.fromtimestamp(float(state.last_time))}")
@@ -2949,6 +2993,10 @@ if __name__ == "__main__":
     # fetch_thread.start()
     # kb_thread.start()
     # monitor_thread.start()
+    
+    window = 20 # number of iterations
+    recent_pull_deltas = deque(maxlen=window)
+    recent_min10 = deque(maxlen=window)
     
     try:
         while not stop_event.is_set():
