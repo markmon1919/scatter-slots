@@ -1,6 +1,6 @@
 #!/usr/bin/env .venv/bin/python
 
-import asyncio, csv, json, logging, math, os, platform, pyautogui, random, re, requests, shutil, subprocess, sys, time, threading, websockets
+import asyncio, certifi, json, logging, math, os, platform, pyautogui, random, re, ssl, shutil, subprocess, sys, time, threading, websockets
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
@@ -2800,9 +2800,10 @@ def providers_list():
 # ────────────── ASYNC WEBSOCKET CLIENT ──────────────
 def start_ws_client(api_server, game, data_queue: ThQueue,):
     async def fetch_api_data():
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
         while not stop_event.is_set():
             try:
-                async with websockets.connect(api_server) as ws:
+                async with websockets.connect(api_server, ssl=ssl_context) as ws:
                     await ws.send(json.dumps({"game": game, "provider": provider}))
                     
                     while not stop_event.is_set():

@@ -155,7 +155,7 @@ app = FastAPI(lifespan=lifespan, title="Data API")
 # ────────────── ROUTES ──────────────
 @app.get("/")
 async def root():
-    return {"message": "FastAPI poller running. Connect via WebSocket to receive min10 updates.", "title": app.title}
+    return {"message": "FastAPI poller running. Connect via WebSocket to receive game updates.", "title": app.title}
 
 @app.get("/game")
 async def get_latest_game(name: str, provider: str):

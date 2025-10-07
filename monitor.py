@@ -5007,7 +5007,7 @@ if __name__ == "__main__":
     
     # provider = GAME_CONFIGS.get(game).provider
     # api_server = API_URL[0] # hard code
-    api_server = VPS_DOMAIN
+    api_server = f"wss://{VPS_DOMAIN}/ws"
 
     # logger.info(f"\n\n\t{BLNK}{DGRY}🔔 Select Server{RES}\n")
     # logger.info("  ".join(f"\n\t[{WHTE}{i}{RES}] - {BLBLU + 'Local' if 'localhost' in host else BLRED + 'VPS'}{RES}" for i, host in enumerate(API_URL, start=1)))
