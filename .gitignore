@@ -87,3 +87,4 @@ logs/*
 # Others
 chrome_profile*
 **/*.csv*
+current_game.txt
