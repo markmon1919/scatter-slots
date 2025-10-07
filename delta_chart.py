@@ -1,11 +1,11 @@
 #!/usr/bin/env .venv/bin/python
 
-import io, time, threading, requests, queue
+import io, os, time, threading, requests, queue
 import pandas as pd
 import mplfinance as mpf
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from config import VPS_DOMAIN, API_URL
+from config import VPS_DOMAIN, API_URL, LOGS_PATH
 
 
 class ChartWatcher:
@@ -96,15 +96,17 @@ class ChartWatcher:
         try:
             csv_file = os.path.join(LOGS_PATH, f"{self.game_name.strip().replace(' ', '_').lower()}_log.csv")
             
-            if not os.path.exists(csv_file):
+            if os.path.exists(csv_file):            
+                with open(csv_file, "r", encoding="utf-8") as f:
+                    csv_content = f.read()
+                    self.last_data_ts = time.time()
+                    return io.StringIO(csv_content)
+            else:
                 print(f"⚠️ CSV fille not found ({csv_file})")
-            
-            with open(csv_file, "r", encoding="utf-8") as f:
-                self.last_data_ts = time.time()
-                return io.StringIO(f.read())              
+                return None
         except Exception as e:
-            print(f"❌ Error fetching CSV: {e}")
-        return None
+            print(f"❌ Error reading CSV: {e}")
+            return None
     
         # try:
         #     res = requests.get(f"{self.api_url}/file", timeout=5)

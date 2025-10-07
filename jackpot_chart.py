@@ -96,16 +96,18 @@ class ChartWatcher:
         try:
             csv_file = os.path.join(LOGS_PATH, f"{self.game_name.strip().replace(' ', '_').lower()}_log-hs.csv")
             
-            if not os.path.exists(csv_file):
+            if os.path.exists(csv_file):            
+                with open(csv_file, "r", encoding="utf-8") as f:
+                    csv_content = f.read()
+                    self.last_data_ts = time.time()
+                    return io.StringIO(csv_content)
+            else:
                 print(f"⚠️ CSV fille not found ({csv_file})")
-            
-            with open(csv_file, "r", encoding="utf-8") as f:
-                self.last_data_ts = time.time()
-                return io.StringIO(f.read())              
+                return None
         except Exception as e:
-            print(f"❌ Error fetching CSV: {e}")
-        return None
-    
+            print(f"❌ Error reading CSV: {e}")
+            return None
+        
         # if "scatter." in self.api_url:      
         #     try:
         #         csv_file = os.path.join(

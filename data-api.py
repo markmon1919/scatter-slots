@@ -64,7 +64,7 @@ async def poll_single(client, game_name, provider, requestFrom):
         min10 = first.get("min10")
         if min10 is None:
             return
-
+        
         now_time = Decimal(str(time.time()))
         key = (game_name, provider, requestFrom)
         prev_min10_request = last_min10s.get(key)
@@ -180,7 +180,7 @@ async def websocket_endpoint(ws: WebSocket):
             logger.error(f"💥 WS initial message not valid JSON: {e} -- received: {init_msg!r}")
             await ws.close(code=1003)
             return
-
+        
         game_name = data.get("game")
         provider = data.get("provider")
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env .venv/bin/python
 
-import asyncio, certifi, json, logging, math, os, platform, pyautogui, random, re, ssl, shutil, subprocess, sys, time, threading, websockets
+import aiofiles, asyncio, certifi, json, logging, math, os, platform, pyautogui, random, re, ssl, shutil, subprocess, sys, time, threading, websockets
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
@@ -329,7 +329,7 @@ def create_hs_time_log(jackpot_value: float, timestamp: Decimal):
             f.write(",".join(fieldnames) + "\n")
         f.write(",".join(str(row.get(fn, "")) for fn in fieldnames) + "\n")
         
-def create_time_log(data: dict):
+async def create_time_log(data: dict):
     if not os.path.exists(LOGS_PATH):
         os.makedirs(LOGS_PATH, exist_ok=True)
         
@@ -340,10 +340,11 @@ def create_time_log(data: dict):
     # # update last_logged cache
     # last_logged["min10"] = data.get("min10")
     
-    csv_file = os.path.join(LOGS_PATH, f"{data.get("name").strip().replace(' ', '_').lower()}_log.csv")
+    # csv_file = os.path.join(LOGS_PATH, f"{data.get("name").strip().replace(' ', '_').lower()}_log.csv")
+    csv_file = os.path.join(LOGS_PATH, f"{game.strip().replace(' ', '_').lower()}_log.csv")
     write_header = not os.path.exists(csv_file)
     
-    fieldnames = [ "timestamp", "jackpot_meter", "color", "10m", "1h", "3h", "6h", "10m_delta" ]
+    fieldnames = [ "timestamp", "jackpot_meter", "color", "10m", "1h", "3h", "6h", "10m_delta", "prev_10m", "prev_10m_delta", "interval" ]
     row = {
         "timestamp": datetime.fromtimestamp(float(data.get("last_updated", time.time()))).strftime("%Y-%m-%d %I:%M:%S %p"),
         "jackpot_meter": data.get("value"),
@@ -352,13 +353,16 @@ def create_time_log(data: dict):
         "1h": data.get("hr1"),
         "3h": data.get("hr3"),
         "6h": data.get("hr6"),
-        "10m_delta": data.get("10m_delta", 0.0)
+        "10m_delta": data.get("10m_delta"),
+        "prev_10m": data.get("prev_min10"),
+        "prev_10m_delta": data.get('prev_10m_delta'),
+        "interval": data.get('interval')
     }
         
-    with open(csv_file, "a", newline="") as f:
+    async with aiofiles.open(csv_file, mode="a", newline="") as f:
         if write_header:
-            f.write(",".join(fieldnames) + "\n")
-        f.write(",".join(str(row.get(fn, "")) for fn in fieldnames) + "\n")
+            await f.write(",".join(fieldnames) + "\n")
+        await f.write(",".join(str(row.get(fn, "")) for fn in fieldnames) + "\n")
 
 def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: dict):
     # today = datetime.fromtimestamp(time.time())
@@ -605,7 +609,7 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
         helpslot_sign_3h = f"{GRE}+{RES}" if helpslot_delta_3h > 0 else ""
         helpslot_signal_3h = f"{LRED}▼{RES}" if history_3h < prev_history_3h else f"{LGRE}▲{RES}" if history_3h > prev_history_3h else f"{LCYN}◆{RES}"
         helpslot_diff_3h = f"({YEL}Prev{DGRY}: {prev_colored_helpslot_data_history_3h}{percent}{DGRY}, {LMAG}Δ{DGRY}: {helpslot_sign_3h}{helpslot_colored_delta_3h}{percent})"
-
+        
         prev_color_6h = RED if prev_history_6h < 0 else GRE if prev_history_6h > 0 else LCYN
         prev_colored_helpslot_data_history_6h = f"{prev_color_6h}{prev_history_6h}{RES}"
         helpslot_delta_6h = round(history_6h - prev_history_6h, 2)
@@ -2817,6 +2821,11 @@ def start_ws_client(api_server, game, data_queue: ThQueue,):
                         state.last_pull_delta = data.get('prev_10m_delta')
                         state.interval = data.get("interval")
                         
+                        try:
+                            await create_time_log(data)
+                        except Exception as e:
+                            logger.info(f"⚠️ {BLRED}Failed to log CSV for {game}: {e}")
+                            
                         data_queue.put(data)
                         
                         logger.debug(f"\n\tstate.last_time: {datetime.fromtimestamp(float(state.last_time))}")
@@ -2970,7 +2979,9 @@ if __name__ == "__main__":
                 
                 save_current_data("api", all_data)
                 save_current_data("helpslot", all_helpslot_data)
-
+                
+                # create_time_log(all_data) # transfer to async in future for advance data writing
+                
                 # alert_queue.put(re.sub(r"\s*\(.*?\)", "", game))
                 # alert_queue.put("low_break_out") if state.is_low_breakout else None
                 # alert_queue.put("low_delta_break_out") if state.is_low_delta_breakout else None

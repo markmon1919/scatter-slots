@@ -96,15 +96,17 @@ class ChartWatcher:
         try:
             csv_file = os.path.join(LOGS_PATH, f"{self.game_name.strip().replace(' ', '_').lower()}_log.csv")
             
-            if not os.path.exists(csv_file):
+            if os.path.exists(csv_file):            
+                with open(csv_file, "r", encoding="utf-8") as f:
+                    csv_content = f.read()
+                    self.last_data_ts = time.time()
+                    return io.StringIO(csv_content)
+            else:
                 print(f"⚠️ CSV fille not found ({csv_file})")
-            
-            with open(csv_file, "r", encoding="utf-8") as f:
-                self.last_data_ts = time.time()
-                return io.StringIO(f.read())              
+                return None
         except Exception as e:
-            print(f"❌ Error fetching CSV: {e}")
-        return None
+            print(f"❌ Error reading CSV: {e}")
+            return None
         
         # try:
         #     res = requests.get(f"{self.api_url}/file", timeout=5)
@@ -173,7 +175,7 @@ class ChartWatcher:
                 self.fig.canvas.manager.set_window_title(title)
             except Exception:
                 pass
-
+            
         now = time.time()
         disconnected = (now - max(self.last_data_ts, self.last_game_ts)) > 10
         if disconnected and self.connected:
