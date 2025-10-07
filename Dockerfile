@@ -3,11 +3,12 @@ FROM python:3.13-slim
 ARG CONTAINER_NAME
 ARG CONTAINER_PORT
 
+ENV CONTAINER_NAME=${CONTAINER_NAME}
 ENV CONTAINER_PORT=${CONTAINER_PORT}
 
 WORKDIR /api
 
-COPY data-api.py config.py pyproject.toml ./
+COPY ${CONTAINER_NAME}.py config.py pyproject.toml ./
 
 RUN mv config.py config.py_old \
     && grep -E '^from collections' config.py_old > config.py \
@@ -15,10 +16,11 @@ RUN mv config.py config.py_old \
     && sed -n '/^ProviderProps =/,/^$/p' config.py_old >> config.py \
     && sed -n '/^PROVIDERS =/,/^$/p' config.py_old >> config.py \
     && sed -n '/^USER_AGENTS =/,/^$/p' config.py_old >> config.py \
-    && grep -E '^LOG' config.py_old >> config.py \
+    && grep -E '^LOG|^URLS|^REQ' config.py_old >> config.py \
     && rm config.py_old
 
 RUN sed -i.bak "s/\${CONTAINER_NAME}/${CONTAINER_NAME}/g" pyproject.toml \
+    && pip install --upgrade pip \
     && pip install --no-cache-dir . \
     && rm pyproject.toml*
 
@@ -28,5 +30,7 @@ RUN apt update \
     && echo Asia/Manila > /etc/timezone \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
+
+# RUN sudo certbot --apache -d scatter.goldenarbitrage.net
     
-CMD [ "sh", "-c", "uvicorn data-api:app --host 0.0.0.0 --port ${CONTAINER_PORT}" ]
+CMD [ "sh", "-c", "uvicorn ${CONTAINER_NAME}:app --host 0.0.0.0 --port ${CONTAINER_PORT}" ]

@@ -59,8 +59,9 @@ class ChartWatcher:
     def get_game_name(self):
         """Fetch the current game name."""
         try:
-            res = requests.get(f"{self.api_url}/file/game", timeout=5)
-            name = res.text.strip() if res.status_code == 200 else ""
+            with open("current_game.txt", "r", encoding="utf-8") as f:
+                name = f.read().strip()
+                
             if name and name.lower() != "none":
                 if self.game_name != name:
                     print(f"🎮 Game detected: {name}")
@@ -73,37 +74,66 @@ class ChartWatcher:
                     self.ui_queue.put(f"{self.chart_title} — Waiting...")
         except Exception as e:
             print(f"❌ Error getting game name: {e}")
+            
+        # try:
+        #     res = requests.get(f"{self.api_url}/file/game", timeout=5)
+        #     name = res.text.strip() if res.status_code == 200 else ""
+        #     if name and name.lower() != "none":
+        #         if self.game_name != name:
+        #             print(f"🎮 Game detected: {name}")
+        #             self.game_name = name
+        #             self.ui_queue.put(f"{self.chart_title} — {self.game_name}")
+        #         self.last_game_ts = time.time()
+        #     else:
+        #         if self.game_name == "Unknown":
+        #             print("⌛ Waiting for valid game name...")
+        #             self.ui_queue.put(f"{self.chart_title} — Waiting...")
+        # except Exception as e:
+        #     print(f"❌ Error getting game name: {e}")
 
     def fetch_csv(self):
-        """Fetch CSV data."""    
-        if "scatter." in self.api_url:      
-            try:
-                csv_file = os.path.join(
-                    LOGS_PATH,
-                    f"{self.game_name.strip().replace('\"', '').replace(' ', '_').lower()}_log-hs.csv"
-                )
-                if os.path.exists(csv_file):
-                    with open(csv_file, "r", encoding="utf-8") as f:
-                        csv_content = f.read()
-                        self.last_data_ts = time.time()
-                        return io.StringIO(csv_content)  # so pandas can read it
-                else:
-                    print(f"⚠️ CSV file not found: {csv_file}")
-                    return None
+        """Fetch CSV data."""
+        try:
+            csv_file = os.path.join(LOGS_PATH, f"{self.game_name.strip().replace(' ', '_').lower()}_log-hs.csv")
+            
+            if not os.path.exists(csv_file):
+                print(f"⚠️ CSV fille not found ({csv_file})")
+            
+            with open(csv_file, "r", encoding="utf-8") as f:
+                self.last_data_ts = time.time()
+                return io.StringIO(f.read())              
+        except Exception as e:
+            print(f"❌ Error fetching CSV: {e}")
+        return None
+    
+        # if "scatter." in self.api_url:      
+        #     try:
+        #         csv_file = os.path.join(
+        #             LOGS_PATH,
+        #             f"{self.game_name.strip().replace('\"', '').replace(' ', '_').lower()}_log-hs.csv"
+        #         )
+        #         if os.path.exists(csv_file):
+        #             with open(csv_file, "r", encoding="utf-8") as f:
+        #                 csv_content = f.read()
+        #                 self.last_data_ts = time.time()
+        #                 return io.StringIO(csv_content)  # so pandas can read it
+        #         else:
+        #             print(f"⚠️ CSV file not found: {csv_file}")
+        #             return None
 
-            except Exception as e:
-                print(f"❌ Error reading CSV: {e}")
-                return None
-        else:
-            try:
-                res = requests.get(f"{self.api_url}/file/jackpot", timeout=5)
-                if res.status_code == 200 and res.text.strip():
-                    self.last_data_ts = time.time()
-                    return io.StringIO(res.text)
-                print(f"⚠️ CSV fetch failed ({res.status_code})")
-            except Exception as e:
-                print(f"❌ Error fetching CSV: {e}")
-            return None
+        #     except Exception as e:
+        #         print(f"❌ Error reading CSV: {e}")
+        #         return None
+        # else:
+        #     try:
+        #         res = requests.get(f"{self.api_url}/file/jackpot", timeout=5)
+        #         if res.status_code == 200 and res.text.strip():
+        #             self.last_data_ts = time.time()
+        #             return io.StringIO(res.text)
+        #         print(f"⚠️ CSV fetch failed ({res.status_code})")
+        #     except Exception as e:
+        #         print(f"❌ Error fetching CSV: {e}")
+        #     return None
 
     def process_csv(self, buf):
         """Parse CSV into OHLC dataframe."""
@@ -208,8 +238,8 @@ class ChartWatcher:
         self.fig.patch.set_facecolor("black")
         self.fig.canvas.manager.set_window_title(f"{self.chart_title} — Waiting...")
         
-        threading.Thread(target=self.data_watcher, daemon=True).start()
         threading.Thread(target=self.poll_game_name, daemon=True).start()
+        threading.Thread(target=self.data_watcher, daemon=True).start()
 
         ani = FuncAnimation(self.fig, self.update_chart, interval=self.refresh_ms, cache_frame_data=False)
         plt.tight_layout()

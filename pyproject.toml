@@ -6,13 +6,10 @@ build-backend = "setuptools.build_meta"
 name = "${CONTAINER_NAME}"
 version = "0.1.0"
 dependencies = [
-    "aiofiles",
     "asyncio",
-    "datetime",
     "fastapi[standard]",
     "httpx",
     "logging",
-    "pydantic",
     "uvicorn[standard]"
 ]
 

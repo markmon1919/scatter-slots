@@ -1127,14 +1127,17 @@ USER_AGENTS = [
     "Version/15.3 Mobile/15E148 Safari/604.1"
 ]
 
+REQUEST_FROMS = [ "H5", "H6" ]
+
 API_CONTAINER = "data-api"
 API_CONTAINER_PORT = 3000
 API_HOST_IP = ""
 API_PORT = 3333
 
 VPS_IP = "66.241.124.83"
-VPS_DOMAIN = "https://scatter.goldenarbitrage.net"
+VPS_DOMAIN = "scatter.goldenarbitrage.net"
 
+WS_URL = [ f"ws://localhost:{API_PORT}/ws", "wss://api-jackpot.fly.dev/ws", f"ws://{API_HOST_IP}:{API_PORT}/ws" ]
 API_URL = [ f"http://localhost:{API_PORT}", "https://api-jackpot.fly.dev", f"http://{API_HOST_IP}:{API_PORT}" ]
 # API_URL = [ "http://localhost:8080", "https://api-jackpot.fly.dev", "http://192.168.1.10:8080" ]
 # API_URL = "https://api-jackpot.fly.dev"
