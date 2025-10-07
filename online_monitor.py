@@ -1164,13 +1164,20 @@ def countdown_timer(seconds: int = 10):
         sys.stdout.flush()
         
         if state.auto_mode:
-            # dynamic jackpot conditions
+            # dynamic jackpot conditions - absolute value test pull
             jackpot_conditions = all([
-                state.last_pull_delta < state.pull_delta,
+                abs(state.last_pull_delta) < abs(state.pull_delta),
                 state.last_min10 < state.min10,
                 state.min10 >= state.min10_thresh,
-                state.pull_delta >= state.pull_thresh
+                abs(state.pull_delta) >= state.pull_thresh
             ])
+            # # dynamic jackpot conditions
+            # jackpot_conditions = all([
+            #     state.last_pull_delta < state.pull_delta,
+            #     state.last_min10 < state.min10,
+            #     state.min10 >= state.min10_thresh,
+            #     state.pull_delta >= state.pull_thresh
+            # ])
             # jackpot_conditions = all([
             #     state.last_pull_delta < state.pull_delta,
             #     state.last_min10 < state.min10,
@@ -2823,7 +2830,8 @@ def get_dynamic_thresholds():
         return 50, 40
     
     # pull_delta threshold: mean + 1.5*std or 95th percentile
-    pull_array = np.array(recent_pull_deltas)
+    # pull_array = np.array(recent_pull_deltas)
+    pull_array = np.abs(np.array(recent_pull_deltas)) # absolute value test
     pull_thresh = max(pull_array.mean() + 1.5 * pull_array.std(),
                     np.percentile(pull_array, 95))
     
