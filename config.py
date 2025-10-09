@@ -12,6 +12,7 @@ from collections import namedtuple
 
 LOG_LEVEL = ""#DEBUG
 LOGS_PATH = "logs"
+GAME_FILE = "current_game.txt"
 BREAKOUT_FILE = "breakout_data.json"
 DATA_FILE = "previous_data.json"
 HELPSLOT_DATA_FILE = "previous_helpslot_data.json"

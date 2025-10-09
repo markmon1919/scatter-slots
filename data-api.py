@@ -1,4 +1,4 @@
-import asyncio, httpx, json, logging, random, time#, uvicorn
+import asyncio, httpx, json, logging, random, time
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from contextlib import asynccontextmanager
 from decimal import Decimal
@@ -67,40 +67,47 @@ async def poll_single(client, game_name, provider, requestFrom):
         
         now_time = Decimal(str(time.time()))
         key = (game_name, provider, requestFrom)
-        prev_min10_request = last_min10s.get(key)
-        prev_prev_min10 = last_prev_min10s.get(key, 0.0)
+
+        # safely get previous value (per-requestFrom)
+        prev_min10_request = last_min10s.get(key, 0.0)
         
-        # compute deltas for this requestFrom
-        delta_prev = prev_min10_request - prev_prev_min10 if prev_min10_request is not None else 0.0
-        delta_10m = min10 - prev_min10_request if prev_min10_request is not None else 0.0
+        # compute delta for this requestFrom
+        delta_10m = min10 - prev_min10_request
 
         # update per-requestFrom tracking
-        last_prev_min10s[key] = prev_min10_request or 0.0
         last_min10s[key] = min10
 
         # check global last min10 to avoid duplicate broadcasts
         last_entry = latest_data.get((game_name, provider))
         last_min10_global = last_entry.get("min10") if last_entry else None
-        last_time_global = Decimal(str(last_entry.get("last_updated"))) if last_entry else None
+        last_time_global = (
+            Decimal(str(last_entry.get("last_updated"))) if last_entry else None
+        )
 
         if last_min10_global == min10:
             return  # skip duplicate global broadcast
 
         interval = float(now_time - last_time_global) if last_time_global else 0.0
-        prev_min10_global = last_min10_global or 0.0
+        prev_min10_global = last_min10_global if last_min10_global is not None else 0.0
 
-        # prepare broadcast including deltas + prev_min10
+        # prepare broadcast
         new_data = dict(first)
         new_data["last_updated"] = str(now_time)
-        new_data["prev_min10"] = prev_min10_global  # NEW
-        new_data["prev_10m_delta"] = delta_prev
+        new_data["prev_min10"] = prev_min10_global
         new_data["10m_delta"] = delta_10m
         new_data["interval"] = interval
-
+        
         # save globally
         latest_data[(game_name, provider)] = new_data
 
+        # broadcast update
         await broadcast(game_name, provider, new_data)
+
+        logger.info(
+            f"⚡ [{game_name} | {requestFrom}] broadcast min10 → {min10} "
+            f"(prev_min10={prev_min10_global}, delta_10m={delta_10m:.2f}, interval={interval:.2f}s)"
+        )
+        
         logger.info(
             f"⚡ [{game_name} | {requestFrom}] broadcast min10 → {min10} "
             f"(prev_min10={prev_min10_global}, delta_prev={delta_prev:.2f}, "
@@ -212,4 +219,5 @@ async def websocket_endpoint(ws: WebSocket):
 
 # for local testing only
 # if __name__ == "__main__":
+#     import uvicorn
 #     uvicorn.run("data-api:app", host="0.0.0.0", port=3333)

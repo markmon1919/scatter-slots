@@ -5,7 +5,7 @@ import pandas as pd
 import mplfinance as mpf
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from config import VPS_DOMAIN, API_URL, LOGS_PATH
+from config import VPS_DOMAIN, API_URL, LOGS_PATH, GAME_FILE
 
 
 class ChartWatcher:
@@ -59,7 +59,7 @@ class ChartWatcher:
     def get_game_name(self):
         """Fetch the current game name."""
         try:
-            with open("current_game.txt", "r", encoding="utf-8") as f:
+            with open(GAME_FILE, "r", encoding="utf-8") as f:
                 name = f.read().strip()
                 
             if name and name.lower() != "none":
@@ -107,7 +107,7 @@ class ChartWatcher:
         except Exception as e:
             print(f"❌ Error reading CSV: {e}")
             return None
-        
+    
         # try:
         #     res = requests.get(f"{self.api_url}/file", timeout=5)
         #     if res.status_code == 200 and res.text.strip():
@@ -117,7 +117,7 @@ class ChartWatcher:
         # except Exception as e:
         #     print(f"❌ Error fetching CSV: {e}")
         # return None
-    
+
     def process_csv(self, buf):
         """Parse CSV into OHLC dataframe."""
         try:
@@ -175,7 +175,7 @@ class ChartWatcher:
                 self.fig.canvas.manager.set_window_title(title)
             except Exception:
                 pass
-            
+
         now = time.time()
         disconnected = (now - max(self.last_data_ts, self.last_game_ts)) > 10
         if disconnected and self.connected:
@@ -200,7 +200,7 @@ class ChartWatcher:
                 style=self.style,
                 type="candle",
                 ylabel=self.header,
-                show_nontrading=True
+                # show_nontrading=True
             )
             self.ax.set_title(
                 f"{self.game_name} - {self.chart_title} ({pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')})",
@@ -223,7 +223,7 @@ class ChartWatcher:
         
         threading.Thread(target=self.poll_game_name, daemon=True).start()
         threading.Thread(target=self.data_watcher, daemon=True).start()
-        
+
         ani = FuncAnimation(self.fig, self.update_chart, interval=self.refresh_ms, cache_frame_data=False)
         plt.tight_layout()
 

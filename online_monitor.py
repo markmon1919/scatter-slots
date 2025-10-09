@@ -9,7 +9,7 @@ from decimal import Decimal
 from queue import Queue as ThQueue, Empty
 from pynput.keyboard import Listener as KeyboardListener, Key, KeyCode
 from trend import load_trend_memory
-from config import (LOGS_PATH, LOG_LEVEL, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_URL, API_PORT, WS_URL, VPS_IP, VPS_DOMAIN, TREND_FILE, BREAKOUT_FILE, DATA_FILE, HELPSLOT_DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, 
+from config import (LOGS_PATH, LOG_LEVEL, GAME_CONFIGS, DEFAULT_GAME_CONFIG, API_URL, API_PORT, WS_URL, VPS_IP, VPS_DOMAIN, GAME_FILE, TREND_FILE, BREAKOUT_FILE, DATA_FILE, HELPSLOT_DATA_FILE, SCREEN_POS, LEFT_SLOT_POS, RIGHT_SLOT_POS, PING, VOICES, HOLD_DELAY_RANGE, SPIN_DELAY_RANGE, TIMEOUT_DELAY_RANGE, PROVIDERS, DEFAULT_PROVIDER_PROPS, URLS, 
                     LRED, LBLU, LCYN, LYEL, LMAG, LGRE, LGRY, RED, MAG, YEL, GRE, CYN, BLU, WHTE, BLRED, BLYEL, BLGRE, BLMAG, BLBLU, BLCYN, BYEL, BMAG, BCYN, BWHTE, DGRY, BLNK, CLEAR, RES)
 
 from selenium import webdriver
@@ -20,6 +20,7 @@ from selenium.webdriver.common.by import By
 
 @dataclass
 class AutoState:
+    game: str = None
     spin_btn: bool = False
     auto_spin: bool = True
     turbo: bool = True
@@ -120,6 +121,7 @@ def get_sleep_times(auto_play_menu: bool=False):
     }
 
 def configure_game(game: str, api_server: str, breakout: dict, auto_mode: bool=False, fast_mode: bool=False, dual_slots: bool=False, split_screen: bool=False, left_slot: bool=False, right_slot: bool=False):#, forever_spin: bool=False):
+    state.game = game
     state.breakout = breakout
     state.auto_mode = auto_mode
     state.fast_mode = fast_mode
@@ -348,7 +350,7 @@ async def create_time_log(data: dict):
     csv_file = os.path.join(LOGS_PATH, f"{game.strip().replace(' ', '_').lower()}_log.csv")
     write_header = not os.path.exists(csv_file)
     
-    fieldnames = [ "timestamp", "jackpot_meter", "color", "10m", "1h", "3h", "6h", "10m_delta", "prev_10m", "prev_10m_delta", "interval" ]
+    fieldnames = [ "timestamp", "jackpot_meter", "color", "10m", "1h", "3h", "6h", "10m_delta", "prev_10m_delta", "prev_10m", "interval" ]
     row = {
         "timestamp": datetime.fromtimestamp(float(data.get("last_updated", time.time()))).strftime("%Y-%m-%d %I:%M:%S %p"),
         "jackpot_meter": data.get("value"),
@@ -358,8 +360,8 @@ async def create_time_log(data: dict):
         "3h": data.get("hr3"),
         "6h": data.get("hr6"),
         "10m_delta": data.get("10m_delta"),
+        "prev_10m_delta": state.last_pull_delta,
         "prev_10m": data.get("prev_min10"),
-        "prev_10m_delta": data.get('prev_10m_delta'),
         "interval": data.get('interval')
     }
         
@@ -528,6 +530,9 @@ def compare_data(prev: dict, current: dict, prev_helpslot: dict, helpslot_data: 
     lowest_low_delta = state.breakout["lowest_low_delta"]
     highest_high = state.breakout["highest_high"]
     highest_high_delta = state.breakout["highest_high_delta"]
+    
+    state.min10_thresh = max(abs(lowest_low), abs(highest_high)) / 2
+    state.pull_thresh = max(abs(lowest_low_delta), abs(highest_high_delta)) / 2
 
     logger.info(f"{banner}")
 
@@ -1164,13 +1169,27 @@ def countdown_timer(seconds: int = 10):
         sys.stdout.flush()
         
         if state.auto_mode:
+            # dynamic jackpot conditions - absolute value test both pull and min10 - note to check on condition #1 line 
+            # jackpot_conditions = all([
+            #     abs(state.last_pull_delta) < abs(state.pull_delta),
+            #     abs(state.last_min10) >= state.min10_thresh,   # using absolute value (this is really thresh)
+            #     abs(state.min10) >= state.min10_thresh,        # using absolute value
+            #     abs(state.pull_delta) >= state.pull_thresh
+            # ])
+            # safer if only upward
+            # jackpot_conditions = all([
+            #     state.last_pull_delta < state.pull_delta,
+            #     state.last_min10 >= state.min10_thresh,  
+            #     state.min10 >= state.min10_thresh,       
+            #     state.pull_delta >= state.pull_thresh
+            # ])
             # dynamic jackpot conditions - absolute value test pull
-            jackpot_conditions = all([
-                abs(state.last_pull_delta) < abs(state.pull_delta),
-                state.last_min10 < state.min10,
-                state.min10 >= state.min10_thresh,
-                abs(state.pull_delta) >= state.pull_thresh
-            ])
+            # jackpot_conditions = all([
+            #     abs(state.last_pull_delta) < abs(state.pull_delta),
+            #     state.last_min10 < state.min10,
+            #     state.min10 >= state.min10_thresh,
+            #     abs(state.pull_delta) >= state.pull_thresh
+            # ])
             # # dynamic jackpot conditions
             # jackpot_conditions = all([
             #     state.last_pull_delta < state.pull_delta,
@@ -1178,21 +1197,22 @@ def countdown_timer(seconds: int = 10):
             #     state.min10 >= state.min10_thresh,
             #     state.pull_delta >= state.pull_thresh
             # ])
-            # jackpot_conditions = all([
-            #     state.last_pull_delta < state.pull_delta,
-            #     state.last_min10 < state.min10,
-            #     state.min10 >= 40, # note on this change too
-            #     state.pull_delta >= 50 # this is trend changer in charet.. 
-            # ])
+            jackpot_conditions = all([
+                state.last_pull_delta < state.pull_delta,
+                state.last_min10 < state.min10,
+                state.min10 >= 0, # note on this change too
+                state.pull_delta >= state.pull_thresh # this is trend changer in charet.. 
+            ])
             
             if jackpot_conditions and triggered_sec is None:
                 spin(False, False, True, False,)
+                # threading.Thread(target=spin, args=(False, False, True, False,), daemon=True).start()
                 # state.fast_mode = True
                 triggered_sec = current_sec
-                logger.info(f"\n\t💥  Jackpot trend detected! pull_delta={state.pull_delta:.2f}, min10={state.min10:.2f}")
+                logger.info(f"\n\t💥  Jackpot trend detected! pull_delta={state.pull_delta:.2f} min10_thresh={state.pull_thresh}, min10={state.min10:.2f} min10_thresh={state.min10_thresh}")
                 alert_queue.put(f"{current_sec} jackpot mode ON")
                 
-            if triggered_sec is not None:
+            elif triggered_sec is not None:
                 spin(False, False, False, False,)
                 if not jackpot_conditions:
                     triggered_sec = None
@@ -1214,12 +1234,13 @@ def countdown_timer(seconds: int = 10):
             # logger.info(f"state.last_min10: {state.last_min10}")
             # logger.info(f"state.min10: {state.min10}")
             
-            if not jackpot_conditions:
+            else:
                 if not state.fast_mode:
                     if current_sec == 6 and state.last_time != Decimal('0'): # DEAD SPIN
                         # wait_before_spin = float(interval_ms - 2)
                         # wait_before_spin = float(interval_ms)
-                        threading.Thread(target=spin, args=(False, False, False, True,), daemon=True).start()
+                        # threading.Thread(target=spin, args=(False, False, False, True,), daemon=True).start()
+                        spin(False, False, False, True,)
                         
                         # logger.info(f"\nCurrent Sec ({YEL}{current_sec}){RES}, Trigger Sec: ({MAG}{trigger_sec}{RES})")
                         # logger.info(f"\nINTERVAL MS (prediction): {interval_ms}")
@@ -2818,28 +2839,31 @@ def providers_list():
         except ValueError:
             logger.warning("\t⚠️  Please enter a valid number.")
             
-# def update_recent_data(pull_delta, min10):
-#     """Add new data to the rolling window"""
-#     recent_pull_deltas.append(pull_delta)
-#     recent_min10.append(min10)
 
-def get_dynamic_thresholds():
-    """Compute dynamic thresholds for pull_delta and min10"""
-    if len(recent_pull_deltas) < 5:
-        # Not enough data yet, use default conservative values
-        return 50, 40
+# def get_dynamic_thresholds(data):
+#     """Compute dynamic thresholds for pull_delta and min10"""
     
-    # pull_delta threshold: mean + 1.5*std or 95th percentile
-    # pull_array = np.array(recent_pull_deltas)
-    pull_array = np.abs(np.array(recent_pull_deltas)) # absolute value test
-    pull_thresh = max(pull_array.mean() + 1.5 * pull_array.std(),
-                    np.percentile(pull_array, 95))
+#     # update rolling window
+#     recent_pull_deltas.append(data.get('10m_delta'))
+#     recent_min10.append(data.get('min10'))
     
-    # min10 threshold: top 25% of recent min10 values
-    min10_array = np.array(recent_min10)
-    min10_thresh = np.percentile(min10_array, 75)
+#     # if len(recent_pull_deltas) < 5:
+#         # Not enough data yet, use default conservative values
+#         # return 50, 40
+#         state.pull_thresh = 50 if len(recent_pull_deltas) > 5 else np.percentile(np.array(recent_min10), 75)
+#         state.min10_thresh = 40
+    
+#     # pull_delta threshold: mean + 1.5*std or 95th percentile
+#     # pull_array = np.array(recent_pull_deltas)
+#     pull_array = np.abs(np.array(recent_pull_deltas)) # absolute value test
+#     state.pull_thresh = max(pull_array.mean() + 1.5 * pull_array.std(),
+#                     np.percentile(pull_array, 95))
+    
+#     # min10 threshold: top 25% of recent min10 values
+#     min10_array = np.array(recent_min10)
+#     state.min10_thresh = np.percentile(np.array(recent_min10), 75)
 
-    return pull_thresh, min10_thresh
+#     # return pull_thresh, min10_thresh
             
 # ────────────── ASYNC WEBSOCKET CLIENT ──────────────
 def start_ws_client(api_server, game, data_queue: ThQueue,):
@@ -2857,8 +2881,8 @@ def start_ws_client(api_server, game, data_queue: ThQueue,):
                         state.last_time = Decimal(data.get('last_updated'))
                         state.min10 = data.get('min10')
                         state.last_min10 = data.get("prev_min10")
+                        state.last_pull_delta = state.pull_delta or 0.0
                         state.pull_delta = data.get('10m_delta')
-                        state.last_pull_delta = data.get('prev_10m_delta')
                         state.interval = data.get("interval")
                         
                         try:
@@ -2866,17 +2890,8 @@ def start_ws_client(api_server, game, data_queue: ThQueue,):
                         except Exception as e:
                             logger.info(f"⚠️ {BLRED}Failed to log CSV for {game}: {e}")
                             
-                        # Example usage in your main loop
-                        # pull_delta = state.pull_delta
-                        # min10 = state.min10
-
-                        # update rolling window
-                        # update_recent_data(pull_delta, min10)
-                        recent_pull_deltas.append(data.get('10m_delta'))
-                        recent_min10.append(data.get('min10'))
-
                         # compute dynamic thresholds
-                        state.pull_thresh, state.min10_thresh = get_dynamic_thresholds()
+                        # await get_dynamic_thresholds()
                         
                         data_queue.put(data)
                         
@@ -2914,7 +2929,7 @@ if __name__ == "__main__":
     # file_handler.setFormatter(formatter)
     # logger.addHandler(file_handler)
     
-    for f in [DATA_FILE, HELPSLOT_DATA_FILE]:
+    for f in [ GAME_FILE, DATA_FILE, HELPSLOT_DATA_FILE ]:
         if os.path.exists(f):
             os.remove(f)
     
@@ -2937,10 +2952,10 @@ if __name__ == "__main__":
     game = games_list(provider)
     alert_queue.put(game)
     # store current game in file
-    with open("current_game.txt", "w", encoding="utf-8") as f:
+    with open(GAME_FILE, "w", encoding="utf-8") as f:
         f.write(game)
     
-    # api_server = WS_URL[0] # local
+    # api_server = next((url for url in WS_URL if 'localhost' in url), None) # local
     api_server = f"wss://{VPS_DOMAIN}/ws" # vps
     
     user_input = input(f"\n\n\tDo you want to enable {CYN}Auto Mode{RES} ❓ ({DGRY}Y/n{RES}): ").strip().lower()
@@ -2957,7 +2972,7 @@ if __name__ == "__main__":
     logger.info(f"\n\n\t... {WHTE}Starting real-time jackpot monitor.\n\t    Press ({BLMAG}Ctrl+C{RES}{WHTE}) to stop.{RES}\n\n")
     
     breakout = load_breakout_memory(game)
-
+    
     state = AutoState()
     settings = configure_game(game, api_server, breakout, auto_mode, fast_mode, dual_slots, split_screen, left_slot, right_slot)#, forever_spin)
     
@@ -3002,9 +3017,9 @@ if __name__ == "__main__":
     # kb_thread.start()
     # monitor_thread.start()
     
-    window = 20 # number of iterations
-    recent_pull_deltas = deque(maxlen=window)
-    recent_min10 = deque(maxlen=window)
+    # window = 20 # number of iterations
+    # recent_pull_deltas = deque(maxlen=window)
+    # recent_min10 = deque(maxlen=window)
     
     try:
         while not stop_event.is_set():
@@ -3029,7 +3044,7 @@ if __name__ == "__main__":
                 previous_helpslot_data = all_helpslot_data.get(game.lower())
 
                 compare_data(previous_data, parsed_data, previous_helpslot_data, helpslot_data)
-
+                
                 all_data[game.lower()] = parsed_data
                 all_helpslot_data[game.lower()] = helpslot_data
                 
@@ -3060,7 +3075,7 @@ if __name__ == "__main__":
         logger.error(f"\n\n\t🤖❌  {BLRED}Main program interrupted.{RES}")
         stop_event.set()
     finally:        
-        for f in [DATA_FILE, HELPSLOT_DATA_FILE]:
+        for f in [ GAME_FILE, DATA_FILE, HELPSLOT_DATA_FILE ]:
             if os.path.exists(f):
                 os.remove(f)
                 

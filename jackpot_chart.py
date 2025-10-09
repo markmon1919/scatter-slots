@@ -5,7 +5,7 @@ import pandas as pd
 import mplfinance as mpf
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from config import VPS_DOMAIN, API_URL, LOGS_PATH
+from config import VPS_DOMAIN, API_URL, LOGS_PATH, GAME_FILE
 
 
 class ChartWatcher:
@@ -59,7 +59,7 @@ class ChartWatcher:
     def get_game_name(self):
         """Fetch the current game name."""
         try:
-            with open("current_game.txt", "r", encoding="utf-8") as f:
+            with open(GAME_FILE, "r", encoding="utf-8") as f:
                 name = f.read().strip()
                 
             if name and name.lower() != "none":
